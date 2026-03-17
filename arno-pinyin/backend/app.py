@@ -11,6 +11,7 @@ import sqlite3
 from datetime import datetime, timedelta
 import os
 import whisper
+from openai import OpenAI
 
 app = Flask(__name__)
 CORS(app)
@@ -169,7 +170,6 @@ def correct_writing():
 """
     
     # 调用AI
-    from openai import OpenAI
     try:
         # 默认使用文心一言，用户可以配置切换豆包
         client = OpenAI(
@@ -280,7 +280,6 @@ def correct_speaking():
 """
     
     # 调用AI
-    from openai import OpenAI
     try:
         # 默认使用文心一言，用户可以配置切换豆包
         client = OpenAI(
