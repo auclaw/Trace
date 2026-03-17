@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Arno 中文 - AI 雅思/托福写作批改</title>
+  <title>Arno 中文 - AI 雅思/托福/多邻国 口语写作批改</title>
   <style>
     * {
       box-sizing: border-box;
@@ -47,6 +47,31 @@
       border-radius: 30px;
       font-size: 14px;
       margin-top: 16px;
+    }
+
+    .tabs {
+      display: flex;
+      background: white;
+      border-radius: 16px;
+      padding: 8px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 16px rgba(102, 126, 234, 0.08);
+    }
+
+    .tab-item {
+      flex: 1;
+      text-align: center;
+      padding: 12px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 16px;
+      color: #666;
+      transition: all 0.3s;
+    }
+
+    .tab-item.active {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
     }
 
     .card {
@@ -105,6 +130,36 @@
       outline: none;
       border-color: #667eea;
       box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+    }
+
+    .form-group input[type="file"] {
+      display: block;
+      padding: 16px 0;
+    }
+
+    .record-btn {
+      width: 100%;
+      background: #f0f4ff;
+      border: 2px solid #667eea;
+      color: #667eea;
+      border-radius: 50px;
+      height: 56px;
+      font-size: 18px;
+      cursor: pointer;
+      margin-bottom: 16px;
+    }
+
+    .record-btn.recording {
+      background: #ffebee;
+      border-color: #f44336;
+      color: #f44336;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.6; }
+      100% { opacity: 1; }
     }
 
     .submit-btn {
@@ -243,7 +298,7 @@
     <!-- 未登录 -->
     <div id="login-section" class="login-section" style="display: none;">
       <h2>欢迎使用 Arno 中文</h2>
-      <p style="margin: 20px 0; color: #666;">AI 雅思/托福/多邻国写作批改，平价好用即时出结果</p>
+      <p style="margin: 20px 0; color: #666;">AI 雅思/托福/多邻国 口语写作批改 · 即时出结果 · 平价好用</p>
       <button class="wechat-login-btn" onclick="wechatLogin()">
         📱 微信一键登录
       </button>
@@ -253,14 +308,24 @@
     <div id="main-content" style="display: none;">
       <div class="header">
         <h1>✍️ Arno 中文</h1>
-        <p>AI 雅思/托福/多邻国写作批改 · 即时出结果 · 平价好用</p>
+        <p>AI 雅思/托福/多邻国 口语写作批改 · 即时出结果 · 平价好用</p>
         <div class="price-badge">单次 ¥2.99 / 月卡 ¥29.9 无限次</div>
       </div>
 
-      <div class="card">
+      <div class="tabs">
+        <div class="tab-item active" data-tab="writing" onclick="switchTab('writing')">
+          📝 写作批改
+        </div>
+        <div class="tab-item" data-tab="speaking" onclick="switchTab('speaking')">
+          🎤 口语批改
+        </div>
+      </div>
+
+      <!-- 写作 -->
+      <div id="writing-panel" class="card">
         <div class="user-info">
           <div class="remaining">
-            剩余次数：<span class="count" id="remaining-count">0</span>
+            剩余次数：<span class="count" id="remaining-count-writing">0</span>
           </div>
           <div>
             <button onclick="window.location.reload()" style="background: #f0f0f0; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer;">刷新</button>
@@ -270,29 +335,77 @@
         <div class="form-group">
           <label>考试类型</label>
           <div class="exam-type-select">
-            <div class="exam-type-item selected" data-type="ielts" onclick="selectExamType(this)">
+            <div class="exam-type-item selected" data-type="ielts" onclick="selectExamType(this, 'writing')">
               雅思 IELTS
             </div>
-            <div class="exam-type-item" data-type="toefl" onclick="selectExamType(this)">
+            <div class="exam-type-item" data-type="toefl" onclick="selectExamType(this, 'writing')">
               托福 TOEFL
             </div>
-            <div class="exam-type-item" data-type="duolingo" onclick="selectExamType(this)">
+            <div class="exam-type-item" data-type="duolingo" onclick="selectExamType(this, 'writing')">
               多邻国 Duolingo
             </div>
           </div>
         </div>
 
         <div class="form-group">
-          <label>题目要求（可选）</label>
-          <textarea id="question" placeholder="粘贴作文题目要求，如果有的话"></textarea>
+          <label>题目要求</label>
+          <textarea id="question-writing" placeholder="粘贴题目要求..."></textarea>
         </div>
 
         <div class="form-group">
           <label>你的作文</label>
-          <textarea id="content" placeholder="粘贴你的作文内容在这里..."></textarea>
+          <textarea id="content-writing" placeholder="粘贴你的作文内容..."></textarea>
         </div>
 
-        <button class="submit-btn" id="submit-btn" onclick="submitCorrection()" disabled>
+        <button class="submit-btn" id="submit-btn-writing" onclick="submitCorrection('writing')" disabled>
+          🚀 提交批改
+        </button>
+      </div>
+
+      <!-- 口语 -->
+      <div id="speaking-panel" class="card" style="display: none;">
+        <div class="user-info">
+          <div class="remaining">
+            剩余次数：<span class="count" id="remaining-count-speaking">0</span>
+          </div>
+          <div>
+            <button onclick="window.location.reload()" style="background: #f0f0f0; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer;">刷新</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>考试类型</label>
+          <div class="exam-type-select">
+            <div class="exam-type-item selected" data-type="ielts" onclick="selectExamType(this, 'speaking')">
+              雅思 IELTS
+            </div>
+            <div class="exam-type-item" data-type="toefl" onclick="selectExamType(this, 'speaking')">
+              托福 TOEFL
+            </div>
+            <div class="exam-type-item" data-type="duolingo" onclick="selectExamType(this, 'speaking')">
+              多邻国 Duolingo
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>题目要求</label>
+          <textarea id="question-speaking" placeholder="粘贴口语题目..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>你的录音</label>
+          <div id="recording-status">
+            <button class="record-btn" id="record-btn" onclick="toggleRecording()">
+              🎤 开始录音
+            </button>
+          </div>
+          <div id="audio-preview" style="display: none; margin-top: 16px;">
+            <audio id="audio-player" controls></audio>
+          </div>
+        </div>
+
+        <button class="submit-btn" id="submit-btn-speaking" onclick="submitSpeaking()" disabled>
           🚀 提交批改
         </button>
       </div>
@@ -302,7 +415,7 @@
       </div>
 
       <div class="card result-area" id="result-area">
-        <div class="result-title">📝 批改结果</div>
+        <div class="result-title">✅ 批改结果</div>
         <div class="result-content" id="result-content"></div>
       </div>
 
@@ -325,7 +438,7 @@
       </div>
 
       <div class="footer">
-        比人工批改便宜，比免费工具专业，帮你快速提高写作成绩 🎉
+        比人工批改便宜，比免费工具专业，帮你快速提高雅思托福成绩 🎉
       </div>
     </div>
   </div>
@@ -333,7 +446,13 @@
   <script>
     const API_HOST = 'https://your-backend-domain.com'  // 改成你的后端地址
     let token = localStorage.getItem('arno_token')
-    let selectedExamType = 'ielts'
+    let selectedExamType = {
+      writing: 'ielts',
+      speaking: 'ielts'
+    }
+    let mediaRecorder = null
+    let audioBlob = null
+    let isRecording = false
 
     // 初始化
     function init() {
@@ -347,17 +466,27 @@
       }
     }
 
-    function wechatLogin() {
-      // 跳转到微信登录
-      window.location.href = API_HOST + '/api/auth/wechat'
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-item').forEach(t => {
+        t.classList.remove('active')
+      })
+      document.querySelector(`.tab-item[data-tab="${tab}"]`).classList.add('active')
+
+      document.getElementById('writing-panel').style.display = tab === 'writing' ? 'block' : 'none'
+      document.getElementById('speaking-panel').style.display = tab === 'speaking' ? 'block' : 'none'
     }
 
-    function selectExamType(el) {
-      document.querySelectorAll('.exam-type-item').forEach(item => {
+    function selectExamType(el, panel) {
+      document.querySelectorAll(`#${panel}-panel .exam-type-item`).forEach(item => {
         item.classList.remove('selected')
       })
       el.classList.add('selected')
-      selectedExamType = el.getAttribute('data-type')
+      selectedExamType[panel] = el.getAttribute('data-type')
+      checkSubmitEnabled()
+    }
+
+    function wechatLogin() {
+      window.location.href = API_HOST + '/api/auth/wechat'
     }
 
     async function loadUserInfo() {
@@ -369,7 +498,8 @@
         })
         const data = await res.json()
         if (data.code === 200) {
-          document.getElementById('remaining-count').textContent = data.data.remaining_counts
+          document.getElementById('remaining-count-writing').textContent = data.data.remaining_counts
+          document.getElementById('remaining-count-speaking').textContent = data.data.remaining_counts
           checkSubmitEnabled()
         }
       } catch (err) {
@@ -378,34 +508,31 @@
     }
 
     function checkSubmitEnabled() {
-      const content = document.getElementById('content').value.trim()
-      const remaining = parseInt(document.getElementById('remaining-count').textContent)
-      const btn = document.getElementById('submit-btn')
-      
-      if (!content) {
-        btn.disabled = true
-        return
-      }
-      
-      // 如果是会员或者还有次数，允许提交
-      btn.disabled = remaining <= 0
+      const writingContent = document.getElementById('content-writing').value.trim()
+      const speakingContent = document.getElementById('question-speaking').value.trim()
+      document.getElementById('submit-btn-writing').disabled = !writingContent || parseInt(document.getElementById('remaining-count-writing').textContent) <= 0
+      document.getElementById('submit-btn-speaking').disabled = (!speakingContent || !audioBlob) || parseInt(document.getElementById('remaining-count-speaking').textContent) <= 0
     }
 
-    document.getElementById('content').addEventListener('input', checkSubmitEnabled)
-    document.getElementById('question').addEventListener('input', checkSubmitEnabled)
+    document.getElementById('content-writing').addEventListener('input', checkSubmitEnabled)
+    document.getElementById('question-speaking').addEventListener('input', checkSubmitEnabled)
 
-    async function submitCorrection() {
-      const question = document.getElementById('question').value.trim()
-      const content = document.getElementById('content').value.trim()
+    async function submitCorrection(panel) {
+      const examType = selectedExamType[panel]
+      let question, content
+
+      if (panel === 'writing') {
+        question = document.getElementById('question-writing').value.trim()
+        content = document.getElementById('content-writing').value.trim()
+      }
 
       if (!content) {
-        alert('请输入作文内容')
+        alert('请输入内容')
         return
       }
 
       document.getElementById('loading').classList.add('show')
       document.getElementById('result-area').classList.remove('show')
-      document.getElementById('submit-btn').disabled = true
 
       try {
         const res = await fetch(API_HOST + '/api/correct/writing', {
@@ -415,17 +542,15 @@
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            exam_type: selectedExamType,
+            exam_type: examType,
             question: question,
             content: content
           })
         })
-
         const data = await res.json()
         if (data.code === 200) {
           document.getElementById('result-content').textContent = data.data.correction
           document.getElementById('result-area').classList.add('show')
-          document.getElementById('remaining-count').textContent = data.data.remaining
           loadUserInfo()
         } else {
           alert(data.msg || '批改失败，请重试')
@@ -434,7 +559,87 @@
         alert('网络错误，请重试')
       } finally {
         document.getElementById('loading').classList.remove('show')
-        document.getElementById('submit-btn').disabled = false
+      }
+    }
+
+    // 录音功能
+    async function toggleRecording() {
+      if (!isRecording) {
+        // 开始录音
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+        const mediaRecorder = new MediaRecorder(stream)
+        const chunks = []
+
+        mediaRecorder.ondataavailable = e => {
+          chunks.push(e.data)
+        }
+
+        mediaRecorder.onstop = () => {
+          audioBlob = new Blob(chunks, { type: 'audio/wav' })
+          document.getElementById('audio-player').src = URL.createObjectURL(audioBlob)
+          document.getElementById('audio-preview').style.display = 'block'
+          checkSubmitEnabled()
+        }
+
+        mediaRecorder.start()
+        isRecording = true
+        window.mediaRecorder = mediaRecorder
+        document.getElementById('record-btn').textContent = '⏹ 停止录音'
+        document.getElementById('record-btn').classList.add('recording')
+      } else {
+        // 停止录音
+        window.mediaRecorder.stop()
+        isRecording = false
+        document.getElementById('record-btn').textContent = '🎤 开始录音'
+        document.getElementById('record-btn').classList.remove('recording')
+      }
+    }
+
+    async function submitSpeaking() {
+      const examType = selectedExamType.speaking
+      const question = document.getElementById('question-speaking').value.trim()
+
+      if (!question) {
+        alert('请输入题目要求')
+        return
+      }
+
+      if (!audioBlob) {
+        alert('请先录音')
+        return
+      }
+
+      document.getElementById('loading').classList.add('show')
+      document.getElementById('result-area').classList.remove('show')
+
+      const formData = new FormData()
+      formData.append('exam_type', examType)
+      formData.append('question', question)
+      formData.append('audio', audioBlob, 'recording.wav')
+
+      try {
+        const res = await fetch(API_HOST + '/api/correct/speaking', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formData
+        })
+        const data = await res.json()
+        if (data.code === 200) {
+          document.getElementById('result-content').textContent = data.data.correction
+          document.getElementById('result-area').classList.add('show')
+          loadUserInfo()
+          // 清空录音
+          audioBlob = null
+          document.getElementById('audio-preview').style.display = 'none'
+        } else {
+          alert(data.msg || '批改失败，请重试')
+        }
+      } catch (err) {
+        alert('网络错误，请重试')
+      } finally {
+        document.getElementById('loading').classList.remove('show')
       }
     }
 
@@ -451,14 +656,14 @@
       .then(res => res.json())
       .then(data => {
         if (data.code === 200) {
-          // 调用微信支付
+          // 唤起微信支付
           // WeixinJSBridge.invoke('getBrandWCPayRequest', {
           //   "appId": "...",
-          //   "timeStamp": "...",
-          //   "nonceStr": "...",
-          //   "package": "...",
+          //   "timeStamp": data.data.timeStamp,
+          //   "nonceStr": data.data.nonceStr,
+          //   "package": data.data.package,
           //   "signType": "MD5",
-          //   "paySign": data.data.prepay_id
+          //   "paySign": data.data.sign
           // }, function(res){
           //   if(res.err_msg == "get_brand_wcpay_request:ok") {
           //     loadUserInfo()
