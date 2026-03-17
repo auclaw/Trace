@@ -1,41 +1,42 @@
 import React, { useState, useEffect } from 'react'
-import { getTodayActivities, getTodayStats } from '../utils/api'
-import ActivityItem from '../components/ActivityItem'
+import { getTodayStats } from '../utils/api'
+import { checkTrackingStatus } from '../utils/tracking'
 
-interface Activity {
-  id: string
-  name: string
+interface TodayStat {
   category: string
-  duration: number  // 分钟
-  startTime: string
+  seconds: number
 }
 
-interface TodayStats {
-  totalFocus: number      // 总专注分钟
-  totalCategories: number
-  topCategory: string
-}
+interface DashboardProps {}
 
-const Dashboard: React.FC = () => {
-  const [activities, setActivities] = useState<Activity[]>([])
-  const [stats, setStats] = useState<TodayStats | null>(null)
+const Dashboard: React.FC<DashboardProps> = () => {
+  const [stats, setStats] = useState<TodayStat[]>([])
   const [loading, setLoading] = useState(true)
+  const [isTracking, setIsTracking] = useState(false)
 
   useEffect(() => {
     loadData()
     // 每分钟刷新一次
-    const interval = setInterval(loadData, 60000)
+    const interval = setInterval(() => {
+      loadData()
+      checkTrackingStatus().then(status => {
+        setIsTracking(status)
+      })
+    }, 60000)
+    
+    checkTrackingStatus().then(status => {
+      setIsTracking(status)
+    })
+    
     return () => clearInterval(interval)
   }, [])
 
   const loadData = async () => {
     try {
-      const [activitiesRes, statsRes] = await Promise.all([
-        getTodayActivities(),
-        getTodayStats()
-      ])
-      setActivities(activitiesRes.data)
-      setStats(statsRes.data)
+      const res = await getTodayStats()
+      if (res.code === 200) {
+        setStats(res.data)
+      }
     } catch (error) {
       console.error('加载数据失败', error)
     } finally {
@@ -43,13 +44,23 @@ const Dashboard: React.FC = () => {
     }
   }
 
-  const formatDuration = (minutes: number) => {
-    const hours = Math.floor(minutes / 60)
-    const mins = minutes % 60
+  const formatDuration = (seconds: number) => {
+    const totalMinutes = Math.floor(seconds / 60)
+    const hours = Math.floor(totalMinutes / 60)
+    const mins = totalMinutes % 60
     if (hours > 0) {
       return `${hours}小时${mins > 0 ? ` ${mins}分` : ''}`
     }
-    return `${mins}分钟`
+    return `${totalMinutes}分钟`
+  }
+
+  const getTotalTime = () => {
+    return stats.reduce((sum, item) => sum + item.seconds, 0)
+  }
+
+  const getTopCategory = () => {
+    if (stats.length === 0) return '-'
+    return stats.sort((a, b) => b.seconds - a.seconds)[0].category
   }
 
   return (
@@ -63,50 +74,50 @@ const Dashboard: React.FC = () => {
             day: 'numeric',
             weekday: 'long'
           })}
+          {isTracking ? ' • 🔍 正在追踪中' : ' • ⏸️ 追踪已暂停'}
         </p>
       </div>
 
-      {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-            <div className="text-sm font-medium text-gray-500 mb-1">总专注时间</div>
-            <div className="text-3xl font-bold text-gray-900">
-              {formatDuration(stats.totalFocus)}
-            </div>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-            <div className="text-sm font-medium text-gray-500 mb-1">活动分类</div>
-            <div className="text-3xl font-bold text-gray-900">
-              {stats.totalCategories}
-            </div>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-            <div className="text-sm font-medium text-gray-500 mb-1">最多分类</div>
-            <div className="text-3xl font-bold text-blue-600">
-              {stats.topCategory || '-'}
-            </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl shadow-sm p-6 text-white">
+          <div className="text-sm font-medium text-blue-100 mb-1">总记录时间</div>
+          <div className="text-3xl font-bold">
+            {formatDuration(getTotalTime())}
           </div>
         </div>
-      )}
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+          <div className="text-sm font-medium text-gray-500 mb-1">分类数量</div>
+          <div className="text-3xl font-bold text-gray-900">
+            {stats.length}
+          </div>
+        </div>
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+          <div className="text-sm font-medium text-gray-500 mb-1">最久分类</div>
+          <div className="text-3xl font-bold text-blue-600">
+            {getTopCategory()}
+          </div>
+        </div>
+      </div>
 
       <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">今日活动记录</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">分类统计</h3>
         {loading ? (
           <div className="text-center py-8 text-gray-500">加载中...</div>
-        ) : activities.length === 0 ? (
+        ) : stats.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             暂无活动记录，等待系统追踪...
           </div>
         ) : (
-          <div className="space-y-3">
-            {activities
-              .sort((a, b) => b.duration - a.duration)
-              .map(activity => (
-                <ActivityItem 
-                  key={activity.id} 
-                  activity={activity}
-                  formatDuration={formatDuration}
-                />
+          <div className="space-y-4">
+            {stats
+              .sort((a, b) => b.seconds - a.seconds)
+              .map(stat => (
+                <div key={stat.category} className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <span className="text-lg font-medium text-gray-900">{stat.category}</span>
+                  </div>
+                  <span className="text-gray-600 font-medium">{formatDuration(stat.seconds)}</span>
+                </div>
               ))
             }
           </div>
