@@ -1,0 +1,94 @@
+/* 清新绿色版本 - 简约信任感 */
+.container {
+  min-height: 100vh;
+  background-color: #f8faf9;
+}
+
+.banner {
+  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+  padding: 60rpx 30rpx 80rpx;
+  color: white;
+  text-align: center;
+  border-radius: 0 0 40rpx 40rpx;
+}
+
+.banner .title {
+  font-size: 56rpx;
+  font-weight: bold;
+  margin-bottom: 16rpx;
+  letter-spacing: 2rpx;
+}
+
+.banner .subtitle {
+  font-size: 30rpx;
+  opacity: 0.95;
+  margin-bottom: 20rpx;
+  line-height: 1.5;
+}
+
+.banner .hint {
+  font-size: 26rpx;
+  background: rgba(255, 255, 255, 0.2);
+  display: inline-block;
+  padding: 8rpx 28rpx;
+  border-radius: 30rpx;
+}
+
+.function-list {
+  margin-top: -40rpx;
+  padding: 0 30rpx 40rpx;
+}
+
+.function-card {
+  background: white;
+  border-radius: 20rpx;
+  padding: 40rpx 28rpx;
+  margin-bottom: 24rpx;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 8rpx 24rpx rgba(17, 153, 142, 0.08);
+  transition: all 0.3s ease;
+  border: 1rpx solid #e8f5e9;
+}
+
+.function-card:active {
+  transform: scale(0.98);
+}
+
+.function-card .icon {
+  font-size: 56rpx;
+  margin-right: 28rpx;
+}
+
+.function-card .info {
+  flex: 1;
+}
+
+.function-card .info .name {
+  font-size: 34rpx;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 8rpx;
+}
+
+.function-card .info .desc {
+  font-size: 26rpx;
+  color: #7f8c8d;
+  line-height: 1.5;
+}
+
+.function-card .arrow {
+  color: #bdc3c7;
+  font-size: 36rpx;
+}
+
+.disclaimer {
+  margin: 40rpx 30rpx;
+  text-align: center;
+}
+
+.disclaimer-text {
+  font-size: 24rpx;
+  color: #95a5a6;
+  line-height: 1.6;
+}
