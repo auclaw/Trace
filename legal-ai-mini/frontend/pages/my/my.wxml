@@ -1,0 +1,68 @@
+<!--my.wxml-->
+<view class="container">
+  <view class="user-card">
+    <view class="avatar">👤</view>
+    <view class="user-info">
+      <view class="nickname">{{nickname}}</view>
+      <view class="vip-info" wx:if="{{isVip}}">
+        <text class="vip-tag">VIP会员</text>
+        <text>到期时间：{{expireDate}}</text>
+      </view>
+      <view class="vip-info" wx:else>
+        <text class="not-vip">非会员</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="menu-list">
+    <view class="menu-item" bindtap="goToBuy">
+      <view class="menu-icon">💎</view>
+      <view class="menu-text">开通会员</view>
+      <view class="arrow">></view>
+    </view>
+
+    <view class="menu-item">
+      <view class="menu-icon">📊</view>
+      <view class="menu-text">今日剩余：{{remaining}} 次</view>
+      <view class="arrow"></view>
+    </view>
+
+    <view class="menu-item">
+      <view class="menu-icon">📖</view>
+      <view class="menu-text">使用帮助</view>
+      <view class="arrow">></view>
+    </view>
+  </view>
+
+  <view class="price-list" wx:if="{{!isVip}}">
+    <view class="title">选择会员套餐</view>
+    
+    <view class="price-card {{selected === 1 ? 'selected' : ''}}" bindtap="selectPrice" data-index="1">
+      <view class="price-tag">热门</view>
+      <view class="info">
+        <view class="name">月卡</view>
+        <view class="price">¥<text>29.9</text></view>
+      </view>
+      <view class="checkmark" wx:if="{{selected === 1}}">✓</view>
+    </view>
+
+    <view class="price-card {{selected === 2 ? 'selected' : ''}}" bindtap="selectPrice" data-index="2">
+      <view class="price-tag discount">最划算</view>
+      <view class="info">
+        <view class="name">年卡</view>
+        <view class="price">¥<text>199</text></view>
+      </view>
+      <view class="checkmark" wx:if="{{selected === 2}}">✓</view>
+    </view>
+
+    <button class="buy-btn" bindtap="buyVip">
+      立即开通
+    </button>
+  </view>
+
+  <view class="disclaimer">
+    <text class="disclaimer-text">
+      免责声明：本工具提供的内容仅供参考，不构成专业法律意见，具体问题请咨询执业律师。
+    </text>
+  </view>
+</view>

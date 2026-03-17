@@ -1,0 +1,36 @@
+<!--review.wxml-->
+<view class="container">
+  <view class="input-area">
+    <textarea 
+      placeholder="请粘贴需要审查的合同内容..." 
+      value="{{contractText}}"
+      bindinput="onInput"
+      maxlength="5000"
+      auto-height
+    />
+  </view>
+
+  <view class="remaining-hint" wx:if="{{remaining > 0}}">
+    今日剩余 <text class="number">{{remaining}}</text> 次免费使用
+  </view>
+  <view class="remaining-hint no-quota" wx:else>
+    今日免费次数已用完，请开通会员继续使用
+  </view>
+
+  <button 
+    class="submit-btn {{disabled ? 'disabled' : ''}}" 
+    bindtap="submitReview"
+    disabled="{{disabled}}"
+  >
+    开始审查
+  </button>
+
+  <view class="result-area" wx:if="{{result}}">
+    <view class="result-title">审查结果：</view>
+    <view class="result-content">{{result}}</view>
+  </view>
+
+  <view class="loading" wx:if="{{loading}}">
+    <text>AI正在审查中，请稍候...</text>
+  </view>
+</view>

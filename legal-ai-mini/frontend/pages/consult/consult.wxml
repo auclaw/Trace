@@ -1,0 +1,36 @@
+<!--consult.wxml-->
+<view class="container">
+  <view class="input-area">
+    <textarea 
+      placeholder="请输入你的法律问题，例如：试用期没签合同违法吗？借钱不还怎么办？" 
+      value="{{question}}"
+      bindinput="onInput"
+      maxlength="1000"
+      auto-height
+    />
+  </view>
+
+  <view class="remaining-hint" wx:if="{{remaining > 0}}">
+    今日剩余 <text class="number">{{remaining}}</text> 次免费使用
+  </view>
+  <view class="remaining-hint no-quota" wx:else>
+    今日免费次数已用完，请开通会员继续使用
+  </view>
+
+  <button 
+    class="submit-btn {{disabled ? 'disabled' : ''}}" 
+    bindtap="submitQuestion"
+    disabled="{{disabled}}"
+  >
+    提交问题
+  </button>
+
+  <view class="result-area" wx:if="{{answer}}">
+    <view class="result-title">AI 解答：</view>
+    <view class="result-content">{{answer}}</view>
+  </view>
+
+  <view class="loading" wx:if="{{loading}}">
+    <text>AI正在思考中，请稍候...</text>
+  </view>
+</view>

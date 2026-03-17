@@ -1,0 +1,82 @@
+.container {
+  min-height: 100vh;
+  background-color: #f5f5f5;
+}
+
+.banner {
+  background: linear-gradient(135deg, #1677ff 0%, #4096ff 100%);
+  padding: 40rpx 30rpx 60rpx;
+  color: white;
+  text-align: center;
+}
+
+.banner .title {
+  font-size: 48rpx;
+  font-weight: bold;
+  margin-bottom: 16rpx;
+}
+
+.banner .subtitle {
+  font-size: 28rpx;
+  opacity: 0.9;
+  margin-bottom: 16rpx;
+}
+
+.banner .hint {
+  font-size: 24rpx;
+  background: rgba(255, 255, 255, 0.2);
+  display: inline-block;
+  padding: 8rpx 24rpx;
+  border-radius: 30rpx;
+}
+
+.function-list {
+  margin-top: -30rpx;
+  padding: 0 30rpx;
+}
+
+.function-card {
+  background: white;
+  border-radius: 16rpx;
+  padding: 32rpx 24rpx;
+  margin-bottom: 20rpx;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.05);
+}
+
+.function-card .icon {
+  font-size: 48rpx;
+  margin-right: 24rpx;
+}
+
+.function-card .info {
+  flex: 1;
+}
+
+.function-card .info .name {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8rpx;
+}
+
+.function-card .info .desc {
+  font-size: 26rpx;
+  color: #999;
+}
+
+.function-card .arrow {
+  color: #ccc;
+  font-size: 32rpx;
+}
+
+.disclaimer {
+  margin: 40rpx 30rpx;
+  text-align: center;
+}
+
+.disclaimer-text {
+  font-size: 22rpx;
+  color: #999;
+}

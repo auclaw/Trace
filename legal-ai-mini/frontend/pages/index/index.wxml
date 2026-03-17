@@ -1,0 +1,41 @@
+<!--index.wxml-->
+<view class="container">
+  <view class="banner">
+    <view class="title">法律AI小工具</view>
+    <view class="subtitle">平价AI法律咨询 · 合同审查 · 文书生成</view>
+    <view class="hint">每日免费使用一次</view>
+  </view>
+
+  <view class="function-list">
+    <view class="function-card" bindtap="goToConsult">
+      <view class="icon">💬</view>
+      <view class="info">
+        <view class="name">AI法律咨询</view>
+        <view class="desc">你的法律问题，AI快速解答</view>
+      </view>
+      <view class="arrow">></view>
+    </view>
+
+    <view class="function-card" bindtap="goToReview">
+      <view class="icon">📄</view>
+      <view class="info">
+        <view class="name">合同审查</view>
+        <view class="desc">帮你找出合同潜在风险</view>
+      </view>
+      <view class="arrow">></view>
+    </view>
+
+    <view class="function-card" bindtap="goToGenerate">
+      <view class="icon">📝</view>
+      <view class="info">
+        <view class="name">文书生成</view>
+        <view class="desc">借条/合同/证明一键生成</view>
+      </view>
+      <view class="arrow">></view>
+    </view>
+  </view>
+
+  <view class="disclaimer">
+    <text class="disclaimer-text">本工具仅供参考，不构成专业法律意见</text>
+  </view>
+</view>

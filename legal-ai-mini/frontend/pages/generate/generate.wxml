@@ -1,0 +1,47 @@
+<!--generate.wxml-->
+<view class="container">
+  <view class="form-item">
+    <view class="label">文书类型</view>
+    <picker mode="selector" range="{{docTypes}}" bindchange="onTypeChange">
+      <view class="picker">
+        {{docTypes[currentTypeIndex]}}
+      </view>
+    </picker>
+  </view>
+
+  <view class="form-item">
+    <view class="label">相关信息</view>
+    <textarea 
+      placeholder="请填写相关信息，比如：借条，借款人张三，身份证xxx，出借人李四，借款金额1万元，还款日2024年12月31日..." 
+      value="{{userInfo}}"
+      bindinput="onInput"
+      maxlength="2000"
+      auto-height
+    />
+  </view>
+
+  <view class="remaining-hint" wx:if="{{remaining > 0}}">
+    今日剩余 <text class="number">{{remaining}}</text> 次免费使用
+  </view>
+  <view class="remaining-hint no-quota" wx:else>
+    今日免费次数已用完，请开通会员继续使用
+  </view>
+
+  <button 
+    class="submit-btn {{disabled ? 'disabled' : ''}}" 
+    bindtap="submitGenerate"
+    disabled="{{disabled}}"
+  >
+    生成文书
+  </button>
+
+  <view class="result-area" wx:if="{{document}}">
+    <view class="result-title">生成结果：</view>
+    <view class="result-content">{{document}}</view>
+    <button class="copy-btn" bindtap="copyResult">复制内容</button>
+  </view>
+
+  <view class="loading" wx:if="{{loading}}">
+    <text>AI正在生成，请稍候...</text>
+  </view>
+</view>
