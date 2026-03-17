@@ -42,6 +42,14 @@ Page({
     })
   },
 
+  // 用户点击例子，直接填充
+  useExample: function(e) {
+    const text = e.currentTarget.dataset.text
+    this.setData({
+      contractText: text
+    })
+  },
+
   submitReview: function() {
     const contractText = this.data.contractText.trim()
     

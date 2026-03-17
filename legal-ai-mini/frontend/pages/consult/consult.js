@@ -42,6 +42,14 @@ Page({
     })
   },
 
+  // 用户点击例子，直接填充
+  useExample: function(e) {
+    const text = e.currentTarget.dataset.text
+    this.setData({
+      question: text
+    })
+  },
+
   submitQuestion: function() {
     const question = this.data.question.trim()
     

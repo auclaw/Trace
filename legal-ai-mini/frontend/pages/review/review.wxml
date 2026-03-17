@@ -1,8 +1,19 @@
 <!--review.wxml-->
 <view class="container">
+  <!-- 引导卡片 -->
+  <view class="guide-card">
+    <view class="guide-title">📄 合同审查</view>
+    <view class="guide-subtitle">粘贴合同内容，AI帮你找风险条款</view>
+    <view class="example-list">
+      <view class="example-item" bindtap="useExample" data-text="出租人：张三 承租人：李四 租赁期限：1年 租金：每月3000元...">
+        👉 点击看例子（租房合同片段）
+      </view>
+    </view>
+  </view>
+
   <view class="input-area">
     <textarea 
-      placeholder="请粘贴需要审查的合同内容..." 
+      placeholder="在这里粘贴需要审查的合同内容..." 
       value="{{contractText}}"
       bindinput="onInput"
       maxlength="5000"
@@ -22,15 +33,18 @@
     bindtap="submitReview"
     disabled="{{disabled}}"
   >
-    开始审查
+    👉 开始审查
   </button>
 
-  <view class="result-area" wx:if="{{result}}">
-    <view class="result-title">审查结果：</view>
-    <view class="result-content">{{result}}</view>
+  <view class="loading" wx:if="{{loading}}">
+    <text>⏳ AI正在审查中，请稍候...</text>
   </view>
 
-  <view class="loading" wx:if="{{loading}}">
-    <text>AI正在审查中，请稍候...</text>
+  <view class="result-area" wx:if="{{result}}">
+    <view class="result-title">✅ 审查结果：</view>
+    <view class="result-content">{{result}}</view>
+    <view class="disclaimer-note">
+      ⚠️ 本审查结果仅供参考，不构成专业法律意见
+    </view>
   </view>
 </view>

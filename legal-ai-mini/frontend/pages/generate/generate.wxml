@@ -1,7 +1,13 @@
 <!--generate.wxml-->
 <view class="container">
+  <!-- 引导卡片 -->
+  <view class="guide-card">
+    <view class="guide-title">📝 法律文书生成</view>
+    <view class="guide-subtitle">选择类型，填写信息，AI帮你生成标准法律文书</view>
+  </view>
+
   <view class="form-item">
-    <view class="label">文书类型</view>
+    <view class="label">选择文书类型</view>
     <picker mode="selector" range="{{docTypes}}" bindchange="onTypeChange">
       <view class="picker">
         {{docTypes[currentTypeIndex]}}
@@ -10,9 +16,10 @@
   </view>
 
   <view class="form-item">
-    <view class="label">相关信息</view>
+    <view class="label">填写相关信息</view>
+    <view class="hint-text">把关键信息写上，比如谁，多少钱，日期</view>
     <textarea 
-      placeholder="请填写相关信息，比如：借条，借款人张三，身份证xxx，出借人李四，借款金额1万元，还款日2024年12月31日..." 
+      placeholder="例如：借条，借款人：张三，身份证：xxx，出借人：李四，借款金额：10000元，还款日：2024年12月31日" 
       value="{{userInfo}}"
       bindinput="onInput"
       maxlength="2000"
@@ -32,16 +39,19 @@
     bindtap="submitGenerate"
     disabled="{{disabled}}"
   >
-    生成文书
+    👉 生成文书
   </button>
 
-  <view class="result-area" wx:if="{{document}}">
-    <view class="result-title">生成结果：</view>
-    <view class="result-content">{{document}}</view>
-    <button class="copy-btn" bindtap="copyResult">复制内容</button>
+  <view class="loading" wx:if="{{loading}}">
+    <text>⏳ AI正在生成，请稍候...</text>
   </view>
 
-  <view class="loading" wx:if="{{loading}}">
-    <text>AI正在生成，请稍候...</text>
+  <view class="result-area" wx:if="{{document}}">
+    <view class="result-title">✅ 生成结果：</view>
+    <view class="result-content">{{document}}</view>
+    <button class="copy-btn" bindtap="copyResult">📋 复制内容</button>
+    <view class="disclaimer-note">
+      ⚠️ 本文书仅供参考，使用前请核对信息准确
+    </view>
   </view>
 </view>

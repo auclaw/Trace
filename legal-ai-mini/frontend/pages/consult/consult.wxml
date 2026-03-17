@@ -1,8 +1,22 @@
 <!--consult.wxml-->
 <view class="container">
+  <!-- 引导卡片 大字简单明了，适合普通人 -->
+  <view class="guide-card">
+    <view class="guide-title">💬 你有什么法律问题？</view>
+    <view class="guide-subtitle">直接输入问题，AI免费给你解答</view>
+    <view class="example-list">
+      <view class="example-item" bindtap="useExample" data-text="试用期没签劳动合同，自己辞职有赔偿吗？">
+        👉 例子：试用期没签合同有赔偿吗？
+      </view>
+      <view class="example-item" bindtap="useExample" data-text="朋友欠钱不还，怎么起诉？需要准备什么？">
+        👉 例子：朋友欠钱不还怎么办？
+      </view>
+    </view>
+  </view>
+
   <view class="input-area">
     <textarea 
-      placeholder="请输入你的法律问题，例如：试用期没签合同违法吗？借钱不还怎么办？" 
+      placeholder="在这里输入你的问题..." 
       value="{{question}}"
       bindinput="onInput"
       maxlength="1000"
@@ -22,15 +36,18 @@
     bindtap="submitQuestion"
     disabled="{{disabled}}"
   >
-    提交问题
+    👉 提交问题
   </button>
 
-  <view class="result-area" wx:if="{{answer}}">
-    <view class="result-title">AI 解答：</view>
-    <view class="result-content">{{answer}}</view>
+  <view class="loading" wx:if="{{loading}}">
+    <text>⏳ AI正在思考中，请稍候...</text>
   </view>
 
-  <view class="loading" wx:if="{{loading}}">
-    <text>AI正在思考中，请稍候...</text>
+  <view class="result-area" wx:if="{{answer}}">
+    <view class="result-title">✅ AI 解答：</view>
+    <view class="result-content">{{answer}}</view>
+    <view class="disclaimer-note">
+      ⚠️ 本回答仅供参考，不构成专业法律意见
+    </view>
   </view>
 </view>
