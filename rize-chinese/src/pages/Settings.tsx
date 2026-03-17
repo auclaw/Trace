@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { getSettings, saveSettings, toggleTracking } from '../utils/api'
+import { logout } from '../utils/auth'
 
 interface SettingsData {
   aiApiKey: string
@@ -48,6 +49,12 @@ const Settings: React.FC = () => {
   const handleToggleTracking = async () => {
     const newStatus = await toggleTracking(!trackingStatus)
     setTrackingStatus(newStatus)
+  }
+
+  const handleLogout = () => {
+    if (confirm('确定要退出登录吗？')) {
+      logout()
+    }
   }
 
   return (
@@ -149,6 +156,15 @@ const Settings: React.FC = () => {
               ✓ 设置已保存
             </p>
           )}
+        </div>
+
+        <div className="pt-4 border-t border-gray-100">
+          <button 
+            onClick={handleLogout}
+            className="w-full px-4 py-3 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200"
+          >
+            退出登录
+          </button>
         </div>
       </div>
 
