@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>法律AI小工具 - 在线Demo</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background-color: #f5f5f5f;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .header h1 {
+      color: #1677ff;
+      font-size: 32px;
+      margin-bottom: 12px;
+    }
+
+    .header p {
+      color: #666;
+      font-size: 16px;
+    }
+
+    .demo-note {
+      background: #e6f7ff;
+      border: 1px solid #91d5ff;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 30px;
+    }
+
+    .demo-note p {
+      color: #1677ff;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .tabs {
+      display: flex;
+      background: white;
+      border-radius: 12px;
+      padding: 8px;
+      margin-bottom: 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .tab {
+      flex: 1;
+      text-align: center;
+      padding: 12px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 15px;
+      color: #666;
+      transition: all 0.3s;
+    }
+
+    .tab.active {
+      background: #1677ff;
+      color: white;
+    }
+
+    .panel {
+      background: white;
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      margin-bottom: 30px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      color: #333;
+      font-size: 15px;
+      font-weight: 500;
+      margin-bottom: 10px;
+    }
+
+    .form-group textarea {
+      width: 100%;
+      min-height: 160px;
+      padding: 12px 16px;
+      border: 1px solid #d9d9d9;
+      border-radius: 8px;
+      font-size: 15px;
+      line-height: 1.6;
+      resize: vertical;
+      font-family: inherit;
+    }
+
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #1677ff;
+      box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.2);
+    }
+
+    .doc-type-select {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .doc-type-item {
+      border: 1px solid #d9d9d9;
+      border-radius: 8px;
+      padding: 12px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .doc-type-item:hover {
+      border-color: #1677ff;
+    }
+
+    .doc-type-item.selected {
+      background: #e6f7ff;
+      border-color: #1677ff;
+      color: #1677ff;
+    }
+
+    .doc-type-item span {
+      font-size: 15px;
+    }
+
+    .submit-btn {
+      width: 100%;
+      background: #1677ff;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 14px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .submit-btn:hover:not(:disabled) {
+      background: #4096ff;
+    }
+
+    .submit-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .result-area {
+      margin-top: 24px;
+      display: none;
+    }
+
+    .result-area.show {
+      display: block;
+    }
+
+    .result-title {
+      font-size: 16px;
+      font-weight: 500;
+      color: #333;
+      margin-bottom: 12px;
+    }
+
+    .result-content {
+      background: #fafafa;
+      border: 1px solid #e8e8e8;
+      border-radius: 8px;
+      padding: 20px;
+      white-space: pre-wrap;
+      line-height: 1.8;
+      font-size: 15px;
+      color: #444;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #999;
+      display: none;
+    }
+
+    .loading.show {
+      display: block;
+    }
+
+    .remaining {
+      text-align: center;
+      color: #666;
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+
+    .remaining span {
+      color: #1677ff;
+      font-weight: 500;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 40px;
+      padding-top: 30px;
+      border-top: 1px solid #e8e8e8;
+      color: #999;
+      font-size: 14px;
+    }
+
+    .price-info {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+
+    .price-item {
+      background: #f0f0f0;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>⚖️ 法律AI小工具</h1>
+      <p>平价AI法律咨询 · 合同审查 · 文书生成 - 在线演示Demo</p>
+    </div>
+
+    <div class="demo-note">
+      <p>👉 这是演示demo，模拟产品交互效果。AI回答是预制的示例，实际使用调用大模型API生成真实回答。</p>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" data-tab="consult" onclick="switchTab('consult')">💬 AI法律咨询</div>
+      <div class="tab" data-tab="review" onclick="switchTab('review')">📄 合同审查</div>
+      <div class="tab" data-tab="generate" onclick="switchTab('generate')">📝 文书生成</div>
+    </div>
+
+    <!-- 法律咨询 -->
+    <div id="panel-consult" class="panel">
+      <div class="remaining">今日剩余免费次数: <span id="remaining-consult">1</span></div>
+      <div class="form-group">
+        <label>输入你的法律问题</label>
+        <textarea id="question" placeholder="例如：试用期没签劳动合同，自己辞职有赔偿吗？"></textarea>
+      </div>
+      <button class="submit-btn" id="btn-consult" onclick="submitConsult()">提交问题</button>
+      <div class="loading" id="loading-consult">
+        AI正在思考中，请稍候...
+      </div>
+      <div class="result-area" id="result-consult">
+        <div class="result-title">AI 解答：</div>
+        <div class="result-content" id="result-content-consult"></div>
+      </div>
+    </div>
+
+    <!-- 合同审查 -->
+    <div id="panel-review" class="panel" style="display: none;">
+      <div class="remaining">今日剩余免费次数: <span id="remaining-review">1</span></div>
+      <div class="form-group">
+        <label>粘贴需要审查的合同内容</label>
+        <textarea id="contract-text" placeholder="粘贴你的合同文本，AI帮你找风险..."></textarea>
+      </div>
+      <button class="submit-btn" id="btn-review" onclick="submitReview">开始审查</button>
+      <div class="loading" id="loading-review">
+        AI正在审查中，请稍候...
+      </div>
+      <div class="result-area" id="result-review">
+        <div class="result-title">审查结果：</div>
+        <div class="result-content" id="result-content-review"></div>
+      </div>
+    </div>
+
+    <!-- 文书生成 -->
+    <div id="panel-generate" class="panel" style="display: none;">
+      <div class="remaining">今日剩余免费次数: <span id="remaining-generate">1</span></div>
+      <div class="form-group">
+        <label>选择文书类型</label>
+        <div class="doc-type-select" id="doc-types">
+          <div class="doc-type-item selected" data-type="借条" onclick="selectDocType(this)">
+            <span>借条</span>
+          </div>
+          <div class="doc-type-item" data-type="租房合同" onclick="selectDocType(this)">
+            <span>租房合同</span>
+          </div>
+          <div class="doc-type-item" data-type="离职证明" onclick="selectDocType(this)">
+            <span>离职证明</span>
+          </div>
+          <div class="doc-type-item" data-type="离婚协议书" onclick="selectDocType(this)">
+            <span>离婚协议书</span>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>填写相关信息</label>
+        <textarea id="doc-info" placeholder="例如：借款人：张三，身份证xxx，出借人：李四，借款金额：10000元，还款日：2024年12月31日"></textarea>
+      </div>
+      <button class="submit-btn" id="btn-generate" onclick="submitGenerate()">生成文书</button>
+      <div class="loading" id="loading-generate">
+        AI正在生成中，请稍候...
+      </div>
+      <div class="result-area" id="result-generate">
+        <div class="result-title">生成结果：</div>
+        <div class="result-content" id="result-content-generate"></div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div><strong>价格体系（正式版）</strong></div>
+      <div class="price-info">
+        <span class="price-item">每日免费 1 次</span>
+        <span class="price-item">单次咨询 ¥9.9</span>
+        <span class="price-item">月卡无限 ¥29.9</span>
+        <span class="price-item">年卡 ¥199</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 预制示例回答，模拟demo效果
+    const sampleAnswers = {
+      '试用期没签劳动合同，自己辞职有赔偿吗？': `根据中国劳动合同法，如果用人单位超过一个月没有与你签订书面劳动合同，从第二个月开始，你可以要求单位支付双倍工资。
+
+如果你是自己主动辞职，经济补偿这一块没有，但双倍工资这部分还是可以主张的。
+
+建议你：
+1. 收集好你在这里工作的证据（考勤记录、工资流水、工作沟通记录）
+2. 和单位协商，协商不成可以去劳动监察投诉或者申请劳动仲裁
+3. 你的情况金额不大，一般调解就能解决，不用太担心
+
+⚠️ 本回答仅供参考，不构成专业法律意见，复杂问题建议咨询当地律师。`,
+
+      'default-consult': `你的问题我收到了，正式版本会调用大模型生成专业解答。
+
+这个演示demo只是给你看看交互界面，实际使用会连接文心一言/豆包API生成真实回答。`,
+
+      'review': `以下是这份合同的风险审查要点：
+
+## 1. 风险条款提示
+- 违约金比例过高（超过实际损失30%），如果发生争议有可能被法院调整
+- 管辖条款约定在对方所在地，你如果要起诉会比较麻烦
+- 押金退还条件写得模糊，容易发生争议
+
+## 2. 建议修改
+- 违约金调整到合理范围
+- 押金退还时间明确写出"合同到期后7日内退还"
+- 管辖可以争取约定在你所在地法院
+
+整体来说这份合同大问题没有，就是一些细节需要明确清楚。`,
+
+      'generate':  `# 借条
+
+借款人：**[借款人姓名]** 身份证号码：**[身份证号]**
+出借人：**[出借人姓名]** 身份证号码：**[身份证号]**
+
+## 借款金额
+今借款人向出借人借到人民币 **______元整（大写：______圆整）**。
+
+## 借款用途
+借款用于：____________________
+
+## 还款日期
+借款人承诺于 ______年______月______日前一次性还清。
+
+## 利息约定
+双方约定利息为：______%/年，利息随本金一并还清。
+
+## 违约责任
+如果借款人到期不还款，出借人为追讨债权产生的律师费、诉讼费由借款人承担。
+
+借款人签字：____________ 日期：________
+出借人签字：____________ 日期：________
+
+---
+以上是根据你提供信息生成的标准借条模板，你可以直接打印签字使用。`
+    };
+
+    let currentTab = 'consult';
+    let selectedDocType = '借条';
+
+    function switchTab(tab) {
+      currentTab = tab;
+      // 更新tab样式
+      document.querySelectorAll('.tab').forEach(t => {
+        t.classList.remove('active');
+      });
+      document.querySelector(`.tab[data-tab="${tab}"]`).classList.add('active');
+      // 隐藏其他panel
+      document.querySelectorAll('.panel').forEach(p => {
+        p.style.display = 'none';
+      });
+      document.getElementById(`panel-${tab}`).style.display = 'block';
+    }
+
+    function selectDocType(el) {
+      document.querySelectorAll('#doc-types .doc-type-item').forEach(i => {
+        i.classList.remove('selected');
+      });
+      el.classList.add('selected');
+      selectedDocType = el.getAttribute('data-type');
+    }
+
+    function showLoading(tab, show) {
+      const loading = document.getElementById(`loading-${tab}`);
+      const btn = document.getElementById(`btn-${tab}`);
+      if (show) {
+        loading.classList.add('show');
+        btn.disabled = true;
+      } else {
+        loading.classList.remove('show');
+        btn.disabled = false;
+      }
+    }
+
+    function showResult(tab, content) {
+      const resultArea = document.getElementById(`result-${tab}`);
+      const resultContent = document.getElementById(`result-content-${tab}`);
+      resultContent.textContent = content;
+      resultArea.classList.add('show');
+    }
+
+    function decreaseRemaining(tab) {
+      const el = document.getElementById(`remaining-${tab}`);
+      let current = parseInt(el.textContent);
+      if (current > 0) {
+        el.textContent = current - 1;
+      }
+    }
+
+    function submitConsult() {
+      const question = document.getElementById('question').value.trim();
+      if (!question) {
+        alert('请输入你的问题');
+        return;
+      }
+
+      showLoading('consult', true);
+
+      // 模拟AI请求延迟
+      setTimeout(() => {
+        let answer = sampleAnswers[question];
+        if (!answer) {
+          answer = sampleAnswers['default-consult'];
+        }
+        showResult('consult', answer);
+        showLoading('consult', false);
+        decreaseRemaining('consult');
+      }, 1500);
+    }
+
+    function submitReview() {
+      const text = document.getElementById('contract-text').value.trim();
+      if (!text) {
+        alert('请粘贴合同内容');
+        return;
+      }
+
+      showLoading('review', true);
+
+      setTimeout(() => {
+        showResult('review', sampleAnswers['review']);
+        showLoading('review', false);
+        decreaseRemaining('review');
+      }, 1500);
+    }
+
+    function submitGenerate() {
+      const info = document.getElementById('doc-info').value.trim();
+      if (!info) {
+        alert('请填写相关信息');
+        return;
+      }
+
+      showLoading('generate', true);
+
+      setTimeout(() => {
+        let result = sampleAnswers['generate'].replace(/\[.*\]/g, '').trim();
+        // 替换变量
+        result = result.replace('**[借款人姓名]**', '借款人：' + selectedDocType + ' - ' + info.split('\n')[0] || '');
+        showResult('generate', result);
+        showLoading('generate', false);
+        decreaseRemaining('generate');
+      }, 1500);
+    }
+
+    // 绑定事件
+    document.getElementById('btn-consult').addEventListener('click', submitConsult);
+  </script>
+</body>
+</html>
