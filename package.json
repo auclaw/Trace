@@ -10,15 +10,19 @@
     "tauri": "tauri"
   },
   "dependencies": {
+    "@tauri-apps/api": "^2.1.0",
+    "html-to-image": "^1.11.11",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "recharts": "^2.10.3"
+    "react-router-dom": "^7.13.1",
+    "recharts": "^2.10.3",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
-    "@tauri-apps/api": "^1.5.0",
-    "@tauri-apps/cli": "^1.5.0",
+    "@tauri-apps/cli": "^2.1.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
+    "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react": "^4.2.0",
     "autoprefixer": "^10.4.16",
     "postcss": "^8.4.32",

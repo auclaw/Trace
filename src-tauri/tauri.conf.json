@@ -1,9 +1,8 @@
 {
-  "$schema": "https://schema.tauri.app/config/1.0.0",
-  "package": {
-    "productName": "rize-chinese",
-    "version": "1.0.0"
-  },
+  "$schema": "https://schema.tauri.app/config/2.0.0",
+  "productName": "merize",
+  "version": "1.0.0",
+  "identifier": "io.merize.app",
   "build": {
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build",
@@ -11,21 +10,23 @@
     "frontendDist": "../dist"
   },
   "app": {
-    "withGlobalTauri": true
+    "withGlobalTauri": true,
+    "security": {
+      "csp": null
+    }
   },
   "bundle": {
     "active": true,
     "targets": ["dmg", "msi", "appimage"],
-    "identifier": "com.yourname.rizechinese",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
-  },
-  "security": {
-    "csp": null
+    ],
+    "macOS": {
+      "entitlements": "entitlements.plist"
+    }
   }
 }

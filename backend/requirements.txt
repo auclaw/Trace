@@ -2,4 +2,4 @@ flask
 flask-cors
 pyjwt
 openai
-sqlite3
+requests

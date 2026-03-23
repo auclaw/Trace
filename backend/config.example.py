@@ -12,5 +12,14 @@ DOUBAN_API_KEY = ''  # 字节豆包
 WECHAT_APP_ID = ''
 WECHAT_APP_SECRET = ''
 
-# 短信API密钥，手机号验证码登录需要（阿里云/腾讯云）
-SMS_API_KEY = ''
+# 微信支付配置
+WECHAT_PAY_MCH_ID = ''  # 微信支付商户号
+WECHAT_PAY_API_KEY = ''  # 微信支付API密钥
+WECHAT_PAY_NOTIFY_URL = ''  # 支付回调通知URL
+
+# 短信配置（阿里云）
+SMS_PROVIDER = 'alicloud'  # alicloud or tencent
+SMS_ACCESS_KEY_ID = ''  # 阿里云AccessKey ID
+SMS_ACCESS_KEY_SECRET = ''  # 阿里云AccessKey Secret
+SMS_SIGN_NAME = ''  # 短信签名名称
+SMS_TEMPLATE_CODE = ''  # 短信模板CODE

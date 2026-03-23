@@ -1,10 +1,10 @@
 // auth.ts - 用户认证工具，支持手机号验证码登录和微信登录
 
-const API_HOST = import.meta.env.VITE_API_HOST || 'https://your-backend-domain.com'
+const API_HOST = import.meta.env.VITE_API_HOST || 'http://localhost:5000'
 
 // 检查是否已登录
 export async function checkAuth(): Promise<boolean> {
-  const token = localStorage.getItem('rize_token')
+  const token = localStorage.getItem('merize_token')
   if (!token) {
     return false
   }
@@ -32,7 +32,7 @@ export async function loginWithPhone(phone: string, code: string): Promise<void>
   })
   const data = await res.json()
   if (data.code === 200) {
-    localStorage.setItem('rize_token', data.data.token)
+    localStorage.setItem('merize_token', data.data.token)
   } else {
     throw new Error(data.msg || '登录失败')
   }
@@ -46,11 +46,25 @@ export async function loginWechat(): Promise<void> {
 
 // 退出登录
 export function logout(): void {
-  localStorage.removeItem('rize_token')
+  localStorage.removeItem('merize_token')
   window.location.reload()
 }
 
 // 获取当前token
 export function getToken(): string | null {
-  return localStorage.getItem('rize_token')
+  return localStorage.getItem('merize_token')
+}
+
+// 发送验证码
+export async function sendCode(phone: string): Promise<void> {
+  const res = await fetch(`${API_HOST}/api/auth/send-code`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ phone })
+  })
+  if (!res.ok) {
+    throw new Error('发送失败')
+  }
 }

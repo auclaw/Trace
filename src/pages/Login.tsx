@@ -1,15 +1,18 @@
-import React, { useState } from 'react'
-import { loginWithPhone, loginWechat } from '../utils/auth'
+import { useState } from 'react'
+import { loginWithPhone, loginWechat, sendCode } from '../utils/auth'
+import type { Theme } from '../App'
 
 interface LoginProps {
+  theme: Theme
   onLoginSuccess: () => void
 }
 
-export default function Login({ onLoginSuccess }: LoginProps) {
+export default function Login({ theme, onLoginSuccess }: LoginProps) {
   const [phone, setPhone] = useState('')
   const [code, setCode] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const isDark = theme === 'dark'
 
   const handleSendCode = async () => {
     if (!phone.match(/^1[3-9]\d{9}$/)) {
@@ -19,7 +22,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
     setError('')
     // 调用后端API发送验证码
     try {
-      // await sendCode(phone)
+      await sendCode(phone)
       setError('验证码已发送')
     } catch (err) {
       setError('发送失败，请重试')
@@ -50,22 +53,30 @@ export default function Login({ onLoginSuccess }: LoginProps) {
     }
   }
 
+  const bgGradient = isDark
+    ? 'from-gray-800 to-gray-900'
+    : 'from-blue-50 to-indigo-100'
+  const cardBg = isDark ? 'bg-gray-800' : 'bg-white'
+  const titleColor = isDark ? 'text-white' : 'text-gray-900'
+  const textColor = isDark ? 'text-gray-300' : 'text-gray-500'
+  const borderColor = isDark ? 'border-gray-600' : 'border-gray-300'
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
+    <div className={`min-h-screen flex items-center justify-center bg-gradient-to-br ${bgGradient} px-4 transition-colors duration-200`}>
       <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl shadow-xl p-8">
+        <div className={`${cardBg} rounded-2xl shadow-xl p-8 transition-colors duration-200`}>
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Rize 中文
+            <h1 className={`text-3xl font-bold ${titleColor} mb-2`}>
+              Merize
             </h1>
-            <p className="text-gray-500">
+            <p className={textColor}>
               AI 自动时间追踪，帮你看清时间去哪里了
             </p>
           </div>
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
                 手机号
               </label>
               <input
@@ -73,13 +84,15 @@ export default function Login({ onLoginSuccess }: LoginProps) {
                 placeholder="请输入手机号"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className={`w-full px-4 py-2 border ${borderColor} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                  isDark ? 'bg-gray-700 text-white' : 'bg-white text-gray-900'
+                }`}
               />
             </div>
 
             <div className="flex gap-3">
               <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
                   验证码
                 </label>
                 <input
@@ -87,13 +100,15 @@ export default function Login({ onLoginSuccess }: LoginProps) {
                   placeholder="6位验证码"
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className={`w-full px-4 py-2 border ${borderColor} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                    isDark ? 'bg-gray-700 text-white' : 'bg-white text-gray-900'
+                  }`}
                 />
               </div>
               <div className="flex-none pt-5">
                 <button
                   onClick={handleSendCode}
-                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 whitespace-nowrap"
+                  className={`px-4 py-2 ${isDark ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'} rounded-lg hover:bg-gray-200 whitespace-nowrap transition-colors`}
                 >
                   获取验证码
                 </button>
@@ -101,7 +116,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
             </div>
 
             {error && (
-              <div className="text-sm text-red-500">
+              <div className={`text-sm ${error.includes('已发送') ? 'text-green-500' : 'text-red-500'}`}>
                 {error}
               </div>
             )}
@@ -116,10 +131,10 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 
             <div className="relative my-6">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300"></div>
+                <div className={`w-full border-t ${isDark ? 'border-gray-600' : 'border-gray-300'}`}></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">或者</span>
+                <span className={`px-2 ${isDark ? 'bg-gray-800' : 'bg-white'} ${textColor}`}>或者</span>
               </div>
             </div>
 
@@ -131,7 +146,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
             </button>
           </div>
 
-          <div className="mt-6 text-center text-xs text-gray-500">
+          <div className={`mt-6 text-center text-xs ${textColor}`}>
             登录即表示你同意《用户协议》和《隐私政策》
           </div>
         </div>

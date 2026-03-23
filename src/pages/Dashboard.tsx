@@ -1,18 +1,59 @@
-import React, { useState, useEffect } from 'react'
-import { getTodayStats } from '../utils/api'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { getTodayStats, getTodayActivities, classifyActivity, deleteActivity, updateActivityCategory, Activity, DailyStats } from '../utils/tracking'
 import { checkTrackingStatus } from '../utils/tracking'
+import { toPng } from 'html-to-image'
+import Timeline from '../components/Timeline'
+import type { Theme } from '../App'
 
-interface TodayStat {
-  category: string
-  seconds: number
+interface DashboardProps {
+  theme: Theme
 }
 
-interface DashboardProps {}
+// 默认每日目标 4 小时 = 240 分钟
+const DEFAULT_DAILY_GOAL = 240
+const DAILY_GOAL_KEY = 'merize_daily_goal'
 
-const Dashboard: React.FC<DashboardProps> = () => {
-  const [stats, setStats] = useState<TodayStat[]>([])
+const Dashboard: React.FC<DashboardProps> = ({ theme }) => {
+  const isDark = theme === 'dark'
+  const [stats, setStats] = useState<DailyStats | null>(null)
+  const [activities, setActivities] = useState<Activity[]>([])
   const [loading, setLoading] = useState(true)
   const [isTracking, setIsTracking] = useState(false)
+  const [categoryStats, setCategoryStats] = useState<{category: string, duration: number}[]>([])
+  const [generatingImage, setGeneratingImage] = useState(false)
+  const [dailyGoalMinutes, setDailyGoalMinutes] = useState<number>(() => {
+    const saved = localStorage.getItem(DAILY_GOAL_KEY)
+    return saved ? parseInt(saved, 10) : DEFAULT_DAILY_GOAL
+  })
+  const [showEditGoal, setShowEditGoal] = useState(false)
+  const [editGoalValue, setEditGoalValue] = useState('')
+  const todayShareRef = useRef<HTMLDivElement>(null)
+
+  const loadData = useCallback(async () => {
+    try {
+      const [statsData, activitiesData] = await Promise.all([
+        getTodayStats(),
+        getTodayActivities()
+      ])
+      setStats(statsData)
+      setActivities(activitiesData)
+
+      // 计算分类统计
+      const categoryMap: {[key: string]: number} = {}
+      for (const act of activitiesData) {
+        const cat = act.category || '未分类'
+        categoryMap[cat] = (categoryMap[cat] || 0) + act.durationMinutes
+      }
+      const catStats = Object.entries(categoryMap).map(([category, duration]) => ({
+        category, duration
+      })).sort((a, b) => b.duration - a.duration)
+      setCategoryStats(catStats)
+    } catch (error) {
+      console.error('加载数据失败', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
     loadData()
@@ -23,54 +64,127 @@ const Dashboard: React.FC<DashboardProps> = () => {
         setIsTracking(status)
       })
     }, 60000)
-    
+
     checkTrackingStatus().then(status => {
       setIsTracking(status)
     })
-    
+
     return () => clearInterval(interval)
-  }, [])
+  }, [loadData])
 
-  const loadData = async () => {
-    try {
-      const res = await getTodayStats()
-      if (res.code === 200) {
-        setStats(res.data)
-      }
-    } catch (error) {
-      console.error('加载数据失败', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const formatDuration = (seconds: number) => {
-    const totalMinutes = Math.floor(seconds / 60)
-    const hours = Math.floor(totalMinutes / 60)
-    const mins = totalMinutes % 60
+  const formatDurationMinutes = (minutes: number) => {
+    const hours = Math.floor(minutes / 60)
+    const mins = Math.round(minutes % 60)
     if (hours > 0) {
       return `${hours}小时${mins > 0 ? ` ${mins}分` : ''}`
     }
-    return `${totalMinutes}分钟`
+    return `${Math.round(minutes)}分钟`
   }
 
-  const getTotalTime = () => {
-    return stats.reduce((sum, item) => sum + item.seconds, 0)
+  const handleClassifyAll = async () => {
+    const unclassified = activities.filter(a => !a.category)
+    if (unclassified.length === 0) {
+      alert('所有活动已经完成分类')
+      return
+    }
+    if (!confirm(`即将对 ${unclassified.length} 条未分类活动进行AI分类，继续吗？`)) {
+      return
+    }
+    for (const act of unclassified) {
+      try {
+        const category = await classifyActivity(act.name, act.windowTitle)
+        await updateActivityCategory(act.id, category)
+      } catch (e) {
+        console.error('分类失败', e)
+      }
+    }
+    await loadData()
+    alert(`分类完成！共处理 ${unclassified.length} 条活动`)
   }
 
-  const getTopCategory = () => {
-    if (stats.length === 0) return '-'
-    return stats.sort((a, b) => b.seconds - a.seconds)[0].category
+  const handleChangeCategory = async (id: string, currentCategory: string | null) => {
+    // Timeline 已经提供了选择界面，这里保留原逻辑兼容prompt方式
+    const newCategory = prompt('请输入新分类', currentCategory || '')
+    if (newCategory !== null) {
+      await updateActivityCategory(id, newCategory)
+      await loadData()
+    }
   }
+
+  const handleDelete = async (id: string) => {
+    if (confirm('确定要删除这条记录吗？')) {
+      await deleteActivity(id)
+      await loadData()
+    }
+  }
+
+  // 生成今日成就分享图片
+  const generateTodayShare = async () => {
+    if (!todayShareRef.current || categoryStats.length === 0) return
+
+    try {
+      setGeneratingImage(true)
+      const dateStr = new Date().toLocaleDateString('zh-CN')
+      const dataUrl = await toPng(todayShareRef.current, {
+        backgroundColor: '#f97316',
+        quality: 0.95
+      })
+      const link = document.createElement('a')
+      link.download = `merize-today-${dateStr.replace(/\//g, '-')}.png`
+      link.href = dataUrl
+      link.click()
+      alert('今日成就图片已生成！可以直接发到小红书打卡 #时间管理 #自律')
+    } catch (error) {
+      console.error('生成图片失败', error)
+      alert('生成图片失败: ' + error)
+    } finally {
+      setGeneratingImage(false)
+    }
+  }
+
+  const totalMinutes = categoryStats.reduce((sum, item) => sum + item.duration, 0)
+  const goalPercentage = Math.min(100, (totalMinutes / dailyGoalMinutes) * 100)
+
+  // 获取鼓励文案
+  const getMotivationalMessage = () => {
+    if (goalPercentage >= 100) return '🎉 恭喜完成今日目标！太棒了！'
+    if (goalPercentage >= 75) return '💪 加油！离目标不远了！'
+    if (goalPercentage >= 50) return '👍 已完成一半，继续保持！'
+    if (goalPercentage >= 25) return '⭐ 正在进步，保持专注！'
+    return '🌱 开始今天的专注之旅吧！'
+  }
+
+  // 保存每日目标
+  const saveDailyGoal = () => {
+    const minutes = parseInt(editGoalValue, 10) * 60
+    if (!isNaN(minutes) && minutes > 0) {
+      setDailyGoalMinutes(minutes)
+      localStorage.setItem(DAILY_GOAL_KEY, minutes.toString())
+    }
+    setShowEditGoal(false)
+  }
+
+  // 打开编辑目标弹窗
+  const openEditGoal = () => {
+    setEditGoalValue((dailyGoalMinutes / 60).toString())
+    setShowEditGoal(true)
+  }
+
+  const titleColor = isDark ? 'text-white' : 'text-gray-900'
+  const textColor = isDark ? 'text-gray-400' : 'text-gray-500'
+  const cardBg = isDark ? 'bg-gray-800' : 'bg-white'
+  const borderColor = isDark ? 'border-gray-700' : 'border-gray-200'
+  const cardBorder = isDark ? 'border-gray-600' : 'border-gray-100'
+  const hoverBg = isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-50'
 
   return (
     <div className="p-8">
       <div className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">今日概览</h2>
-        <p className="text-gray-500">
-          {new Date().toLocaleDateString('zh-CN', { 
-            year: 'numeric', 
-            month: 'long', 
+        <h2 className={`text-2xl font-bold ${titleColor} mb-2`}>今日概览</h2>
+        <p className={textColor}>
+          {new Date().toLocaleDateString('zh-CN', {
+            year: 'numeric',
+            month: 'long',
             day: 'numeric',
             weekday: 'long'
           })}
@@ -78,50 +192,251 @@ const Dashboard: React.FC<DashboardProps> = () => {
         </p>
       </div>
 
+      {/* Rize 风格时间线 */}
+      <div className="mb-8">
+        <Timeline
+          activities={activities}
+          onEditCategory={handleChangeCategory}
+          onDelete={handleDelete}
+        />
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl shadow-sm p-6 text-white">
-          <div className="text-sm font-medium text-blue-100 mb-1">总记录时间</div>
+        <div className="bg-gradient-to-br from-primary to-success rounded-2xl shadow-md p-6 text-white">
+          <div className="text-sm font-medium text-orange-100 mb-1">总记录时间</div>
           <div className="text-3xl font-bold">
-            {formatDuration(getTotalTime())}
+            {formatDurationMinutes(totalMinutes)}
           </div>
         </div>
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-          <div className="text-sm font-medium text-gray-500 mb-1">分类数量</div>
-          <div className="text-3xl font-bold text-gray-900">
-            {stats.length}
+        <div className={`${cardBg} rounded-2xl shadow-sm p-6 border ${borderColor}`}>
+          <div className={`text-sm font-medium ${textColor} mb-1`}>分类数量</div>
+          <div className={`text-3xl font-bold ${titleColor}`}>
+            {categoryStats.length}
           </div>
         </div>
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-          <div className="text-sm font-medium text-gray-500 mb-1">最久分类</div>
-          <div className="text-3xl font-bold text-blue-600">
-            {getTopCategory()}
+        <div className={`${cardBg} rounded-2xl shadow-sm p-6 border ${borderColor}`}>
+          <div className={`text-sm font-medium ${textColor} mb-1`}>最久分类</div>
+          <div className="text-3xl font-bold text-primary">
+            {stats?.topCategory || '-'}
           </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">分类统计</h3>
-        {loading ? (
-          <div className="text-center py-8 text-gray-500">加载中...</div>
-        ) : stats.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            暂无活动记录，等待系统追踪...
+      {/* 每日专注目标进度 */}
+      <div className={`mb-8 ${cardBg} rounded-2xl shadow-sm p-6 border ${borderColor}`}>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className={`text-lg font-semibold ${titleColor}`}>今日专注目标</h3>
+          <button
+            onClick={openEditGoal}
+            className={`px-3 py-1 text-sm ${isDark ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'} rounded-lg transition-colors`}
+          >
+            修改目标
+          </button>
+        </div>
+        <div className="flex items-center gap-8">
+          <div className="flex-1">
+            <div className="flex justify-between text-sm mb-2">
+              <span className={textColor}>
+                {formatDurationMinutes(totalMinutes)} / {formatDurationMinutes(dailyGoalMinutes)}
+              </span>
+              <span className={textColor}>
+                {Math.round(goalPercentage)}%
+              </span>
+            </div>
+            <div className={`h-4 rounded-full ${isDark ? 'bg-gray-700' : 'bg-gray-200'} overflow-hidden`}>
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${
+                  goalPercentage >= 100
+                    ? 'bg-gradient-to-r from-green-500 to-green-400'
+                    : 'bg-gradient-to-r from-blue-500 to-primary'
+                }`}
+                style={{ width: `${goalPercentage}%` }}
+              ></div>
+            </div>
+            <div className={`mt-3 text-sm font-medium ${
+              goalPercentage >= 100
+                ? 'text-green-500'
+                : isDark
+                ? 'text-gray-300'
+                : 'text-gray-600'
+            }`}>
+              {getMotivationalMessage()}
+            </div>
           </div>
-        ) : (
-          <div className="space-y-4">
-            {stats
-              .sort((a, b) => b.seconds - a.seconds)
-              .map(stat => (
-                <div key={stat.category} className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <span className="text-lg font-medium text-gray-900">{stat.category}</span>
-                  </div>
-                  <span className="text-gray-600 font-medium">{formatDuration(stat.seconds)}</span>
+        </div>
+      </div>
+
+      {/* 编辑目标弹窗 */}
+      {showEditGoal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className={`${cardBg} rounded-xl shadow-xl p-6 w-full max-w-sm`}>
+            <h3 className={`text-xl font-semibold ${titleColor} mb-4`}>修改每日专注目标</h3>
+            <div className="mb-4">
+              <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
+                每日目标（小时）
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="16"
+                step="0.5"
+                value={editGoalValue}
+                onChange={(e) => setEditGoalValue(e.target.value)}
+                className={`w-full px-3 py-2 border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  isDark ? 'bg-gray-700 text-white' : 'bg-white text-gray-900'
+                }`}
+              />
+              <p className={`text-xs ${textColor} mt-1`}>推荐: 4 小时工作，8 小时全天专注</p>
+            </div>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowEditGoal(false)}
+                className={`px-4 py-2 ${isDark ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'text-gray-700 bg-gray-100'} rounded-lg hover:bg-gray-200 transition-colors`}
+              >
+                取消
+              </button>
+              <button
+                onClick={saveDailyGoal}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                保存
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 分享按钮区域 */}
+      {categoryStats.length > 0 && (
+        <div className={`mb-8 ${cardBg} rounded-2xl shadow-sm p-6 border ${borderColor}`}>
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className={`text-lg font-semibold ${titleColor} mb-1`}>小红书分享</h3>
+              <p className={`text-sm ${textColor}`}>生成今日成就卡片，分享到小红书打卡自律</p>
+            </div>
+            <button
+              onClick={generateTodayShare}
+              disabled={generatingImage}
+              className="px-6 py-3 bg-primary text-white rounded-xl hover:bg-primary/90 disabled:opacity-50 transition-colors"
+            >
+              {generatingImage ? '生成中...' : '📷 生成今日分享图'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 隐藏的分享卡片模板 */}
+      {categoryStats.length > 0 && (
+        <div className="hidden">
+          <div ref={todayShareRef} className="w-[800px] h-[1000px] bg-gradient-to-br from-primary to-success p-12 text-white">
+            <div className="h-full flex flex-col">
+              <div className="text-center mb-10">
+                <h1 className="text-5xl font-bold mb-3">merize 今日成就</h1>
+                <p className="text-xl opacity-90">{new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}</p>
+              </div>
+
+              <div className="flex-1 bg-white/10 rounded-3xl p-10 backdrop-blur">
+                <div className="text-4xl font-bold mb-8 text-center">
+                  今日总计 {formatDurationMinutes(totalMinutes)}
                 </div>
-              ))
-            }
+                <div className="space-y-6">
+                  {categoryStats.slice(0, 5).map((stat, index) => (
+                    <div key={stat.category} className="flex items-center justify-between">
+                      <div className="flex items-center gap-6">
+                        <span className="text-3xl font-bold opacity-70 w-10">{index + 1}</span>
+                        <span className="text-2xl">{stat.category}</span>
+                      </div>
+                      <span className="text-2xl font-semibold">{formatDurationMinutes(stat.duration)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-10 text-center">
+                {stats?.topCategory && (
+                  <p className="text-3xl font-semibold mb-4">
+                    今日专注 {stats.topCategory}
+                  </p>
+                )}
+                <p className="text-xl opacity-80">#merize #时间管理 #自律 #效率提升</p>
+              </div>
+            </div>
           </div>
-        )}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className={`${cardBg} rounded-2xl shadow-sm p-6 border ${borderColor}`}>
+          <h3 className={`text-lg font-semibold ${titleColor} mb-4`}>分类统计</h3>
+          {loading ? (
+            <div className={`text-center py-8 ${textColor}`}>加载中...</div>
+          ) : categoryStats.length === 0 ? (
+            <div className={`text-center py-8 ${textColor}`}>
+              暂无活动记录，等待系统追踪...
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {categoryStats
+                .map(stat => (
+                  <div key={stat.category} className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <span className={`text-base font-medium ${titleColor}`}>{stat.category}</span>
+                    </div>
+                    <span className={`${isDark ? 'text-gray-300' : 'text-gray-600'} font-medium`}>{formatDurationMinutes(stat.duration)}</span>
+                  </div>
+                ))
+              }
+            </div>
+          )}
+        </div>
+
+        <div className={`${cardBg} rounded-2xl shadow-sm p-6 border ${borderColor}`}>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className={`text-lg font-semibold ${titleColor}`}>原始活动记录</h3>
+            {activities.some(a => !a.category) && (
+              <button
+                onClick={handleClassifyAll}
+                className="px-3 py-1 bg-primary text-white text-sm rounded-lg hover:bg-primary/90"
+              >
+                AI 一键分类
+              </button>
+            )}
+          </div>
+          {loading ? (
+            <div className={`text-center py-8 ${textColor}`}>加载中...</div>
+          ) : activities.length === 0 ? (
+            <div className={`text-center py-8 ${textColor}`}>
+              暂无活动记录
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {activities.slice().reverse().map(act => (
+                <div key={act.id} className={`flex items-center justify-between p-2 border ${cardBorder} rounded ${hoverBg} transition-colors`}>
+                  <div className="flex-1 min-w-0">
+                    <div className={`text-sm font-medium ${titleColor} truncate`}>{act.windowTitle}</div>
+                    <div className={textColor}>
+                      {act.name} • {act.category || '未分类'} • {formatDurationMinutes(act.durationMinutes)}
+                    </div>
+                  </div>
+                  <div className="flex space-x-1 ml-2">
+                    <button
+                      onClick={() => handleChangeCategory(act.id, act.category)}
+                      className={`px-2 py-1 text-xs ${isDark ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'} rounded transition-colors`}
+                    >
+                      修改
+                    </button>
+                    <button
+                      onClick={() => handleDelete(act.id)}
+                      className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 transition-colors"
+                    >
+                      删除
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

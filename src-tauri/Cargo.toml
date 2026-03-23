@@ -1,22 +1,27 @@
 [package]
-name = "rize-chinese"
+name = "merize"
 version = "1.0.0"
-description = "Rize 中文本地化 - AI自动时间追踪工具"
+description = "Merize - AI 自动时间追踪工具 (中文本地化版)"
 authors = ["you"]
 license = ""
 repository = ""
 edition = "2021"
 
 [build-dependencies]
-tauri-build = { version = "1.5", features = [ "definitions" ] }
+tauri-build = { version = "2", features = [ ] }
 
 [dependencies]
-tauri = { version = "1.5", features = [ "shell-open"] }
+tauri = { version = "2", features = ["tray-icon"] }
+tauri-plugin-autostart = "2"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tokio = { version = "1.0", features = ["full"] }
-chrono = { version = "0.4", features = ["serde", "local"] }
+chrono = { version = "0.4", features = ["serde", "std"] }
 regex = "1.10"
 reqwest = { version = "0.11", features = ["json"] }
 anyhow = "1.0"
 thiserror = "1.0"
+x-win = "5.5.0"
+uuid = { version = "1.0", features = ["v4", "serde"] }
+dirs = "5.0"
+tracing = "0.1"

@@ -1,10 +1,13 @@
-import { invoke } from '@tauri-apps/api'
+import { invoke } from '@tauri-apps/api/core'
 import { getToken } from './auth'
 
 const API_HOST = import.meta.env.VITE_API_HOST || 'http://localhost:5000'
 
-// 获取今日活动统计
-export async function getTodayStats() {
+// 类型导入
+import type { Activity, DailyStats, WeeklyStatItem, Settings } from './tracking'
+
+// 获取今日活动统计 (远程API)
+export async function getTodayStatsRemote() {
   const token = getToken()
   const res = await fetch(`${API_HOST}/api/activities/today`, {
     headers: {
@@ -44,31 +47,117 @@ export async function aiClassify(windows: [string, string][], provider: 'ernie' 
 }
 
 // ============= 原生调用保留 =============
+// 类型导出
+export type { Activity, DailyStats, WeeklyStatItem, Settings } from './tracking'
+
 // 获取今日活动
 export async function getTodayActivities() {
   const result = await invoke('get_today_activities')
-  return result as { data: any[] }
+  return result as Activity[]
+}
+
+// 获取指定日期所有活动
+export async function getActivitiesByDate(dateStr: string): Promise<Activity[]> {
+  return await invoke('get_activities_by_date', { date_str: dateStr })
+}
+
+// 获取今日统计
+export async function getTodayStats(): Promise<DailyStats> {
+  return await invoke('get_today_stats')
+}
+
+// 获取指定日期统计
+export async function getStatsByDate(dateStr: string): Promise<DailyStats> {
+  return await invoke('get_daily_stats_by_date', { date_str: dateStr })
+}
+
+// 获取每周统计
+export async function getWeeklyStats(): Promise<WeeklyStatItem[]> {
+  return await invoke('get_weekly_stats')
+}
+
+// 获取月度热力图统计
+export interface MonthlyDayStat {
+  day: number
+  total_minutes: number
+}
+
+export async function getMonthlyStats(year: number, month: number): Promise<MonthlyDayStat[]> {
+  return await invoke('get_monthly_stats', { year, month })
 }
 
 // 获取设置
-export async function getSettings() {
-  const result = await invoke('get_settings')
-  return result as { data: any }
+export async function getSettings(): Promise<Settings> {
+  return await invoke('get_settings')
 }
 
 // 保存设置
-export async function saveSettings(settings: any) {
-  await invoke('save_settings', { settings })
+export async function saveSettings(settings: Settings): Promise<void> {
+  await invoke('save_settings', { new_settings: settings })
 }
 
 // 切换追踪状态
-export async function toggleTracking(enable: boolean) {
-  const result = await invoke('toggle_tracking', { enable })
-  return result as boolean
+export async function toggleTracking(enable: boolean): Promise<boolean> {
+  return await invoke('toggle_tracking', { enable })
 }
 
 // 检查追踪状态
-export async function checkTrackingStatus() {
-  const result = await invoke('check_tracking_status')
-  return result as boolean
+export async function checkTrackingStatus(): Promise<boolean> {
+  return await invoke('check_tracking_status')
+}
+
+// AI 分类活动
+export async function classifyActivity(appName: string, windowTitle: string): Promise<string> {
+  return await invoke('classify_activity', { app_name: appName, window_title: windowTitle })
+}
+
+// 删除活动（手动编辑）
+export async function deleteActivity(id: string): Promise<void> {
+  return await invoke('delete_activity', { id })
+}
+
+// 更新活动分类（手动编辑）
+export async function updateActivityCategory(id: string, category: string): Promise<void> {
+  return await invoke('update_activity_category', { id, category })
+}
+
+// 获取所有历史活动用于导出
+export async function getAllActivitiesExport(): Promise<Activity[]> {
+  return await invoke('get_all_activities_export')
+}
+
+// 创建手动活动
+export async function createActivity(
+  name: string,
+  windowTitle: string,
+  category: string | null,
+  startTimeMs: number,
+  durationMinutes: number
+): Promise<Activity> {
+  return await invoke('create_activity', {
+    name,
+    window_title: windowTitle,
+    category,
+    start_time_ms: startTimeMs,
+    duration_minutes: durationMinutes
+  })
+}
+
+// 更新活动
+export async function updateActivity(
+  id: string,
+  name?: string,
+  windowTitle?: string,
+  category?: string | null,
+  startTimeMs?: number,
+  durationMinutes?: number
+): Promise<void> {
+  return await invoke('update_activity', {
+    id,
+    name,
+    window_title: windowTitle,
+    category,
+    start_time_ms: startTimeMs,
+    duration_minutes: durationMinutes
+  })
 }
