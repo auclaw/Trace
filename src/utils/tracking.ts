@@ -34,6 +34,11 @@ export interface Settings {
   aiProvider: 'ernie' | 'doubao'
   autoStartOnBoot: boolean
   ignoredApplications: string[]
+  // Privacy settings
+  privacy_sync_mode?: 'full' | 'summary_only' | 'local_only'
+  privacy_cloud_encryption?: boolean
+  privacy_retain_raw_local?: boolean
+  privacy_auto_delete_days?: number
 }
 
 // 所有函数从 api.ts 重导出，保持 API 兼容性

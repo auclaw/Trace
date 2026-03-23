@@ -9,7 +9,17 @@ from models.database_models import (
     ACTIVITY_TABLE_SQL,
     VERIFICATION_CODE_TABLE_SQL,
     SUBSCRIPTION_ORDER_TABLE_SQL,
-    SUBSCRIPTION_HISTORY_TABLE_SQL
+    SUBSCRIPTION_HISTORY_TABLE_SQL,
+    ORGANIZATION_TABLE_SQL,
+    TEAM_TABLE_SQL,
+    ORG_MEMBER_TABLE_SQL,
+    TIME_APPROVAL_TABLE_SQL,
+    HABIT_TARGET_TABLE_SQL,
+    HABIT_CHECKIN_TABLE_SQL,
+    FLOW_BLOCK_TABLE_SQL,
+    INTERRUPTION_TABLE_SQL,
+    TEAM_FOCUS_SESSION_TABLE_SQL,
+    TEAM_FOCUS_MEMBER_TABLE_SQL
 )
 
 @contextmanager
@@ -35,4 +45,15 @@ def init_database():
         cursor.execute(VERIFICATION_CODE_TABLE_SQL)
         cursor.execute(SUBSCRIPTION_ORDER_TABLE_SQL)
         cursor.execute(SUBSCRIPTION_HISTORY_TABLE_SQL)
+        # Team/enterprise features
+        cursor.execute(ORGANIZATION_TABLE_SQL)
+        cursor.execute(TEAM_TABLE_SQL)
+        cursor.execute(ORG_MEMBER_TABLE_SQL)
+        cursor.execute(TIME_APPROVAL_TABLE_SQL)
+        cursor.execute(HABIT_TARGET_TABLE_SQL)
+        cursor.execute(HABIT_CHECKIN_TABLE_SQL)
+        cursor.execute(FLOW_BLOCK_TABLE_SQL)
+        cursor.execute(INTERRUPTION_TABLE_SQL)
+        cursor.execute(TEAM_FOCUS_SESSION_TABLE_SQL)
+        cursor.execute(TEAM_FOCUS_MEMBER_TABLE_SQL)
         conn.commit()

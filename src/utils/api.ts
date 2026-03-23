@@ -1,7 +1,28 @@
 import { invoke } from '@tauri-apps/api/core'
 import { getToken } from './auth'
 
-const API_HOST = import.meta.env.VITE_API_HOST || 'http://localhost:5000'
+export const API_HOST = import.meta.env.VITE_API_HOST || 'http://localhost:5000'
+
+// 通用 API 请求函数 (用于后端 Flask API)
+export async function apiRequest<T = any>(
+  path: string,
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'GET',
+  body?: any
+): Promise<{ code: number; data: T; msg?: string }> {
+  const token = getToken()
+  const options: RequestInit = {
+    method,
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  }
+  if (body !== undefined) {
+    options.body = JSON.stringify(body)
+  }
+  const res = await fetch(`${API_HOST}${path}`, options)
+  return await res.json()
+}
 
 // 类型导入
 import type { Activity, DailyStats, WeeklyStatItem, Settings } from './tracking'
@@ -77,10 +98,7 @@ export async function getWeeklyStats(): Promise<WeeklyStatItem[]> {
 }
 
 // 获取月度热力图统计
-export interface MonthlyDayStat {
-  day: number
-  total_minutes: number
-}
+import type { MonthlyDayStat } from './tracking'
 
 export async function getMonthlyStats(year: number, month: number): Promise<MonthlyDayStat[]> {
   return await invoke('get_monthly_stats', { year, month })

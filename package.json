@@ -1,7 +1,7 @@
 {
-  "name": "rize-chinese",
+  "name": "merize",
   "version": "1.0.0",
-  "description": "Rize 中文本地化 - AI自动时间追踪工具",
+  "description": "Merize - AI自动时间追踪工具，中文本地化优化",
   "type": "module",
   "scripts": {
     "dev": "vite",

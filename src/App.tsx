@@ -7,6 +7,15 @@ import Planner from './pages/Planner'
 import Calendar from './pages/Calendar'
 import FocusMode from './pages/FocusMode'
 import Login from './pages/Login'
+import OrgAdmin from './pages/OrgAdmin'
+import TeamDashboard from './pages/TeamDashboard'
+import WeeklyApproval from './pages/WeeklyApproval'
+import Habits from './pages/Habits'
+import FlowBlocks from './pages/FlowBlocks'
+import TeamFocus from './pages/TeamFocus'
+import AiSummary from './pages/AiSummary'
+import DeepWorkStats from './pages/DeepWorkStats'
+import PrivacySettings from './pages/PrivacySettings'
 import Sidebar from './components/Sidebar'
 import { checkTrackingStatus } from './utils/tracking'
 import { checkAuth } from './utils/auth'
@@ -84,6 +93,15 @@ function App() {
             <Route path="/planner" element={<Planner theme={theme} />} />
             <Route path="/calendar" element={<Calendar theme={theme} />} />
             <Route path="/focus" element={<FocusMode theme={theme} />} />
+            <Route path="/org-admin" element={<OrgAdmin theme={theme} />} />
+            <Route path="/team-dashboard" element={<TeamDashboard theme={theme} />} />
+            <Route path="/approval" element={<WeeklyApproval theme={theme} />} />
+            <Route path="/habits" element={<Habits theme={theme} />} />
+            <Route path="/flow-blocks" element={<FlowBlocks theme={theme} />} />
+            <Route path="/team-focus" element={<TeamFocus theme={theme} />} />
+            <Route path="/ai-summary" element={<AiSummary theme={theme} />} />
+            <Route path="/deep-work-stats" element={<DeepWorkStats theme={theme} />} />
+            <Route path="/privacy" element={<PrivacySettings theme={theme} />} />
             <Route path="/settings" element={<Settings theme={theme} toggleTheme={toggleTheme} />} />
           </Routes>
         </main>

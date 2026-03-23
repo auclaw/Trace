@@ -1,6 +1,6 @@
 // auth.ts - 用户认证工具，支持手机号验证码登录和微信登录
 
-const API_HOST = import.meta.env.VITE_API_HOST || 'http://localhost:5000'
+import { API_HOST } from './api'
 
 // 检查是否已登录
 export async function checkAuth(): Promise<boolean> {
@@ -66,5 +66,22 @@ export async function sendCode(phone: string): Promise<void> {
   })
   if (!res.ok) {
     throw new Error('发送失败')
+  }
+}
+
+// 获取当前登录用户 ID 从 JWT token
+export function getCurrentUserId(): number | null {
+  const token = getToken()
+  if (!token) {
+    return null
+  }
+  try {
+    // JWT 格式: header.payload.signature
+    const payloadBase64 = token.split('.')[1]
+    const payloadJson = atob(payloadBase64)
+    const payload = JSON.parse(payloadJson)
+    return payload.user_id || null
+  } catch {
+    return null
   }
 }

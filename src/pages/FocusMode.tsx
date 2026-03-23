@@ -24,6 +24,7 @@ const LONG_BREAK_MINUTES = 15
 const POMODORO_BEFORE_LONG_BREAK = 4
 
 const FocusMode: React.FC<FocusModeProps> = ({ theme: _theme }) => {
+  // FocusMode uses immersive fullscreen with mode-specific gradients regardless of app theme
   const [workMinutes, setWorkMinutes] = useState(DEFAULT_WORK_MINUTES)
   const [breakMinutes, setBreakMinutes] = useState(DEFAULT_BREAK_MINUTES)
   const [timeLeft, setTimeLeft] = useState(DEFAULT_WORK_MINUTES * 60)

@@ -2,7 +2,17 @@ import { useState, useEffect } from 'react'
 import { getSettings, saveSettings, toggleTracking, checkTrackingStatus, getAllActivitiesExport } from '../utils/tracking'
 import { Settings as SettingsType } from '../utils/tracking'
 import { logout } from '../utils/auth'
+import { apiRequest } from '../utils/api'
 import type { Theme } from '../App'
+
+type SubscriptionPlan = 'free' | 'personal' | 'business'
+
+interface UserRole {
+  hasOrgAdmin: boolean
+  hasTeamLead: boolean
+  hasAnyTeam: boolean
+  plan: SubscriptionPlan
+}
 
 interface SettingsProps {
   theme: Theme
@@ -26,11 +36,29 @@ const Settings: React.FC<SettingsProps> = ({ theme, toggleTheme }) => {
   const [trackingStatus, setTrackingStatus] = useState(false)
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
+  const [roles, setRoles] = useState<UserRole>({
+    hasOrgAdmin: false,
+    hasTeamLead: false,
+    hasAnyTeam: false,
+    plan: 'free',
+  })
 
   useEffect(() => {
     loadSettings()
     checkStatus()
+    loadRoles()
   }, [])
+
+  const loadRoles = async () => {
+    try {
+      const response = await apiRequest('/api/user/roles', 'GET')
+      if (response.code === 200) {
+        setRoles(response.data)
+      }
+    } catch (error) {
+      console.error('Failed to load user roles', error)
+    }
+  }
 
   const loadSettings = async () => {
     try {
@@ -208,67 +236,108 @@ const Settings: React.FC<SettingsProps> = ({ theme, toggleTheme }) => {
           <div>
             <h3 className={`font-semibold ${titleColor}`}>追踪状态</h3>
             <p className={`text-sm ${textColor}`}>
-              {trackingStatus ? '当前正在记录你的活动' : '当前已暂停记录'}
+              {roles.plan === 'free'
+                ? '免费版仅支持手动记录，自动追踪需要升级套餐'
+                : (trackingStatus ? '当前正在记录你的活动' : '当前已暂停记录')
+              }
             </p>
           </div>
-          <button
-            onClick={handleToggleTracking}
-            className={`px-4 py-2 rounded-lg font-medium ${
-              trackingStatus
-                ? (isDark ? 'bg-red-900/30 text-red-400 hover:bg-red-900/50' : 'bg-red-100 text-red-700 hover:bg-red-200')
-                : (isDark ? 'bg-green-900/30 text-green-400 hover:bg-green-900/50' : 'bg-green-100 text-green-700 hover:bg-green-200')
-            }`}
-          >
-            {trackingStatus ? '暂停追踪' : '开始追踪'}
-          </button>
+          {roles.plan === 'free' ? (
+            <button
+              disabled
+              className={`px-4 py-2 rounded-lg font-medium ${
+                isDark ? 'bg-gray-600 text-gray-400' : 'bg-gray-200 text-gray-500'
+              } cursor-not-allowed`}
+            >
+              需要升级套餐
+            </button>
+          ) : (
+            <button
+              onClick={handleToggleTracking}
+              className={`px-4 py-2 rounded-lg font-medium ${
+                trackingStatus
+                  ? (isDark ? 'bg-red-900/30 text-red-400 hover:bg-red-900/50' : 'bg-red-100 text-red-700 hover:bg-red-200')
+                  : (isDark ? 'bg-green-900/30 text-green-400 hover:bg-green-900/50' : 'bg-green-100 text-green-700 hover:bg-green-200')
+              }`}
+            >
+              {trackingStatus ? '暂停追踪' : '开始追踪'}
+            </button>
+          )}
         </div>
 
-        <div>
-          <label className={`block text-sm font-medium ${labelColor} mb-2`}>
-            AI 提供商
-          </label>
-          <div className="flex space-x-4">
-            <label className={`flex items-center ${isDark ? 'text-gray-300' : 'text-gray-900'}`}>
-              <input
-                type="radio"
-                value="ernie"
-                checked={settings.aiProvider === 'ernie'}
-                onChange={(e) => setSettings({...settings, aiProvider: e.target.value as any})}
-                className="mr-2"
-              />
-              百度文心一言
-            </label>
-            <label className={`flex items-center ${isDark ? 'text-gray-300' : 'text-gray-900'}`}>
-              <input
-                type="radio"
-                value="doubao"
-                checked={settings.aiProvider === 'doubao'}
-                onChange={(e) => setSettings({...settings, aiProvider: e.target.value as any})}
-                className="mr-2"
-              />
-              字节豆包
-            </label>
+        {/* 订阅套餐 */}
+        <div className={`flex items-center justify-between p-4 rounded-lg border ${borderColor}`}>
+          <div>
+            <h3 className={`font-semibold ${titleColor}`}>当前套餐</h3>
+            <p className={`text-sm ${textColor}`}>
+              不同套餐开放不同进阶功能：免费(手动) → 个人(自动+AI) → 商业(团队+协作)
+            </p>
           </div>
-          <p className={`text-xs ${textColor} mt-1`}>
-            选择你使用的大模型API，需要自己申请API密钥
-          </p>
+          {/* 套餐信息从后端获取，框架已就绪 */}
+          {(() => {
+            const planLabels = {free: '免费版', personal: '个人版', business: '商业版'};
+            const planClasses = {
+              free: isDark ? 'bg-gray-500/30 text-gray-300' : 'bg-gray-100 text-gray-700',
+              personal: isDark ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-100 text-blue-700',
+              business: isDark ? 'bg-purple-900/30 text-purple-400' : 'bg-purple-100 text-purple-700'
+            };
+            return (
+              <span className={`px-3 py-1 rounded-full text-sm ${planClasses[roles.plan]}`}>
+                {planLabels[roles.plan]}
+              </span>
+            );
+          })()}
         </div>
 
-        <div>
-          <label className={`block text-sm font-medium ${labelColor} mb-2`}>
-            API 密钥
-          </label>
-          <input
-            type="password"
-            value={settings.aiApiKey}
-            onChange={(e) => setSettings({...settings, aiApiKey: e.target.value})}
-            className={`w-full px-4 py-2 border ${borderColor} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${inputBg}`}
-            placeholder="填入你的API密钥"
-          />
-          <p className={`text-xs ${textColor} mt-1`}>
-            密钥只保存在本地，不会上传到服务器
-          </p>
-        </div>
+        {/*
+          AI 提供商和API密钥设置暂时隐藏 - AI统一由服务提供，未来开放用户自定义时取消注释即可
+          <div>
+            <label className={`block text-sm font-medium ${labelColor} mb-2`}>
+              AI 提供商
+            </label>
+            <div className="flex space-x-4">
+              <label className={`flex items-center ${isDark ? 'text-gray-300' : 'text-gray-900'}`}>
+                <input
+                  type="radio"
+                  value="ernie"
+                  checked={settings.aiProvider === 'ernie'}
+                  onChange={(e) => setSettings({...settings, aiProvider: e.target.value as any})}
+                  className="mr-2"
+                />
+                百度文心一言
+              </label>
+              <label className={`flex items-center ${isDark ? 'text-gray-300' : 'text-gray-900'}`}>
+                <input
+                  type="radio"
+                  value="doubao"
+                  checked={settings.aiProvider === 'doubao'}
+                  onChange={(e) => setSettings({...settings, aiProvider: e.target.value as any})}
+                  className="mr-2"
+                />
+                字节豆包
+              </label>
+            </div>
+            <p className={`text-xs ${textColor} mt-1`}>
+              选择你使用的大模型API，需要自己申请API密钥。
+            </p>
+          </div>
+
+          <div>
+            <label className={`block text-sm font-medium ${labelColor} mb-2`}>
+              API 密钥
+            </label>
+            <input
+              type="password"
+              value={settings.aiApiKey}
+              onChange={(e) => setSettings({...settings, aiApiKey: e.target.value})}
+              className={`w-full px-4 py-2 border ${borderColor} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${inputBg}`}
+              placeholder="API密钥由服务统一提供"
+            />
+            <p className={`text-xs ${textColor} mt-1`}>
+              AI分类由服务统一提供，暂不开放用户自定义。
+            </p>
+          </div>
+        */}
 
         <div>
           <label className={`flex items-center ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>

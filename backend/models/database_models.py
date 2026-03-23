@@ -19,6 +19,8 @@ ACTIVITY_TABLE_SQL = '''
 CREATE TABLE IF NOT EXISTS activities (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER,
+    org_id INTEGER,
+    team_id INTEGER,
     window_title TEXT,
     application TEXT,
     url TEXT,
@@ -26,7 +28,9 @@ CREATE TABLE IF NOT EXISTS activities (
     end_time TIMESTAMP,
     category TEXT,
     created_at TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users (id)
+    FOREIGN KEY (user_id) REFERENCES users (id),
+    FOREIGN KEY (org_id) REFERENCES organizations (id),
+    FOREIGN KEY (team_id) REFERENCES teams (id)
 )
 '''
 
@@ -74,5 +78,153 @@ CREATE TABLE IF NOT EXISTS subscription_history (
     notes TEXT NULL,
     FOREIGN KEY (user_id) REFERENCES users (id),
     FOREIGN KEY (order_id) REFERENCES subscription_orders (id)
+)
+'''
+
+# Organization table (for enterprise/team version)
+ORGANIZATION_TABLE_SQL = '''
+CREATE TABLE IF NOT EXISTS organizations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    admin_user_id INTEGER NOT NULL,
+    domain TEXT,
+    seat_count INTEGER NOT NULL,
+    billing_cycle TEXT NOT NULL, -- 'monthly' or 'yearly'
+    amount DECIMAL(10,2) NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (admin_user_id) REFERENCES users (id)
+)
+'''
+
+# Team table (within organization)
+TEAM_TABLE_SQL = '''
+CREATE TABLE IF NOT EXISTS teams (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    org_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    lead_user_id INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (org_id) REFERENCES organizations (id),
+    FOREIGN KEY (lead_user_id) REFERENCES users (id)
+)
+'''
+
+# Organization member table
+ORG_MEMBER_TABLE_SQL = '''
+CREATE TABLE IF NOT EXISTS org_members (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    org_id INTEGER NOT NULL,
+    team_id INTEGER,
+    user_id INTEGER NOT NULL,
+    role TEXT NOT NULL, -- 'admin', 'lead', 'member'
+    status TEXT NOT NULL, -- 'pending', 'active', 'suspended'
+    invited_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (org_id) REFERENCES organizations (id),
+    FOREIGN KEY (team_id) REFERENCES teams (id),
+    FOREIGN KEY (user_id) REFERENCES users (id)
+)
+'''
+
+# Weekly time approval table (member submits, lead approves)
+TIME_APPROVAL_TABLE_SQL = '''
+CREATE TABLE IF NOT EXISTS time_approval (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    org_id INTEGER NOT NULL,
+    week_start DATE NOT NULL,
+    status TEXT NOT NULL, -- 'draft', 'submitted', 'approved', 'rejected'
+    submitted_at DATETIME,
+    approved_at DATETIME,
+    feedback TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+)
+'''
+
+# Habit target table (daily deep work target)
+HABIT_TARGET_TABLE_SQL = '''
+CREATE TABLE IF NOT EXISTS habit_targets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    target_hours REAL NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+)
+'''
+
+# Habit checkin table (daily checkin)
+HABIT_CHECKIN_TABLE_SQL = '''
+CREATE TABLE IF NOT EXISTS habit_checkins (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    habit_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    checkin_date DATE NOT NULL,
+    actual_hours REAL NOT NULL,
+    completed INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (habit_id) REFERENCES habit_targets (id)
+)
+'''
+
+# Flow block (distracting websites blocking)
+FLOW_BLOCK_TABLE_SQL = '''
+CREATE TABLE IF NOT EXISTS flow_blocks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    domain TEXT NOT NULL,
+    enabled INTEGER DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+)
+'''
+
+# Interruption record (statistics)
+INTERRUPTION_TABLE_SQL = '''
+CREATE TABLE IF NOT EXISTS interruptions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    interrupt_time DATETIME NOT NULL,
+    source TEXT NOT NULL, -- 'chat', 'email', 'meeting', 'other'
+    recovery_minutes REAL NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+)
+'''
+
+# Team focus session (sync focus time)
+TEAM_FOCUS_SESSION_TABLE_SQL = '''
+CREATE TABLE IF NOT EXISTS team_focus_sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    team_id INTEGER NOT NULL,
+    creator_id INTEGER NOT NULL,
+    start_time DATETIME NOT NULL,
+    end_time DATETIME NOT NULL,
+    status TEXT NOT NULL, -- 'active', 'finished'
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (team_id) REFERENCES teams (id),
+    FOREIGN KEY (creator_id) REFERENCES users (id)
+)
+'''
+
+# Deep flow block record (statistics for deep work analysis)
+DEEP_FLOW_BLOCK_TABLE_SQL = '''
+CREATE TABLE IF NOT EXISTS deep_flow_blocks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    start_time DATETIME NOT NULL,
+    end_time DATETIME NOT NULL,
+    duration_minutes INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users (id)
+)
+'''
+
+# Team focus session membership
+TEAM_FOCUS_MEMBER_TABLE_SQL = '''
+CREATE TABLE IF NOT EXISTS team_focus_members (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    status TEXT NOT NULL, -- 'focusing', 'break', 'finished'
+    joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (session_id) REFERENCES team_focus_sessions (id),
+    FOREIGN KEY (user_id) REFERENCES users (id)
 )
 '''
