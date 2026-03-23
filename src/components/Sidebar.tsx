@@ -51,7 +51,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isTracking, theme }) => {
       <div className={`p-6 ${borderBottomClass}`}>
         <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-success bg-clip-text text-transparent">Merize</h1>
         <p className={`text-xs ${mutedTextClass}`}>AI 自动时间追踪</p>
-        <div className="mt-2 flex items-center">
+        <div className="mt-2 flex items-center" data-tour="tracking-status">
           <span className={`w-2 h-2 rounded-full mr-2 ${isTracking ? 'bg-green-500 animate-pulse' : isDark ? 'bg-gray-600' : 'bg-gray-300'} transition-all duration-300`}></span>
           <span className={`text-sm ${mutedTextClass}`}>{isTracking ? '正在追踪' : '追踪已暂停'}</span>
         </div>
@@ -63,6 +63,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isTracking, theme }) => {
             <NavLink
               to="/"
               end
+              data-tour="dashboard"
               className={({ isActive }) => {
                 const base = 'flex items-center px-4 py-3 rounded-xl transition-all duration-200 transform'
                 if (isActive) {
@@ -79,6 +80,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isTracking, theme }) => {
           <li>
             <NavLink
               to="/statistics"
+              data-tour="statistics"
               className={({ isActive }) => {
                 const base = 'flex items-center px-4 py-3 rounded-xl transition-all duration-200 transform'
                 if (isActive) {
@@ -95,6 +97,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isTracking, theme }) => {
           <li>
             <NavLink
               to="/planner"
+              data-tour="planner"
               className={({ isActive }) => {
                 const base = 'flex items-center px-4 py-3 rounded-xl transition-all duration-200 transform'
                 if (isActive) {
@@ -111,6 +114,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isTracking, theme }) => {
           <li>
             <NavLink
               to="/calendar"
+              data-tour="calendar"
               className={({ isActive }) => {
                 const base = 'flex items-center px-4 py-3 rounded-xl transition-all duration-200 transform'
                 if (isActive) {
@@ -127,6 +131,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isTracking, theme }) => {
           <li>
             <NavLink
               to="/focus"
+              data-tour="focus-mode"
               className={({ isActive }) => {
                 const base = 'flex items-center px-4 py-3 rounded-xl transition-all duration-200 transform'
                 if (isActive) {
@@ -316,6 +321,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isTracking, theme }) => {
           <li>
             <NavLink
               to="/settings"
+              data-tour="settings"
               className={({ isActive }) => {
                 const base = 'flex items-center px-4 py-3 rounded-xl transition-all duration-200 transform'
                 if (isActive) {

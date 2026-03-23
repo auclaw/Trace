@@ -1,6 +1,12 @@
 // Rize 中文本地化 - Rust 后端主程序
 // AI自动时间追踪 + 今日计划
 
+// 新模块 - 功能特性
+pub mod broadcast;
+pub mod feature_flags;
+pub mod pomodoro;
+pub mod idle_detection;
+
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
@@ -12,6 +18,7 @@ use x_win::get_active_window;
 use reqwest::Client;
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
+use tauri::AppHandle;
 
 // 数据结构
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -33,6 +40,7 @@ pub struct Settings {
     pub ai_provider: String, // ernie | doubao
     pub auto_start_on_boot: bool,
     pub ignored_applications: Vec<String>, // 忽略列表，这些应用不会被记录
+    pub feature_flags: Option<std::collections::HashMap<String, bool>>, // Runtime feature flags
 }
 
 impl Default for Settings {
@@ -42,6 +50,7 @@ impl Default for Settings {
             ai_provider: "ernie".to_string(),
             auto_start_on_boot: true,
             ignored_applications: Vec::new(),
+            feature_flags: None,
         }
     }
 }
@@ -64,16 +73,16 @@ pub struct SubTask {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PlannedTask {
     pub id: String,
-    pub title: String;       // 任务标题
-    pub priority: u8;       // 1-5，1最高优先级
-    pub estimated_minutes: f64; // 预估时间（分钟）
-    pub actual_minutes: f64;   // 实际已用时间
-    pub completed: bool;       // 是否完成
-    pub created_at: NaiveDate;
-    pub project: Option<String>; // 项目分类
-    pub repeat_type: Option<String>; // 重复类型: none/daily/weekly/monthly
-    pub subtasks: Option<Vec<SubTask>>; // 子任务
-    pub due_date: Option<String>; // 截止日期
+    pub title: String,       // 任务标题
+    pub priority: u8,       // 1-5，1最高优先级
+    pub estimated_minutes: f64, // 预估时间（分钟）
+    pub actual_minutes: f64,   // 实际已用时间
+    pub completed: bool,       // 是否完成
+    pub created_at: NaiveDate,
+    pub project: Option<String>, // 项目分类
+    pub repeat_type: Option<String>, // 重复类型: none/daily/weekly/monthly
+    pub subtasks: Option<Vec<SubTask>>, // 子任务
+    pub due_date: Option<String>, // 截止日期
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -103,15 +112,21 @@ pub struct WeeklyStatItem {
 }
 
 // 全局状态
+#[derive(Clone)]
 pub struct AppState {
-    activities: Mutex<Vec<Activity>>,
-    current_loaded_date: Mutex<NaiveDate>, // 当前加载的日期，保存时使用
-    planned_tasks: Mutex<Vec<PlannedTask>>, // 今日计划任务
-    settings: Mutex<Settings>,
-    is_tracking: Mutex<bool>,
+    activities: Arc<Mutex<Vec<Activity>>>,
+    current_loaded_date: Arc<Mutex<NaiveDate>>, // 当前加载的日期，保存时使用
+    planned_tasks: Arc<Mutex<Vec<PlannedTask>>>, // 今日计划任务
+    settings: Arc<Mutex<Settings>>,
+    is_tracking: Arc<Mutex<bool>>,
     http_client: Client,
-    current_activity: Mutex<Option<Activity>>,
-    last_activity_check: Mutex<Instant>,
+    current_activity: Arc<Mutex<Option<Activity>>>,
+    last_activity_check: Arc<Mutex<Instant>>,
+    // New modules for feature flags and realtime broadcast
+    pub broadcast_manager: broadcast::BroadcastManager,
+    pub pomodoro_timer: pomodoro::PomodoroTimer,
+    pub feature_flags: feature_flags::FeatureFlagState,
+    pub idle_detector: idle_detection::IdleDetector,
 }
 
 // AI分类请求响应
@@ -538,7 +553,7 @@ fn get_daily_stats_by_date(date_str: String, state: tauri::State<'_, AppState>) 
 
 // 获取月度统计 - 热力图数据，每天总分钟数
 #[tauri::command]
-fn get_monthly_stats(year: i32, month: u32, state: tauri::State<'_, AppState>) -> Result<Vec<MonthlyDayStat>, String> {
+fn get_monthly_stats(year: i32, month: u32, _state: tauri::State<'_, AppState>) -> Result<Vec<MonthlyDayStat>, String> {
     let mut result = Vec::new();
 
     // 获取当月天数
@@ -551,9 +566,9 @@ fn get_monthly_stats(year: i32, month: u32, state: tauri::State<'_, AppState>) -
 
     // 遍历每一天
     for day in 1..=num_days {
-        let date = NaiveDate::from_ym_opt(year, month, day)
+        let date = NaiveDate::from_ymd_opt(year, month, day)
             .ok_or_else(|| format!("Invalid date: {}-{}-{}", year, month, day))?;
-        let path = get_activities_path(date);
+        let path = get_activities_path(date).map_err(|e| e.to_string())?;
 
         // 如果文件不存在，这天没有记录，跳过或者加0
         if !path.exists() {
@@ -803,6 +818,33 @@ fn toggle_tracking(enable: bool, state: tauri::State<'_, AppState>) -> Result<bo
 fn check_tracking_status(state: tauri::State<'_, AppState>) -> Result<bool, String> {
     let is_tracking = state.is_tracking.lock().unwrap();
     Ok(*is_tracking)
+}
+
+// 获取所有功能特性开关状态
+#[tauri::command]
+fn get_feature_flags(state: tauri::State<'_, AppState>) -> Vec<(String, bool)> {
+    let flags = state.feature_flags.get_all();
+    flags.into_iter().map(|(flag, enabled)| (flag.to_key().to_string(), enabled)).collect()
+}
+
+// 更新单个功能特性开关
+#[tauri::command]
+fn set_feature_flag(key: String, enabled: bool, state: tauri::State<'_, AppState>) -> Result<(), String> {
+    if let Some(flag) = feature_flags::FeatureFlag::from_key(&key) {
+        state.feature_flags.set_enabled(flag, enabled);
+
+        // Save to settings
+        let mut settings = state.settings.lock().unwrap();
+        let mut map = settings.feature_flags.clone().unwrap_or_default();
+        map.insert(key, enabled);
+        settings.feature_flags = Some(map);
+        drop(settings);
+
+        save_settings_internal(&*state).map_err(|e| e.to_string())?;
+        Ok(())
+    } else {
+        Err(format!("Unknown feature flag: {}", key))
+    }
 }
 
 // --- 今日计划API ---
@@ -1197,14 +1239,19 @@ fn main() {
     // 初始化状态
     let today = Local::now().date_naive();
     let state = Arc::new(AppState {
-        activities: Mutex::new(Vec::new()),
-        current_loaded_date: Mutex::new(today),
-        planned_tasks: Mutex::new(Vec::new()),
-        settings: Mutex::new(Settings::default()),
-        is_tracking: Mutex::new(false),
+        activities: Arc::new(Mutex::new(Vec::new())),
+        current_loaded_date: Arc::new(Mutex::new(today)),
+        planned_tasks: Arc::new(Mutex::new(Vec::new())),
+        settings: Arc::new(Mutex::new(Settings::default())),
+        is_tracking: Arc::new(Mutex::new(false)),
         http_client: Client::new(),
-        current_activity: Mutex::new(None),
-        last_activity_check: Mutex::new(Instant::now()),
+        current_activity: Arc::new(Mutex::new(None)),
+        last_activity_check: Arc::new(Mutex::new(Instant::now())),
+        // Initialize new modules
+        broadcast_manager: broadcast::BroadcastManager::new(),
+        pomodoro_timer: pomodoro::PomodoroTimer::new(),
+        feature_flags: feature_flags::FeatureFlagState::new(),
+        idle_detector: idle_detection::IdleDetector::new(),
     });
 
     // 克隆状态用于轮询线程
@@ -1270,6 +1317,102 @@ fn main() {
                 .title(if is_tracking { "🔍 追踪中" } else { "⏸️ 暂停" })
                 .build(app);
 
+            // Load feature flags from saved settings
+            let settings_guard = state.settings.lock().unwrap();
+            if let Some(frontend_flags) = &settings_guard.feature_flags {
+                state.feature_flags.merge_from_frontend(frontend_flags);
+            }
+            drop(settings_guard);
+
+            // Get app handle for background tasks
+            let app_handle = app.handle().clone();
+            let broadcast_manager = state.broadcast_manager.clone();
+            let broadcast_manager_pomodoro = broadcast_manager.clone();
+
+            // Start pomodoro timer background loop
+            let pomodoro_timer = state.pomodoro_timer.clone();
+            tokio::spawn(async move {
+                pomodoro_timer.run_timer_loop(app_handle.clone(), &broadcast_manager_pomodoro).await;
+            });
+
+            // Start idle detection background loop if enabled
+            if state.feature_flags.is_enabled(feature_flags::FeatureFlag::IdleDetection) {
+                let idle_detector = state.idle_detector.clone();
+                let state_clone = (*state).clone();
+                let app_handle = app.handle().clone();
+
+                std::thread::spawn(move || {
+                    let rt = tokio::runtime::Runtime::new().unwrap();
+                    rt.block_on(async move {
+                        // Handle idle transition: auto-pause tracking
+                        let on_idle = |app: &AppHandle| {
+                            let mut is_tracking = state_clone.is_tracking.lock().unwrap();
+                            if *is_tracking {
+                                *is_tracking = false;
+                                drop(is_tracking);
+
+                                // Update tray menu
+                                let toggle_label = "开始追踪";
+                                let show_main_window = tauri::menu::MenuItem::new(app, "打开主窗口", true, None::<&str>).unwrap();
+                                let open_focus_mode = tauri::menu::MenuItem::new(app, "专注模式", true, None::<&str>).unwrap();
+                                let toggle_tracking = tauri::menu::MenuItem::new(app, toggle_label, true, None::<&str>).unwrap();
+                                let quit_app = tauri::menu::MenuItem::new(app, "退出应用", true, None::<&str>).unwrap();
+
+                                let tray_menu = tauri::menu::MenuBuilder::new(app)
+                                    .item(&show_main_window)
+                                    .item(&open_focus_mode)
+                                    .item(&toggle_tracking)
+                                    .separator()
+                                    .item(&quit_app)
+                                    .build()
+                                    .unwrap();
+
+                                let _ = tauri::tray::TrayIconBuilder::new()
+                                    .menu(&tray_menu)
+                                    .title("⏸️ 暂停 (空闲)")
+                                    .build(app);
+                            }
+                        };
+
+                        // Handle active transition: auto-resume tracking if configured
+                        let on_active = |app: &AppHandle| {
+                            let _settings = state_clone.settings.lock().unwrap();
+                            let auto_resume = true; // Default: auto-resume enabled
+                            if auto_resume {
+                                let mut is_tracking = state_clone.is_tracking.lock().unwrap();
+                                if !*is_tracking {
+                                    *is_tracking = true;
+                                    drop(is_tracking);
+
+                                    // Update tray menu
+                                    let toggle_label = "暂停追踪";
+                                    let show_main_window = tauri::menu::MenuItem::new(app, "打开主窗口", true, None::<&str>).unwrap();
+                                    let open_focus_mode = tauri::menu::MenuItem::new(app, "专注模式", true, None::<&str>).unwrap();
+                                    let toggle_tracking = tauri::menu::MenuItem::new(app, toggle_label, true, None::<&str>).unwrap();
+                                    let quit_app = tauri::menu::MenuItem::new(app, "退出应用", true, None::<&str>).unwrap();
+
+                                    let tray_menu = tauri::menu::MenuBuilder::new(app)
+                                        .item(&show_main_window)
+                                        .item(&open_focus_mode)
+                                        .item(&toggle_tracking)
+                                        .separator()
+                                        .item(&quit_app)
+                                        .build()
+                                        .unwrap();
+
+                                    let _ = tauri::tray::TrayIconBuilder::new()
+                                        .menu(&tray_menu)
+                                        .title("🔍 追踪中")
+                                        .build(app);
+                                }
+                            }
+                        };
+
+                        idle_detector.run_detection_loop(app_handle, &broadcast_manager, on_idle, on_active).await;
+                    });
+                });
+            }
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -1289,6 +1432,9 @@ fn main() {
             toggle_tracking,
             check_tracking_status,
             classify_activity,
+            // 新增：Feature flags
+            get_feature_flags,
+            set_feature_flag,
             // 新增：今日计划API
             get_today_planned_tasks,
             add_planned_task,
@@ -1297,6 +1443,12 @@ fn main() {
             match_activity_to_task,
             get_task_actual_time,
             ai_reschedule_tasks,
+            // 新增：Pomodoro commands
+            pomodoro::get_pomodoro_state,
+            pomodoro::start_pomodoro,
+            pomodoro::pause_pomodoro,
+            pomodoro::reset_pomodoro,
+            pomodoro::stop_pomodoro,
         ])
         .on_tray_icon_event(|_tray, _event| {
             // 默认已经处理点击弹出菜单

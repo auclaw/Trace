@@ -29,11 +29,26 @@ export interface MonthlyDayStat {
   total_minutes: number
 }
 
+// Pomodoro timer types (backend-driven)
+export type PomodoroState = 'Idle' | 'Running' | 'Paused' | 'Break' | 'LongBreak'
+
+export interface PomodoroData {
+  state: PomodoroState
+  remaining_seconds: number
+  total_seconds: number
+  completed_sessions: number
+  progress_percent: number
+}
+
+import type { FeatureFlagKey } from './feature-flags'
+
 export interface Settings {
   aiApiKey: string
   aiProvider: 'ernie' | 'doubao'
   autoStartOnBoot: boolean
   ignoredApplications: string[]
+  // Feature flags
+  featureFlags?: Record<FeatureFlagKey, boolean>
   // Privacy settings
   privacy_sync_mode?: 'full' | 'summary_only' | 'local_only'
   privacy_cloud_encryption?: boolean

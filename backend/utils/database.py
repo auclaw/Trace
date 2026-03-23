@@ -19,7 +19,9 @@ from models.database_models import (
     FLOW_BLOCK_TABLE_SQL,
     INTERRUPTION_TABLE_SQL,
     TEAM_FOCUS_SESSION_TABLE_SQL,
-    TEAM_FOCUS_MEMBER_TABLE_SQL
+    TEAM_FOCUS_MEMBER_TABLE_SQL,
+    MELEGAL_DOCUMENTS_TABLE_SQL,
+    MELEGAL_REVIEW_ORDER_TABLE_SQL
 )
 
 @contextmanager
@@ -56,4 +58,7 @@ def init_database():
         cursor.execute(INTERRUPTION_TABLE_SQL)
         cursor.execute(TEAM_FOCUS_SESSION_TABLE_SQL)
         cursor.execute(TEAM_FOCUS_MEMBER_TABLE_SQL)
+        # melegal 可颂法务 tables
+        cursor.execute(MELEGAL_DOCUMENTS_TABLE_SQL)
+        cursor.execute(MELEGAL_REVIEW_ORDER_TABLE_SQL)
         conn.commit()

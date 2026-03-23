@@ -228,3 +228,39 @@ CREATE TABLE IF NOT EXISTS team_focus_members (
     FOREIGN KEY (user_id) REFERENCES users (id)
 )
 '''
+
+# melegal - 可颂法务: 法律文书表
+MELEGAL_DOCUMENTS_TABLE_SQL = '''
+CREATE TABLE IF NOT EXISTS melegal_documents (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    scene_id TEXT NOT NULL,
+    answers TEXT NOT NULL, -- JSON of user answers
+    content TEXT NOT NULL, -- generated document content
+    status TEXT NOT NULL, -- 'generating', 'reviewing', 'done', 'failed'
+    package_type TEXT NOT NULL, -- 'basic', 'pro', 'premium'
+    price DECIMAL(10,2) NOT NULL,
+    reviewer_id INTEGER NULL, -- lawyer user id if reviewed
+    reviewed_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users (id)
+)
+'''
+
+# melegal - 律师复核订单表
+MELEGAL_REVIEW_ORDER_TABLE_SQL = '''
+CREATE TABLE IF NOT EXISTS melegal_review_orders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    document_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    lawyer_id INTEGER NULL,
+    status TEXT NOT NULL, -- 'pending', 'assigned', 'completed', 'cancelled'
+    price DECIMAL(10,2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP NULL,
+    notes TEXT NULL,
+    FOREIGN KEY (document_id) REFERENCES melegal_documents (id),
+    FOREIGN KEY (user_id) REFERENCES users (id)
+)
+'''

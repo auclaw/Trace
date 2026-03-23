@@ -1621,6 +1621,246 @@ def save_privacy_settings():
     return jsonify({'code': 200, 'msg': '隐私设置保存成功'})
 
 
+# ========== melegal 可颂法务 API ==========
+# 可颂法务 - 让普通人打得起官司
+# AI法律文书生成 + 律师复核服务
+
+from services.ai_client import AIClient
+
+ai_client = AIClient()
+
+@app.route('/api/melegal/generate', methods=['POST'])
+def melegal_generate_document():
+    """
+    Generate legal document using AI
+    Body:
+    - scene_id: str scene type
+    - answers: dict user answers
+    - package: str basic/pro/premium
+    """
+    auth_header = request.headers.get('Authorization', '')
+    if not auth_header.startswith('Bearer '):
+        return jsonify({'code': 401, 'msg': '未授权'})
+    token = auth_header.split(' ')[1]
+    user_id = verify_token(token)
+    if not user_id:
+        return jsonify({'code': 401, 'msg': 'Token无效'})
+
+    data = request.get_json()
+    scene_id = data.get('scene_id')
+    answers = data.get('answers', {})
+    package = data.get('package', 'basic')
+
+    # Generate document from template with user answers
+    # For different scenes, we have different prompt templates
+    prompt = ai_client.build_legal_document_prompt(scene_id, answers)
+    document_content = ai_client.generate_document(prompt)
+
+    # Auto law article check
+    validation_result = ai_client.validate_law_articles(document_content)
+
+    # If package is pro/premium, queue for lawyer review
+    document_status = 'generating' if package == 'basic' else 'reviewing'
+
+    # Save to database
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        prices = {'basic': 9.9, 'pro': 29.9, 'premium': 99}
+        price = prices.get(package, 9.9)
+        cursor.execute('''
+            INSERT INTO melegal_documents
+            (user_id, scene_id, answers, content, status, package_type, price)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (user_id, scene_id, json.dumps(answers), document_content, document_status, package, price))
+        document_id = cursor.lastrowid
+        conn.commit()
+
+    response = {
+        'code': 200,
+        'data': {
+            'document_id': document_id,
+            'content': document_content,
+            'status': document_status,
+            'validation': validation_result,
+        }
+    }
+
+    return jsonify(response)
+
+
+@app.route('/api/melegal/list', methods=['GET'])
+def melegal_list_documents():
+    """List all user's documents"""
+    auth_header = request.headers.get('Authorization', '')
+    if not auth_header.startswith('Bearer '):
+        return jsonify({'code': 401, 'msg': '未授权'})
+    token = auth_header.split(' ')[1]
+    user_id = verify_token(token)
+    if not user_id:
+        return jsonify({'code': 401, 'msg': 'Token无效'})
+
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT id, scene_id, status, package_type, price, created_at
+            FROM melegal_documents
+            WHERE user_id = ?
+            ORDER BY created_at DESC
+        ''', (user_id,))
+        rows = cursor.fetchall()
+
+        scene_names = {
+            'civil-debt': '民事起诉状 - 欠钱不还',
+            'labor-dispute': '劳动仲裁 - 工资/社保',
+            'divorce-agreement': '离婚协议书',
+            'consumer-rights': '消费维权起诉状',
+            '答辩状': '民事答辩状',
+            'loan-contract': '民间借贷借条',
+            'custom': '自定义案件',
+        }
+
+        documents = []
+        for row in rows:
+            id, scene_id, status, package_type, price, created_at = row
+            documents.append({
+                'id': str(id),
+                'sceneName': scene_names.get(scene_id, scene_id),
+                'status': status,
+                'packageType': package_type,
+                'price': price,
+                'createdAt': created_at.strftime('%Y-%m-%d') if created_at else '',
+            })
+
+    return jsonify({'code': 200, 'data': documents})
+
+
+@app.route('/api/melegal/download/<int:document_id>', methods=['GET'])
+def melegal_download(document_id):
+    """Get document content for download"""
+    auth_header = request.headers.get('Authorization', '')
+    if not auth_header.startswith('Bearer '):
+        return jsonify({'code': 401, 'msg': '未授权'})
+    token = auth_header.split(' ')[1]
+    user_id = verify_token(token)
+    if not user_id:
+        return jsonify({'code': 401, 'msg': 'Token无效'})
+
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT content, status, package_type FROM melegal_documents
+            WHERE id = ? AND user_id = ?
+        ''', (document_id, user_id))
+        row = cursor.fetchone()
+        if not row:
+            return jsonify({'code': 404, 'msg': '文档不存在'})
+
+        content, status, package_type = row
+
+    return jsonify({
+        'code': 200,
+        'data': {
+            'content': content,
+            'status': status,
+            'packageType': package_type,
+        }
+    })
+
+
+@app.route('/api/melegal/delete/<int:document_id>', methods=['DELETE'])
+def melegal_delete(document_id):
+    """Delete a document"""
+    auth_header = request.headers.get('Authorization', '')
+    if not auth_header.startswith('Bearer '):
+        return jsonify({'code': 401, 'msg': '未授权'})
+    token = auth_header.split(' ')[1]
+    user_id = verify_token(token)
+    if not user_id:
+        return jsonify({'code': 401, 'msg': 'Token无效'})
+
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            DELETE FROM melegal_documents WHERE id = ? AND user_id = ?
+        ''', (document_id, user_id))
+        conn.commit()
+
+    return jsonify({'code': 200, 'msg': '删除成功'})
+
+
+@app.route('/api/melegal/validate', methods=['POST'])
+def melegal_validate():
+    """Validate law articles in document"""
+    data = request.get_json()
+    content = data.get('content', '')
+    result = ai_client.validate_law_articles(content)
+    return jsonify({'code': 200, 'data': result})
+
+
+@app.route('/api/melegal/generate-custom', methods=['POST'])
+def melegal_generate_custom():
+    """Generate custom legal document from user description (chat mode)
+    Body:
+    - description: str user's full description
+    """
+    auth_header = request.headers.get('Authorization', '')
+    if not auth_header.startswith('Bearer '):
+        return jsonify({'code': 401, 'msg': '未授权'})
+    token = auth_header.split(' ')[1]
+    user_id = verify_token(token)
+    if not user_id:
+        return jsonify({'code': 401, 'msg': 'Token无效'})
+
+    data = request.get_json()
+    description = data.get('description', '')
+
+    # Build prompt for custom generation
+    prompt = """你是一位经验丰富的中国律师，请根据用户描述的案情和需求，帮用户生成一份专业规范的法律文书。
+
+要求：
+1. 根据用户需求判断需要什么类型的法律文书，使用正确的格式
+2. 诉讼请求/事实理由要清晰明确
+3. 使用法言法语，但保持内容准确
+4. 如果用户信息不足，你根据常识合理补充完整
+5. 只输出最终文书内容，不要其他解释
+
+用户描述：
+%s
+""" % description
+
+    document_content = ai_client.generate_document(prompt)
+
+    # Auto law article check
+    validation_result = ai_client.validate_law_articles(document_content)
+
+    # Always basic package for custom, user can upgrade later
+    document_status = 'done'
+    price = 9.9
+
+    # Save to database
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO melegal_documents
+            (user_id, scene_id, answers, content, status, package_type, price)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (user_id, 'custom', json.dumps({'description': description}), document_content, document_status, 'basic', price))
+        document_id = cursor.lastrowid
+        conn.commit()
+
+    response = {
+        'code': 200,
+        'data': {
+            'document_id': document_id,
+            'content': document_content,
+            'status': document_status,
+            'validation': validation_result,
+        }
+    }
+
+    return jsonify(response)
+
+
 if __name__ == '__main__':
     # Initialize database on startup
     init_database()

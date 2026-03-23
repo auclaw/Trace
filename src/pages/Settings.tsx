@@ -3,6 +3,11 @@ import { getSettings, saveSettings, toggleTracking, checkTrackingStatus, getAllA
 import { Settings as SettingsType } from '../utils/tracking'
 import { logout } from '../utils/auth'
 import { apiRequest } from '../utils/api'
+import {
+  getAllFeatureFlags,
+  featureFlagCategories,
+  type FeatureFlagKey,
+} from '../utils/feature-flags'
 import type { Theme } from '../App'
 
 type SubscriptionPlan = 'free' | 'personal' | 'business'
@@ -42,6 +47,10 @@ const Settings: React.FC<SettingsProps> = ({ theme, toggleTheme }) => {
     hasAnyTeam: false,
     plan: 'free',
   })
+  // 功能特性开关状态
+  const [featureFlags, setFeatureFlags] = useState<Record<FeatureFlagKey, boolean>>(
+    getAllFeatureFlags()
+  )
 
   useEffect(() => {
     loadSettings()
@@ -69,12 +78,43 @@ const Settings: React.FC<SettingsProps> = ({ theme, toggleTheme }) => {
         aiApiKey: '',
         aiProvider: 'ernie',
         autoStartOnBoot: true,
-        ignoredApplications: []
+        ignoredApplications: [],
+        featureFlags: getAllFeatureFlags(),
       }
       setSettings({
         ...defaultSettings,
         ...data
       })
+      // 加载功能开关到本地状态
+      // 确保所有功能标志都有值 - 用默认值填充缺失的
+      if (data && typeof data === 'object' && 'featureFlags' in data) {
+        const defaultFlags = getAllFeatureFlags()
+        const userFlags = data.featureFlags as Record<string, unknown>
+
+        // Explicitly build the object to guarantee all keys exist and are boolean
+        // This keeps TypeScript happy
+        const merged: Record<FeatureFlagKey, boolean> = {
+          keyboardShortcuts: typeof userFlags.keyboardShortcuts === 'boolean'
+            ? userFlags.keyboardShortcuts
+            : defaultFlags.keyboardShortcuts,
+          focusMode: typeof userFlags.focusMode === 'boolean'
+            ? userFlags.focusMode
+            : defaultFlags.focusMode,
+          pomodoro: typeof userFlags.pomodoro === 'boolean'
+            ? userFlags.pomodoro
+            : defaultFlags.pomodoro,
+          pdfExport: typeof userFlags.pdfExport === 'boolean'
+            ? userFlags.pdfExport
+            : defaultFlags.pdfExport,
+          onboardingTour: typeof userFlags.onboardingTour === 'boolean'
+            ? userFlags.onboardingTour
+            : defaultFlags.onboardingTour,
+          idleDetection: typeof userFlags.idleDetection === 'boolean'
+            ? userFlags.idleDetection
+            : defaultFlags.idleDetection,
+        }
+        setFeatureFlags(merged)
+      }
     } catch (error) {
       console.error('加载设置失败', error)
       // 加载失败时使用默认值
@@ -82,7 +122,8 @@ const Settings: React.FC<SettingsProps> = ({ theme, toggleTheme }) => {
         aiApiKey: '',
         aiProvider: 'ernie',
         autoStartOnBoot: true,
-        ignoredApplications: []
+        ignoredApplications: [],
+        featureFlags: getAllFeatureFlags(),
       })
     } finally {
       setLoading(false)
@@ -98,7 +139,11 @@ const Settings: React.FC<SettingsProps> = ({ theme, toggleTheme }) => {
     setSaving(true)
     setSaved(false)
     try {
-      await saveSettings(settings!)
+      // 将本地功能开关保存到设置
+      await saveSettings({
+        ...settings!,
+        featureFlags: { ...featureFlags },
+      })
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
     } catch (error) {
@@ -421,6 +466,53 @@ const Settings: React.FC<SettingsProps> = ({ theme, toggleTheme }) => {
           ) : (
             <p className={`text-sm ${textColor}`}>暂无忽略应用</p>
           )}
+        </div>
+
+        {/* 功能特性开关 - 按分组展示 */}
+        <div className={`pt-4 border-t ${borderLight}`}>
+          <h3 className={`font-semibold ${titleColor} mb-4`}>功能特性</h3>
+          {Object.entries(featureFlagCategories).map(([category, flags]) => (
+            <div key={category} className="mb-4">
+              <h4 className={`text-sm font-medium ${labelColor} mb-2 capitalize`}>
+                {category === 'productivity' ? '生产力' :
+                 category === 'export' ? '导出' :
+                 category === 'ui' ? '界面' :
+                 category === 'tracking' ? '追踪' : category}
+              </h4>
+              <div className="space-y-3">
+                {flags.map(({ key, name, description }) => (
+                  <label key={key} className={`flex items-start justify-between ${isDark ? 'text-gray-300' : 'text-gray-700'} cursor-pointer`}>
+                    <div className="flex-1">
+                      <div className="font-medium">{name}</div>
+                      <div className={`text-xs ${textColor}`}>{description}</div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={featureFlags[key] ?? true}
+                      onChange={(e) => {
+                        // Type assertion is safe because key is always a valid FeatureFlagKey from featureFlagCategories
+                        setFeatureFlags({
+                          ...featureFlags,
+                          [key]: e.target.checked,
+                        } as Record<FeatureFlagKey, boolean>)
+                        // 更新设置对象
+                        if (settings) {
+                          setSettings({
+                            ...settings,
+                            featureFlags: {
+                              ...settings.featureFlags,
+                              [key]: e.target.checked,
+                            } as Record<FeatureFlagKey, boolean>,
+                          })
+                        }
+                      }}
+                      className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 border-gray-300"
+                    />
+                  </label>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
 
         <div className={`pt-4 border-t ${borderLight}`}>

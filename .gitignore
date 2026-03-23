@@ -30,3 +30,4 @@ config.local.py
 
 # Tauri
 src-tauri/target/
+.gstack/

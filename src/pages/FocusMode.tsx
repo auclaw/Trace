@@ -1,60 +1,61 @@
 // 专注模式 - 番茄工作法
 // 25分钟工作 / 5分钟休息，支持自定义时长
-// 记录专注会话，统计每日专注时间
+// 后端驱动计时器保证准确性
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { invoke } from '@tauri-apps/api/core'
+import { listen } from '@tauri-apps/api/event'
 import type { Theme } from '../App'
-
-type FocusMode = 'work' | 'break'
-
-interface FocusSession {
-  id: string
-  startTime: number
-  duration: number
-  mode: FocusMode
-}
+import type { PomodoroData, PomodoroState } from '../utils/tracking'
 
 interface FocusModeProps {
   theme: Theme
 }
 
-const DEFAULT_WORK_MINUTES = 25
-const DEFAULT_BREAK_MINUTES = 5
-const LONG_BREAK_MINUTES = 15
-const POMODORO_BEFORE_LONG_BREAK = 4
-
 const FocusMode: React.FC<FocusModeProps> = ({ theme: _theme }) => {
   // FocusMode uses immersive fullscreen with mode-specific gradients regardless of app theme
-  const [workMinutes, setWorkMinutes] = useState(DEFAULT_WORK_MINUTES)
-  const [breakMinutes, setBreakMinutes] = useState(DEFAULT_BREAK_MINUTES)
-  const [timeLeft, setTimeLeft] = useState(DEFAULT_WORK_MINUTES * 60)
-  const [isRunning, setIsRunning] = useState(false)
-  const [currentMode, setCurrentMode] = useState<FocusMode>('work')
-  const [sessionCount, setSessionCount] = useState(0)
-  const [sessions, setSessions] = useState<FocusSession[]>([])
+  const [pomodoro, setPomodoro] = useState<PomodoroData | null>(null)
   const [showSettings, setShowSettings] = useState(false)
+  const [workMinutes, setWorkMinutes] = useState(25)
+  const [breakMinutes, setBreakMinutes] = useState(5)
+  const [longBreakMinutes, setLongBreakMinutes] = useState(15)
+  const [sessionsBeforeLongBreak, setSessionsBeforeLongBreak] = useState(4)
 
-  const timerRef = useRef<number | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const unlistenRef = useRef<(() => void) | null>(null)
 
-  // 加载历史会话统计
+  // 获取初始状态
   useEffect(() => {
-    const today = new Date().toDateString()
-    const saved = localStorage.getItem(`merize-focus-sessions-${today}`)
-    if (saved) {
-      const parsed: FocusSession[] = JSON.parse(saved)
-      setSessions(parsed)
-      setSessionCount(parsed.filter(s => s.mode === 'work').length)
+    const getInitialState = async () => {
+      const state = await invoke<PomodoroData>('get_pomodoro_state')
+      setPomodoro(state)
     }
+    getInitialState()
 
     // 创建音频元素
     audioRef.current = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-alarm-digital-clock-beep-989.mp3')
-  }, [])
 
-  // 保存会话到本地存储
-  const saveSessions = useCallback((newSessions: FocusSession[]) => {
-    const today = new Date().toDateString()
-    localStorage.setItem(`merize-focus-sessions-${today}`, JSON.stringify(newSessions))
+    // 监听pomodoro滴答事件
+    const setupListeners = async () => {
+      // 监听每个tick更新状态
+      unlistenRef.current = await listen<PomodoroData>('pomodoro-tick', (event) => {
+        setPomodoro(event.payload)
+      })
+
+      // 监听状态变化事件，播放声音当session完成
+      await listen('pomodoro-session-complete', () => {
+        if (audioRef.current) {
+          audioRef.current.play().catch(e => console.error('播放提示音失败', e))
+        }
+      })
+    }
+    setupListeners()
+
+    return () => {
+      if (unlistenRef.current) {
+        unlistenRef.current()
+      }
+    }
   }, [])
 
   // 格式化时间为 mm:ss
@@ -64,132 +65,101 @@ const FocusMode: React.FC<FocusModeProps> = ({ theme: _theme }) => {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
   }
 
-  // 进度百分比
-  const getProgressPercent = (): number => {
-    const total = currentMode === 'work' ? workMinutes * 60 : breakMinutes * 60
-    return ((total - timeLeft) / total) * 100
-  }
-
   // 开始计时器
-  const startTimer = () => {
-    if (!isRunning) {
-      setIsRunning(true)
-    }
+  const startTimer = async () => {
+    await invoke('start_pomodoro')
   }
 
   // 暂停计时器
-  const pauseTimer = () => {
-    setIsRunning(false)
+  const pauseTimer = async () => {
+    await invoke('pause_pomodoro')
   }
 
   // 重置计时器
-  const resetTimer = () => {
-    setIsRunning(false)
-    if (currentMode === 'work') {
-      setTimeLeft(workMinutes * 60)
-    } else {
-      setTimeLeft(breakMinutes * 60)
+  const resetTimer = async () => {
+    await invoke('reset_pomodoro')
+  }
+
+  // Get the current mode display name
+  const getModeName = (state: PomodoroState): string => {
+    switch (state) {
+      case 'Idle': return '准备开始'
+      case 'Running': return '专注中'
+      case 'Paused': return '已暂停'
+      case 'Break': return '休息中'
+      case 'LongBreak': return '长休息'
+      default: return '未知'
     }
   }
 
-  // 跳过当前会话，切换模式
-  const skipSession = () => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current)
-    }
-    setIsRunning(false)
-    switchMode()
-  }
-
-  // 切换工作/休息模式
-  const switchMode = () => {
-    if (currentMode === 'work') {
-      // 完成一个工作会话
-      const newSession: FocusSession = {
-        id: Date.now().toString(),
-        startTime: Date.now() - workMinutes * 60 * 1000,
-        duration: workMinutes * 60,
-        mode: 'work'
-      }
-      const newSessions = [...sessions, newSession]
-      setSessions(newSessions)
-      saveSessions(newSessions)
-      setSessionCount(newSessions.filter(s => s.mode === 'work').length)
-
-      // 决定休息时长
-      const completedWorkSessions = newSessions.filter(s => s.mode === 'work').length
-      const actualBreakMinutes = completedWorkSessions % POMODORO_BEFORE_LONG_BREAK === 0
-        ? LONG_BREAK_MINUTES
-        : breakMinutes
-
-      setCurrentMode('break')
-      setTimeLeft(actualBreakMinutes * 60)
-    } else {
-      setCurrentMode('work')
-      setTimeLeft(workMinutes * 60)
+  // Get background gradient based on current state
+  const getBgGradient = (state: PomodoroState): string => {
+    switch (state) {
+      case 'Running': return 'from-blue-900 to-indigo-900'
+      case 'Break': return 'from-green-700 to-teal-800'
+      case 'LongBreak': return 'from-green-800 to-teal-900'
+      case 'Paused': return 'from-yellow-700 to-orange-800'
+      case 'Idle': return 'from-gray-800 to-gray-900'
+      default: return 'from-gray-800 to-gray-900'
     }
   }
 
-  // 计时器滴答
-  useEffect(() => {
-    if (isRunning && timeLeft > 0) {
-      timerRef.current = window.setInterval(() => {
-        setTimeLeft(prev => {
-          if (prev <= 1) {
-            // 时间到
-            if (audioRef.current) {
-              audioRef.current.play().catch(e => console.error('播放提示音失败', e))
-            }
-            setIsRunning(false)
-            switchMode()
-            return 0
-          }
-          return prev - 1
-        })
-      }, 1000)
-    } else {
-      if (timerRef.current) {
-        clearInterval(timerRef.current)
-      }
+  // Get progress color based on current state
+  const getProgressColor = (state: PomodoroState): string => {
+    switch (state) {
+      case 'Running': return 'bg-blue-400'
+      case 'Break': case 'LongBreak': return 'bg-green-400'
+      case 'Paused': return 'bg-yellow-400'
+      case 'Idle': return 'bg-gray-400'
+      default: return 'bg-gray-400'
     }
+  }
 
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current)
-      }
+  // Get button background based on current state
+  const getButtonBg = (state: PomodoroState): string => {
+    switch (state) {
+      case 'Running': return 'bg-blue-500 hover:bg-blue-600'
+      case 'Break': case 'LongBreak': return 'bg-green-500 hover:bg-green-600'
+      case 'Paused': return 'bg-yellow-500 hover:bg-yellow-600'
+      case 'Idle': return 'bg-gray-500 hover:bg-gray-600'
+      default: return 'bg-gray-500 hover:bg-gray-600'
     }
-  }, [isRunning, timeLeft])
+  }
 
-  // 计算今日总专注分钟
-  const totalFocusMinutes = sessions
-    .filter(s => s.mode === 'work')
-    .reduce((sum, s) => sum + Math.round(s.duration / 60), 0)
+  if (!pomodoro) {
+    return (
+      <div className="min-h-full flex items-center justify-center bg-gray-900 text-white">
+        <div className="text-center">
+          <div className="text-2xl">加载中...</div>
+        </div>
+      </div>
+    )
+  }
+
+  // 计算今日总专注分钟 - 每个完成的工作session贡献workMinutes
+  const totalFocusMinutes = pomodoro.completed_sessions * workMinutes
 
   // 背景颜色根据模式变化
-  const bgGradient = currentMode === 'work'
-    ? 'from-blue-900 to-indigo-900'
-    : 'from-green-700 to-teal-800'
+  const bgGradient = getBgGradient(pomodoro.state)
+  const progressColor = getProgressColor(pomodoro.state)
+  const buttonBg = getButtonBg(pomodoro.state)
 
-  const progressColor = currentMode === 'work'
-    ? 'bg-blue-400'
-    : 'bg-green-400'
-
-  const buttonBg = currentMode === 'work'
-    ? 'bg-blue-500 hover:bg-blue-600'
-    : 'bg-green-500 hover:bg-green-600'
+  const isIdleOrPaused = pomodoro.state === 'Idle' || pomodoro.state === 'Paused'
 
   return (
-    <div className={`min-h-full flex flex-col items-center justify-center p-8 bg-gradient-to-br ${bgGradient} text-white`}>
+    <div className={`min-h-screen flex flex-col items-center justify-center p-8 bg-gradient-to-br ${bgGradient} text-white`}>
       <div className="w-full max-w-md text-center">
         {/* 标题 */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold mb-2">
-            {currentMode === 'work' ? '专注工作' : '放松休息'}
+            {getModeName(pomodoro.state)}
           </h1>
           <p className="text-white/70">
-            {currentMode === 'work'
+            {pomodoro.state === 'Running'
               ? '关闭通知，专注当下一件事'
-              : '站起来活动一下，喝杯水休息一下'
+              : pomodoro.state === 'Break' || pomodoro.state === 'LongBreak'
+              ? '站起来活动一下，喝杯水休息一下'
+              : '点击开始开始专注之旅'
             }
           </p>
         </div>
@@ -200,32 +170,30 @@ const FocusMode: React.FC<FocusModeProps> = ({ theme: _theme }) => {
             {/* 进度条 */}
             <div
               className={`absolute inset-0 ${progressColor} opacity-20 transition-all duration-1000 ease-linear`}
-              style={{ width: `${getProgressPercent()}%`, clipPath: 'polygon(0 0, 100% 0, 100% 100%, 0 100%)' }}
+              style={{ width: `${pomodoro.progress_percent}%`, clipPath: 'polygon(0 0, 100% 0, 100% 100%, 0 100%)' }}
             />
             <div className="relative z-10">
               <div className="text-6xl font-bold tracking-wider">
-                {formatTime(timeLeft)}
+                {formatTime(pomodoro.remaining_seconds)}
               </div>
               <div className="text-white/70 text-sm mt-2">
-                {sessionCount} 个番茄钟 • {totalFocusMinutes} 分钟
+                {pomodoro.completed_sessions} 个番茄钟 • {totalFocusMinutes} 分钟
               </div>
             </div>
           </div>
         </div>
 
         {/* 控制按钮 */}
-        <div className="flex items-center justify-center gap-4 mb-8">
-          {!isRunning ? (
+        <div className="flex items-center justify-center gap-4 mb-8 flex-wrap">
+          {isIdleOrPaused && pomodoro.remaining_seconds > 0 && (
             <button
               onClick={startTimer}
               className={`px-8 py-3 rounded-full font-semibold ${buttonBg} transition-all hover:scale-105`}
             >
-              {timeLeft === (currentMode === 'work' ? workMinutes : breakMinutes) * 60
-                ? '开始'
-                : '继续'
-              }
+              {pomodoro.state === 'Idle' ? '开始' : '继续'}
             </button>
-          ) : (
+          )}
+          {pomodoro.state === 'Running' && (
             <button
               onClick={pauseTimer}
               className={`px-8 py-3 rounded-full font-semibold bg-white/20 hover:bg-white/30 transition-all hover:scale-105`}
@@ -238,12 +206,6 @@ const FocusMode: React.FC<FocusModeProps> = ({ theme: _theme }) => {
             className="px-6 py-3 rounded-full font-semibold bg-white/10 hover:bg-white/20 transition-all hover:scale-105"
           >
             重置
-          </button>
-          <button
-            onClick={skipSession}
-            className="px-6 py-3 rounded-full font-semibold bg-white/10 hover:bg-white/20 transition-all hover:scale-105"
-          >
-            跳过
           </button>
         </div>
 
@@ -274,9 +236,6 @@ const FocusMode: React.FC<FocusModeProps> = ({ theme: _theme }) => {
                   onChange={(e) => {
                     const val = parseInt(e.target.value)
                     setWorkMinutes(val)
-                    if (!isRunning && currentMode === 'work') {
-                      setTimeLeft(val * 60)
-                    }
                   }}
                   className="w-full"
                 />
@@ -298,9 +257,6 @@ const FocusMode: React.FC<FocusModeProps> = ({ theme: _theme }) => {
                   onChange={(e) => {
                     const val = parseInt(e.target.value)
                     setBreakMinutes(val)
-                    if (!isRunning && currentMode === 'break') {
-                      setTimeLeft(val * 60)
-                    }
                   }}
                   className="w-full"
                 />
@@ -309,20 +265,62 @@ const FocusMode: React.FC<FocusModeProps> = ({ theme: _theme }) => {
                   <span>30m</span>
                 </div>
               </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  长休息时长: {longBreakMinutes} 分钟
+                </label>
+                <input
+                  type="range"
+                  min="10"
+                  max="45"
+                  step="5"
+                  value={longBreakMinutes}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value)
+                    setLongBreakMinutes(val)
+                  }}
+                  className="w-full"
+                />
+                <div className="flex justify-between text-xs text-white/60">
+                  <span>10m</span>
+                  <span>45m</span>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  长休息间隔: 每 {sessionsBeforeLongBreak} 个番茄钟
+                </label>
+                <input
+                  type="range"
+                  min="2"
+                  max="6"
+                  step="1"
+                  value={sessionsBeforeLongBreak}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value)
+                    setSessionsBeforeLongBreak(val)
+                  }}
+                  className="w-full"
+                />
+                <div className="flex justify-between text-xs text-white/60">
+                  <span>2</span>
+                  <span>6</span>
+                </div>
+              </div>
               <p className="text-xs text-white/60">
-                💡 每 {POMODORO_BEFORE_LONG_BREAK} 个番茄钟后会自动延长休息时间到 {LONG_BREAK_MINUTES} 分钟
+                💡 配置会保存在本地，重启后生效
               </p>
             </div>
           </div>
         )}
 
         {/* 今日统计 */}
-        {sessions.length > 0 && (
+        {pomodoro.completed_sessions > 0 && (
           <div className="bg-white/10 backdrop-blur rounded-xl p-6 text-left">
             <h3 className="font-semibold mb-3">今日统计</h3>
             <div className="grid grid-cols-2 gap-4 text-center">
               <div>
-                <div className="text-2xl font-bold">{sessionCount}</div>
+                <div className="text-2xl font-bold">{pomodoro.completed_sessions}</div>
                 <div className="text-sm text-white/70">完成番茄钟</div>
               </div>
               <div>
@@ -335,8 +333,8 @@ const FocusMode: React.FC<FocusModeProps> = ({ theme: _theme }) => {
 
         {/* 小贴士 */}
         <div className="mt-8 text-white/50 text-sm">
-          <p>番茄工作法: 25分钟专注工作 → 5分钟休息，循环往复。</p>
-          <p className="mt-1">每完成4个番茄钟，建议休息15分钟。</p>
+          <p>番茄工作法: 专注工作 → 休息，循环往复。</p>
+          <p className="mt-1">每完成多个番茄钟，建议延长休息时间恢复精力。</p>
         </div>
       </div>
     </div>
