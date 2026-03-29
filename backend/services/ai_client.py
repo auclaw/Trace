@@ -1,9 +1,14 @@
 """
-AI Client - Unified interface for ERNIE and Doubao
+AI Client - Unified interface for multiple providers
 Singleton pattern to avoid recreating client for each request
+Supported: ERNIE (baidu), Doubao (bytedance), Qwen (alibabacloud), DeepSeek, MiniMax, Kimi (moonshot)
 """
 from openai import OpenAI
-from config.settings import ERNIE_API_KEY, DOUBAN_API_KEY
+from config.settings import (
+    ERNIE_API_KEY, DOUBAN_API_KEY, QWEN_API_KEY,
+    DEEPSEEK_API_KEY, MINIMAX_API_KEY, KIMI_API_KEY,
+    VOLCENGINE_API_KEY, OLLAMA_API_KEY, OLLAMA_BASE_URL, OLLAMA_DEFAULT_MODEL
+)
 from utils.logger import setup_logger
 
 logger = setup_logger()
@@ -16,7 +21,7 @@ class AIClient:
     def __init__(self, provider: str):
         """
         Initialize AI client
-        :param provider: "ernie" or "doubao"
+        :param provider: "ernie", "doubao" or "qwen"
         """
         self.provider = provider
 
@@ -28,6 +33,30 @@ class AIClient:
             api_key = DOUBAN_API_KEY
             base_url = "https://aip.volcengineapi.com/v1/chat/completions"
             self.default_model = "doubao-4k"
+        elif provider == 'qwen':
+            api_key = QWEN_API_KEY
+            base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+            self.default_model = "qwen-max"
+        elif provider == 'deepseek':
+            api_key = DEEPSEEK_API_KEY
+            base_url = "https://api.deepseek.com/v1"
+            self.default_model = "deepseek-chat"
+        elif provider == 'minimax':
+            api_key = MINIMAX_API_KEY
+            base_url = "https://api.minimax.chat/v1"
+            self.default_model = "abab6.5-chat"
+        elif provider == 'kimi':
+            api_key = KIMI_API_KEY
+            base_url = "https://api.moonshot.cn/v1"
+            self.default_model = "moonshot-v1-8k"
+        elif provider == 'volcengine':
+            api_key = VOLCENGINE_API_KEY
+            base_url = "https://ark.cn-beijing.volces.com/api/v1"
+            self.default_model = "doubao-4k"
+        elif provider == 'ollama':
+            api_key = OLLAMA_API_KEY
+            base_url = OLLAMA_BASE_URL
+            self.default_model = OLLAMA_DEFAULT_MODEL
         else:
             raise ValueError(f"Unknown provider: {provider}")
 
@@ -74,6 +103,18 @@ class AIClient:
             return cls.get_instance('ernie')
         elif DOUBAN_API_KEY:
             return cls.get_instance('doubao')
+        elif QWEN_API_KEY:
+            return cls.get_instance('qwen')
+        elif DEEPSEEK_API_KEY:
+            return cls.get_instance('deepseek')
+        elif MINIMAX_API_KEY:
+            return cls.get_instance('minimax')
+        elif KIMI_API_KEY:
+            return cls.get_instance('kimi')
+        elif VOLCENGINE_API_KEY:
+            return cls.get_instance('volcengine')
+        elif OLLAMA_API_KEY is not None:
+            return cls.get_instance('ollama')
         else:
             raise ValueError("No AI API key configured")
 

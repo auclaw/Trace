@@ -10,6 +10,7 @@ import random
 import re
 import json
 from datetime import datetime, timedelta
+from typing import Optional, Tuple
 
 from config.settings import SECRET_KEY
 from utils.database import get_db_connection, init_database
@@ -34,7 +35,7 @@ def generate_token(user_id: int) -> str:
     return jwt.encode(payload, SECRET_KEY, algorithm='HS256')
 
 
-def verify_token(token: str) -> int | None:
+def verify_token(token: str) -> Optional[int]:
     """Verify JWT token, return user_id or None"""
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
@@ -43,7 +44,7 @@ def verify_token(token: str) -> int | None:
         return None
 
 
-def check_subscription_valid(user_id: int) -> tuple[bool, str | None]:
+def check_subscription_valid(user_id: int) -> Tuple[bool, Optional[str]]:
     """
     Check if user has an active valid subscription
     :return: (is_valid, error_message if invalid else None)
@@ -140,7 +141,7 @@ def save_verification_code(phone: str, code: str, expire_minutes: int = 10):
         conn.commit()
 
 
-def get_verification_code(phone: str) -> dict | None:
+def get_verification_code(phone: str) -> Optional[dict]:
     """Get valid verification code from database"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -192,6 +193,10 @@ def send_code():
     save_verification_code(phone, code)
 
     if send_sms_code(phone, code):
+        # In development mode where SMS is not configured,
+        # log the code for testing
+        if not SMSFactory.get_instance().access_key_id:
+            logger.warning(f"[DEV MODE] Verification code for {phone} is: {code}")
         logger.info(f"Verification code sent to {phone}")
         return jsonify({'code': 200, 'msg': '验证码已发送'})
     else:
@@ -242,6 +247,61 @@ def login_phone():
 
     token = generate_token(user_id)
     logger.info(f"User {user_id} logged in via phone {phone}")
+    return jsonify({
+        'code': 200,
+        'data': {
+            'token': token,
+            'user_id': user_id
+        }
+    })
+
+
+@app.route('/api/auth/dev-login', methods=['POST'])
+def dev_login():
+    """Development mode: direct login without verification code
+    Only available when SMS is not configured (for local development)
+    """
+    # Only allow this when SMS is not configured (dev mode)
+    from config.settings import SMS_ACCESS_KEY_ID
+    if SMS_ACCESS_KEY_ID and len(SMS_ACCESS_KEY_ID.strip()) > 0:
+        return jsonify({'code': 403, 'msg': '此接口仅在开发模式下可用'})
+
+    data = request.get_json()
+    phone = data.get('phone')
+
+    if not phone or not re.match(r'^1[3-9]\d{9}$', phone):
+        return jsonify({'code': 400, 'msg': '手机号格式错误'})
+
+    # Query or create user
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT id, is_vip, expire_at FROM users WHERE phone = ?', (phone,))
+        row = cursor.fetchone()
+
+        if not row:
+            # Create new user - automatically activate 14-day free trial
+            from datetime import timedelta
+            expire_at = datetime.now() + timedelta(days=14)
+            cursor.execute(
+                'INSERT INTO users (phone, created_at, is_vip, expire_at) VALUES (?, ?, ?, ?)',
+                (phone, datetime.now(), 1, expire_at)
+            )
+            conn.commit()
+            user_id = cursor.lastrowid
+            # Record trial start in history
+            cursor.execute(
+                '''INSERT INTO subscription_history
+                   (user_id, event_type, order_id, previous_expire_at, new_expire_at, notes)
+                   VALUES (?, ?, ?, ?, ?, ?)''',
+                (user_id, 'trial_start', None, None, expire_at, 'Dev mode auto-create')
+            )
+            conn.commit()
+            logger.info(f"[DEV MODE] New user created: {user_id}, phone {phone}")
+        else:
+            user_id = row[0]
+
+    token = generate_token(user_id)
+    logger.info(f"[DEV MODE] User {user_id} logged in via dev-login ({phone})")
     return jsonify({
         'code': 200,
         'data': {
@@ -1627,7 +1687,7 @@ def save_privacy_settings():
 
 from services.ai_client import AIClient
 
-ai_client = AIClient()
+ai_client = AIClient.get_default_client()
 
 @app.route('/api/melegal/generate', methods=['POST'])
 def melegal_generate_document():
@@ -1861,8 +1921,230 @@ def melegal_generate_custom():
     return jsonify(response)
 
 
+# ========== Browser development mode APIs - read activities from local data directory ==========
+
+import os
+import json
+from datetime import datetime
+
+def process_activities_data(raw_activities, date_str):
+    """
+    Process raw activities data from JSON file:
+    1. Convert snake_case to camelCase for frontend
+    2. Calculate missing startTimeMs if not present
+    3. Merge consecutive activities with same app name
+    """
+    # Parse date start time (midnight)
+    year, month, day = map(int, date_str.split('-'))
+    from datetime import datetime
+    day_start_dt = datetime(year, month, day, 0, 0, 0)
+    day_start_ms = int(day_start_dt.timestamp() * 1000)
+
+    # Step 1: Convert field names and calculate cumulative start times
+    converted = []
+    current_start_ms = day_start_ms
+
+    for raw in raw_activities:
+        # Convert snake_case to camelCase
+        activity = {
+            'id': raw.get('id', ''),
+            'name': raw.get('name', ''),
+            'windowTitle': raw.get('window_title', '') or raw.get('windowTitle', ''),
+            'category': raw.get('category'),
+            'taskId': raw.get('task_id'),
+            'startTimeMs': raw.get('start_time_ms', current_start_ms) or current_start_ms,
+            'durationMinutes': raw.get('duration_minutes', 0) or raw.get('durationMinutes', 0),
+        }
+        converted.append(activity)
+        # Update next start time
+        current_start_ms = activity['startTimeMs'] + int(activity['durationMinutes'] * 60 * 1000)
+
+    # Step 2: Merge consecutive activities with same app name
+    if not converted:
+        return []
+
+    merged = []
+    current = None
+
+    for activity in converted:
+        if current is None:
+            current = activity.copy()
+            continue
+
+        # If same app name (and same category), merge
+        if current['name'] == activity['name'] and current['category'] == activity['category']:
+            # Extend duration
+            current['durationMinutes'] += activity['durationMinutes']
+            # Keep the first start time
+        else:
+            # Push current and start new
+            merged.append(current)
+            current = activity.copy()
+
+    # Push the last one
+    if current is not None:
+        merged.append(current)
+
+    # Filter out activities with less than 0.5 minutes (30 seconds) - they are just flickers
+    merged = [a for a in merged if a['durationMinutes'] >= 0.5]
+
+    return merged
+
+
+@app.route('/api/browser/get-today-activities', methods=['GET'])
+def browser_get_today_activities():
+    """Get today's activities from local data directory (for browser dev mode)"""
+    today = datetime.now().date()
+    date_str = today.strftime('%Y-%m-%d')
+
+    # On macOS, data directory is ~/Library/Application Support/merize/
+    home_dir = os.path.expanduser('~')
+    data_dir = os.path.join(home_dir, 'Library', 'Application Support', 'merize')
+    file_path = os.path.join(data_dir, f'activities_{date_str}.json')
+
+    if not os.path.exists(file_path):
+        return jsonify({'code': 200, 'data': []})
+
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            raw_activities = json.load(f)
+        processed = process_activities_data(raw_activities, date_str)
+        return jsonify({'code': 200, 'data': processed})
+    except Exception as e:
+        logger.error(f"Failed to read activities file: {e}")
+        return jsonify({'code': 500, 'msg': str(e)})
+
+
+@app.route('/api/browser/get-activities-by-date', methods=['GET'])
+def browser_get_activities_by_date():
+    """Get activities by date from local data directory (for browser dev mode)"""
+    date_str = request.args.get('date', '')
+    if not date_str:
+        return jsonify({'code': 400, 'msg': 'Missing date parameter'})
+
+    # On macOS, data directory is ~/Library/Application Support/merize/
+    home_dir = os.path.expanduser('~')
+    data_dir = os.path.join(home_dir, 'Library', 'Application Support', 'merize')
+    file_path = os.path.join(data_dir, f'activities_{date_str}.json')
+
+    if not os.path.exists(file_path):
+        return jsonify({'code': 200, 'data': []})
+
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            raw_activities = json.load(f)
+        processed = process_activities_data(raw_activities, date_str)
+        return jsonify({'code': 200, 'data': processed})
+    except Exception as e:
+        logger.error(f"Failed to read activities file: {e}")
+        return jsonify({'code': 500, 'msg': str(e)})
+
+
+@app.route('/api/browser/get-today-stats', methods=['GET'])
+def browser_get_today_stats():
+    """Calculate today stats from activities (for browser dev mode)"""
+    date_str = request.args.get('date', '')
+    if not date_str:
+        date_str = datetime.now().date().strftime('%Y-%m-%d')
+
+    home_dir = os.path.expanduser('~')
+    data_dir = os.path.join(home_dir, 'Library', 'Application Support', 'merize')
+    file_path = os.path.join(data_dir, f'activities_{date_str}.json')
+
+    if not os.path.exists(file_path):
+        return jsonify({
+            'code': 200,
+            'data': {
+                'total_focus_minutes': 0,
+                'total_categories': 0,
+                'top_category': ''
+            }
+        })
+
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            activities = json.load(f)
+
+        category_counts = {}
+        total_focus = 0.0
+        for activity in activities:
+            total_focus += activity.get('duration_minutes', 0)
+            category = activity.get('category')
+            if category:
+                if category not in category_counts:
+                    category_counts[category] = 0
+                category_counts[category] += activity.get('duration_minutes', 0)
+
+        top_category = ''
+        max_duration = 0
+        for cat, duration in category_counts.items():
+            if duration > max_duration:
+                max_duration = duration
+                top_category = cat
+
+        return jsonify({
+            'code': 200,
+            'data': {
+                'total_focus_minutes': total_focus,
+                'total_categories': len(category_counts),
+                'top_category': top_category
+            }
+        })
+    except Exception as e:
+        logger.error(f"Failed to calculate stats: {e}")
+        return jsonify({'code': 500, 'msg': str(e)})
+
+
+@app.route('/api/browser/get-monthly-stats', methods=['GET'])
+def browser_get_monthly_stats():
+    """Get monthly stats for heatmap (for browser dev mode)"""
+    year = request.args.get('year', '')
+    month = request.args.get('month', '')
+    if not year or not month:
+        return jsonify({'code': 400, 'msg': 'Missing year/month parameters'})
+
+    year = int(year)
+    month = int(month)
+
+    home_dir = os.path.expanduser('~')
+    data_dir = os.path.join(home_dir, 'Library', 'Application Support', 'merize')
+
+    # Calculate number of days in this month
+    if month == 12:
+        next_month_start = datetime(year + 1, 1, 1)
+    else:
+        next_month_start = datetime(year, month + 1, 1)
+    days_in_month = (next_month_start - datetime(year, month, 1)).days
+
+    result = []
+
+    for day in range(1, days_in_month + 1):
+        date_str = f'{year:04d}-{month:02d}-{day:02d}'
+        file_path = os.path.join(data_dir, f'activities_{date_str}.json')
+
+        total_minutes = 0
+        if os.path.exists(file_path):
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    activities = json.load(f)
+                for activity in activities:
+                    total_minutes += activity.get('duration_minutes', 0) or activity.get('durationMinutes', 0)
+            except Exception:
+                pass
+
+        result.append({
+            'day': day,
+            'total_minutes': total_minutes
+        })
+
+    return jsonify({
+        'code': 200,
+        'data': result
+    })
+
+
 if __name__ == '__main__':
     # Initialize database on startup
     init_database()
     logger.info("Database initialized")
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=2345, debug=True)

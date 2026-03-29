@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { loginWithPhone, loginWechat, sendCode } from '../utils/auth'
+import { loginWithPhone, loginWechat, sendCode, devLogin } from '../utils/auth'
+import { API_HOST } from '../utils/api'
 import type { Theme } from '../App'
 
 interface LoginProps {
@@ -50,6 +51,21 @@ export default function Login({ theme, onLoginSuccess }: LoginProps) {
       onLoginSuccess()
     } catch (err) {
       setError('微信登录失败')
+    }
+  }
+
+  const handleDevLogin = async () => {
+    if (!phone.match(/^1[3-9]\d{9}$/)) {
+      setError('请输入正确的手机号')
+      return
+    }
+    setLoading(true)
+    try {
+      await devLogin(phone)
+      onLoginSuccess()
+    } catch (err) {
+      setError('开发模式登录失败')
+      setLoading(false)
     }
   }
 
@@ -144,6 +160,28 @@ export default function Login({ theme, onLoginSuccess }: LoginProps) {
             >
               📱 微信一键登录
             </button>
+
+            {/* 开发模式登录 - 仅在本地开发时显示 */}
+            {API_HOST.includes('localhost') && (
+              <>
+                <div className="relative my-6">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className={`w-full border-t ${isDark ? 'border-gray-600' : 'border-gray-300'}`}></div>
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className={`px-2 ${isDark ? 'bg-gray-800' : 'bg-white'} ${textColor}`}>开发模式</span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleDevLogin}
+                  disabled={loading}
+                  className="w-full py-2 bg-gray-600 text-white text-sm font-medium rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50"
+                >
+                  ⚙️ 直接登录（无需验证码）
+                </button>
+              </>
+            )}
           </div>
 
           <div className={`mt-6 text-center text-xs ${textColor}`}>

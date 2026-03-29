@@ -1,7 +1,7 @@
 import { invoke } from '@tauri-apps/api/core'
 import { getToken } from './auth'
 
-export const API_HOST = import.meta.env.VITE_API_HOST || 'http://localhost:5000'
+export const API_HOST = import.meta.env.VITE_API_HOST || 'http://localhost:2345'
 
 // 通用 API 请求函数 (用于后端 Flask API)
 export async function apiRequest<T = any>(
@@ -67,33 +67,90 @@ export async function aiClassify(windows: [string, string][], provider: 'ernie' 
   return data.data.category
 }
 
+// ============= 环境检测: Tauri native vs Browser dev =============
+
+function isBrowserDev(): boolean {
+  // 浏览器环境中没有 Tauri，使用 HTTP API 读取本地数据
+  return typeof window !== 'undefined' && !(window as any).__TAURI__
+}
+
 // ============= 原生调用保留 =============
 // 类型导出
 export type { Activity, DailyStats, WeeklyStatItem, Settings } from './tracking'
 
 // 获取今日活动
-export async function getTodayActivities() {
+export async function getTodayActivities(): Promise<Activity[]> {
+  if (isBrowserDev()) {
+    // Browser dev mode: use HTTP API
+    const res = await apiRequest<Activity[]>('/api/browser/get-today-activities', 'GET')
+    if (res.code === 200) {
+      return res.data
+    }
+    return []
+  }
+  // Tauri native: use invoke
   const result = await invoke('get_today_activities')
   return result as Activity[]
 }
 
 // 获取指定日期所有活动
 export async function getActivitiesByDate(dateStr: string): Promise<Activity[]> {
+  if (isBrowserDev()) {
+    // Browser dev mode: use HTTP API
+    const res = await apiRequest<Activity[]>(`/api/browser/get-activities-by-date?date=${dateStr}`, 'GET')
+    if (res.code === 200) {
+      return res.data
+    }
+    return []
+  }
+  // Tauri native: use invoke
   return await invoke('get_activities_by_date', { date_str: dateStr })
 }
 
 // 获取今日统计
 export async function getTodayStats(): Promise<DailyStats> {
+  if (isBrowserDev()) {
+    // Browser dev mode: use HTTP API
+    const res = await apiRequest<DailyStats>('/api/browser/get-today-stats', 'GET')
+    if (res.code === 200) {
+      return res.data
+    }
+    return {
+      totalFocusMinutes: 0,
+      totalCategories: 0,
+      topCategory: ''
+    }
+  }
+  // Tauri native: use invoke
   return await invoke('get_today_stats')
 }
 
 // 获取指定日期统计
 export async function getStatsByDate(dateStr: string): Promise<DailyStats> {
+  if (isBrowserDev()) {
+    // Browser dev mode: use HTTP API
+    const res = await apiRequest<DailyStats>(`/api/browser/get-today-stats?date=${dateStr}`, 'GET')
+    if (res.code === 200) {
+      return res.data
+    }
+    return {
+      totalFocusMinutes: 0,
+      totalCategories: 0,
+      topCategory: ''
+    }
+  }
+  // Tauri native: use invoke
   return await invoke('get_daily_stats_by_date', { date_str: dateStr })
 }
 
 // 获取每周统计
 export async function getWeeklyStats(): Promise<WeeklyStatItem[]> {
+  if (isBrowserDev()) {
+    // Browser dev mode: not implemented for weekly yet, return empty
+    // This is only used for weekly stats which isn't critical in dev
+    return []
+  }
+  // Tauri native: use invoke
   return await invoke('get_weekly_stats')
 }
 
@@ -101,6 +158,15 @@ export async function getWeeklyStats(): Promise<WeeklyStatItem[]> {
 import type { MonthlyDayStat } from './tracking'
 
 export async function getMonthlyStats(year: number, month: number): Promise<MonthlyDayStat[]> {
+  if (isBrowserDev()) {
+    // Browser dev mode: use HTTP API
+    const res = await apiRequest<MonthlyDayStat[]>(`/api/browser/get-monthly-stats?year=${year}&month=${month}`, 'GET')
+    if (res.code === 200) {
+      return res.data
+    }
+    return []
+  }
+  // Tauri native: use invoke
   return await invoke('get_monthly_stats', { year, month })
 }
 

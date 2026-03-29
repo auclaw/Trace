@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import { NavLink } from 'react-router-dom'
 import type { Theme } from '../App'
+import { toggleTracking } from '../utils/tracking'
 import { apiRequest } from '../utils/api'
 
 interface SidebarProps {
   isTracking: boolean
   theme: Theme
+  onToggleTracking: (newStatus: boolean) => void
 }
 
 type SubscriptionPlan = 'free' | 'personal' | 'business'
@@ -17,7 +19,7 @@ interface UserRole {
   plan: SubscriptionPlan
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isTracking, theme }) => {
+const Sidebar: React.FC<SidebarProps> = ({ isTracking, theme, onToggleTracking }) => {
   const isDark = theme === 'dark'
   const [roles, setRoles] = useState<UserRole>({
     hasOrgAdmin: false,
@@ -25,6 +27,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isTracking, theme }) => {
     hasAnyTeam: false,
     plan: 'free',
   })
+  const [loading, setLoading] = useState(false)
   const bgClass = isDark ? 'bg-gray-800' : 'bg-white'
   const borderClass = isDark ? 'border-gray-700' : 'border-gray-200'
   const textClass = isDark ? 'text-gray-300' : 'text-gray-700'
@@ -46,14 +49,42 @@ const Sidebar: React.FC<SidebarProps> = ({ isTracking, theme }) => {
     loadRoles()
   }, [])
 
+  const handleToggle = async () => {
+    setLoading(true)
+    try {
+      const newStatus = !isTracking
+      const result = await toggleTracking(newStatus)
+      onToggleTracking(result)
+    } catch (error) {
+      console.error('Failed to toggle tracking', error)
+      // 即使出错也更新UI
+      onToggleTracking(!isTracking)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className={`w-64 ${bgClass} shadow-sm border-r ${borderClass} flex flex-col transition-colors duration-200`}>
       <div className={`p-6 ${borderBottomClass}`}>
         <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-success bg-clip-text text-transparent">Merize</h1>
         <p className={`text-xs ${mutedTextClass}`}>AI 自动时间追踪</p>
-        <div className="mt-2 flex items-center" data-tour="tracking-status">
-          <span className={`w-2 h-2 rounded-full mr-2 ${isTracking ? 'bg-green-500 animate-pulse' : isDark ? 'bg-gray-600' : 'bg-gray-300'} transition-all duration-300`}></span>
-          <span className={`text-sm ${mutedTextClass}`}>{isTracking ? '正在追踪' : '追踪已暂停'}</span>
+        <div className="mt-3 flex items-center justify-between" data-tour="tracking-status">
+          <div className="flex items-center">
+            <span className={`w-2 h-2 rounded-full mr-2 ${isTracking ? 'bg-green-500 animate-pulse' : isDark ? 'bg-gray-600' : 'bg-gray-300'} transition-all duration-300`}></span>
+            <span className={`text-sm ${mutedTextClass}`}>{isTracking ? '正在追踪' : '追踪已暂停'}</span>
+          </div>
+          <button
+            onClick={handleToggle}
+            disabled={loading}
+            className={`px-3 py-1 text-xs rounded-full font-medium transition-colors ${
+              isTracking
+                ? (isDark ? 'bg-red-900/30 text-red-400 hover:bg-red-900/50' : 'bg-red-100 text-red-700 hover:bg-red-200')
+                : (isDark ? 'bg-green-900/30 text-green-400 hover:bg-green-900/50' : 'bg-green-100 text-green-700 hover:bg-green-200')
+            } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            {isTracking ? '暂停' : '开始'}
+          </button>
         </div>
       </div>
 
@@ -300,23 +331,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isTracking, theme }) => {
               )}
             </>
           )}
-
-          <li>
-            <NavLink
-              to="/privacy"
-              className={({ isActive }) => {
-                const base = 'flex items-center px-4 py-3 rounded-xl transition-all duration-200 transform'
-                if (isActive) {
-                  return `${base} bg-gradient-to-r from-primary/10 to-success/10 text-primary font-medium scale-[1.02] shadow-sm`
-                } else {
-                  return `${base} ${textClass} hover:bg-opacity-10 ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} hover:scale-[1.01]`
-                }
-              }}
-            >
-              <span className="mr-3 text-lg">🔒</span>
-              隐私设置
-            </NavLink>
-          </li>
 
           <li>
             <NavLink

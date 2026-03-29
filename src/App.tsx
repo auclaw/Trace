@@ -15,7 +15,6 @@ import FlowBlocks from './pages/FlowBlocks'
 import TeamFocus from './pages/TeamFocus'
 import AiSummary from './pages/AiSummary'
 import DeepWorkStats from './pages/DeepWorkStats'
-import PrivacySettings from './pages/PrivacySettings'
 import Sidebar from './components/Sidebar'
 import OnboardingTour, { getDefaultTourSteps } from './components/OnboardingTour'
 import { checkTrackingStatus, toggleTracking } from './utils/tracking'
@@ -153,12 +152,16 @@ function AppContent() {
 
   const bgClass = theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'
 
+  const handleToggleTracking = async (newStatus: boolean) => {
+    setIsTracking(newStatus)
+  }
+
   return (
     <div className={`flex h-screen ${bgClass} transition-colors duration-200`}>
-      <Sidebar isTracking={isTracking} theme={theme} />
+      <Sidebar isTracking={isTracking} theme={theme} onToggleTracking={handleToggleTracking} />
       <main className="flex-1 overflow-auto">
         <Routes>
-          <Route path="/" element={<Dashboard theme={theme} />} />
+          <Route path="/" element={<Dashboard theme={theme} isTracking={isTracking} onTrackingChange={setIsTracking} />} />
           <Route path="/statistics" element={<Statistics theme={theme} />} />
           <Route path="/planner" element={<Planner theme={theme} />} />
           <Route path="/calendar" element={<Calendar theme={theme} />} />
@@ -171,8 +174,7 @@ function AppContent() {
           <Route path="/team-focus" element={<TeamFocus theme={theme} />} />
           <Route path="/ai-summary" element={<AiSummary theme={theme} />} />
           <Route path="/deep-work-stats" element={<DeepWorkStats theme={theme} />} />
-          <Route path="/privacy" element={<PrivacySettings theme={theme} />} />
-          <Route path="/settings" element={<Settings theme={theme} toggleTheme={toggleTheme} />} />
+          <Route path="/settings" element={<Settings theme={theme} toggleTheme={toggleTheme} isTracking={isTracking} onTrackingChange={setIsTracking} />} />
         </Routes>
       </main>
       <OnboardingTour

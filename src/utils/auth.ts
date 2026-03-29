@@ -69,6 +69,23 @@ export async function sendCode(phone: string): Promise<void> {
   }
 }
 
+// 开发模式直接登录（不需要验证码）
+export async function devLogin(phone: string): Promise<void> {
+  const res = await fetch(`${API_HOST}/api/auth/dev-login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ phone })
+  })
+  const data = await res.json()
+  if (data.code === 200) {
+    localStorage.setItem('merize_token', data.data.token)
+  } else {
+    throw new Error(data.msg || '登录失败')
+  }
+}
+
 // 获取当前登录用户 ID 从 JWT token
 export function getCurrentUserId(): number | null {
   const token = getToken()

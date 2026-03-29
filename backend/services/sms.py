@@ -8,7 +8,7 @@ import hashlib
 import base64
 import urllib.parse
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Union
 import requests
 
 from config.settings import (
@@ -130,10 +130,10 @@ class TencentSMS:
 class SMSFactory:
     """SMS service factory"""
 
-    _instance: Optional[AliCloudSMS | TencentSMS] = None
+    _instance: Optional[Union[AliCloudSMS, TencentSMS]] = None
 
     @classmethod
-    def get_instance(cls) -> AliCloudSMS | TencentSMS:
+    def get_instance(cls) -> Union[AliCloudSMS, TencentSMS]:
         """Get singleton instance"""
         if cls._instance is None:
             if SMS_PROVIDER == 'alicloud':

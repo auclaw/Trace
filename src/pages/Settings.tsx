@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getSettings, saveSettings, toggleTracking, checkTrackingStatus, getAllActivitiesExport } from '../utils/tracking'
+import { getSettings, saveSettings, toggleTracking, getAllActivitiesExport } from '../utils/tracking'
 import { Settings as SettingsType } from '../utils/tracking'
 import { logout } from '../utils/auth'
 import { apiRequest } from '../utils/api'
@@ -22,9 +22,11 @@ interface UserRole {
 interface SettingsProps {
   theme: Theme
   toggleTheme: () => void
+  isTracking: boolean
+  onTrackingChange: (status: boolean) => void
 }
 
-const Settings: React.FC<SettingsProps> = ({ theme, toggleTheme }) => {
+const Settings: React.FC<SettingsProps> = ({ theme, toggleTheme, isTracking, onTrackingChange }) => {
   const isDark = theme === 'dark'
   const titleColor = isDark ? 'text-white' : 'text-gray-900'
   const textColor = isDark ? 'text-gray-400' : 'text-gray-500'
@@ -38,7 +40,6 @@ const Settings: React.FC<SettingsProps> = ({ theme, toggleTheme }) => {
   const [settings, setSettings] = useState<SettingsType | null>(null)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
-  const [trackingStatus, setTrackingStatus] = useState(false)
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
   const [roles, setRoles] = useState<UserRole>({
@@ -54,7 +55,6 @@ const Settings: React.FC<SettingsProps> = ({ theme, toggleTheme }) => {
 
   useEffect(() => {
     loadSettings()
-    checkStatus()
     loadRoles()
   }, [])
 
@@ -130,11 +130,6 @@ const Settings: React.FC<SettingsProps> = ({ theme, toggleTheme }) => {
     }
   }
 
-  const checkStatus = async () => {
-    const status = await checkTrackingStatus()
-    setTrackingStatus(status)
-  }
-
   const handleSave = async () => {
     setSaving(true)
     setSaved(false)
@@ -155,12 +150,12 @@ const Settings: React.FC<SettingsProps> = ({ theme, toggleTheme }) => {
 
   const handleToggleTracking = async () => {
     try {
-      const newStatus = await toggleTracking(!trackingStatus)
-      setTrackingStatus(newStatus)
+      const newStatus = await toggleTracking(!isTracking)
+      onTrackingChange(newStatus)
     } catch (error) {
       console.error('切换追踪状态失败', error)
       // 即使出错也更新 UI，用户可以再次点击
-      setTrackingStatus(!trackingStatus)
+      onTrackingChange(!isTracking)
     }
   }
 
@@ -283,7 +278,7 @@ const Settings: React.FC<SettingsProps> = ({ theme, toggleTheme }) => {
             <p className={`text-sm ${textColor}`}>
               {roles.plan === 'free'
                 ? '免费版仅支持手动记录，自动追踪需要升级套餐'
-                : (trackingStatus ? '当前正在记录你的活动' : '当前已暂停记录')
+                : (isTracking ? '当前正在记录你的活动' : '当前已暂停记录')
               }
             </p>
           </div>
@@ -300,12 +295,12 @@ const Settings: React.FC<SettingsProps> = ({ theme, toggleTheme }) => {
             <button
               onClick={handleToggleTracking}
               className={`px-4 py-2 rounded-lg font-medium ${
-                trackingStatus
+                isTracking
                   ? (isDark ? 'bg-red-900/30 text-red-400 hover:bg-red-900/50' : 'bg-red-100 text-red-700 hover:bg-red-200')
                   : (isDark ? 'bg-green-900/30 text-green-400 hover:bg-green-900/50' : 'bg-green-100 text-green-700 hover:bg-green-200')
               }`}
             >
-              {trackingStatus ? '暂停追踪' : '开始追踪'}
+              {isTracking ? '暂停追踪' : '开始追踪'}
             </button>
           )}
         </div>
@@ -551,6 +546,148 @@ const Settings: React.FC<SettingsProps> = ({ theme, toggleTheme }) => {
             >
               {exporting ? '导出中...' : '导出 CSV'}
             </button>
+          </div>
+        </div>
+
+        {/* 隐私设置 */}
+        <div className={`pt-4 border-t ${borderLight}`}>
+          <h3 className={`font-semibold ${titleColor} mb-4`}>隐私设置</h3>
+
+          {/* 云同步模式 */}
+          <div className="mb-4 space-y-3">
+            <p className={`text-sm ${textColor} mb-3`}>
+              选择哪些数据会同步到云端 —— 隐私优先是我们的核心设计
+            </p>
+            <label className={`block p-4 rounded cursor-pointer border ${borderColor} ${
+              settings.privacy_sync_mode === 'local_only'
+                ? (isDark ? 'border-blue-500 ring-1 ring-blue-500 bg-blue-900/20' : 'border-blue-500 ring-1 ring-blue-500 bg-blue-50')
+                : ''
+            }`}>
+              <input
+                type="radio"
+                name="privacy_sync_mode"
+                value="local_only"
+                checked={settings.privacy_sync_mode === 'local_only'}
+                onChange={(e) => setSettings({ ...settings, privacy_sync_mode: e.target.value as any })}
+                className="mr-2"
+              />
+              <div>
+                <strong className={titleColor}>🔒 纯本地模式</strong>
+                <p className={`text-sm ${textColor} mt-1`}>
+                  所有数据永远存在你的电脑上，不上传任何数据到云端。适合对隐私有极致要求的用户。
+                </p>
+              </div>
+            </label>
+
+            <label className={`block p-4 rounded cursor-pointer border ${borderColor} ${
+              settings.privacy_sync_mode === 'summary_only' || !settings.privacy_sync_mode
+                ? (isDark ? 'border-blue-500 ring-1 ring-blue-500 bg-blue-900/20' : 'border-blue-500 ring-1 ring-blue-500 bg-blue-50')
+                : ''
+            }`}>
+              <input
+                type="radio"
+                name="privacy_sync_mode"
+                value="summary_only"
+                checked={(settings.privacy_sync_mode || 'summary_only') === 'summary_only'}
+                onChange={(e) => setSettings({ ...settings, privacy_sync_mode: e.target.value as any })}
+                className="mr-2"
+              />
+              <div>
+                <strong className={titleColor}>⚖️ 仅汇总数据（推荐）</strong>
+                <p className={`text-sm ${textColor} mt-1`}>
+                  原始窗口标题/URL 永远留在本地，云端只存分类汇总结果。兼顾隐私和多设备同步。
+                </p>
+              </div>
+            </label>
+
+            <label className={`block p-4 rounded cursor-pointer border ${borderColor} ${
+              settings.privacy_sync_mode === 'full'
+                ? (isDark ? 'border-blue-500 ring-1 ring-blue-500 bg-blue-900/20' : 'border-blue-500 ring-1 ring-blue-500 bg-blue-50')
+                : ''
+            }`}>
+              <input
+                type="radio"
+                name="privacy_sync_mode"
+                value="full"
+                checked={settings.privacy_sync_mode === 'full'}
+                onChange={(e) => setSettings({ ...settings, privacy_sync_mode: e.target.value as any })}
+                className="mr-2"
+              />
+              <div>
+                <strong className={titleColor}>📡 完整同步</strong>
+                <p className={`text-sm ${textColor} mt-1`}>
+                  同步所有数据（包括原始标题）到云端，端对端加密保护。换设备完整恢复。
+                </p>
+              </div>
+            </label>
+          </div>
+
+          {/* 端对端加密 */}
+          {(settings.privacy_sync_mode !== 'local_only') && (
+            <div className="mb-4 p-4 border rounded border-gray-200 dark:border-gray-700">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className={`font-semibold ${titleColor} mb-1`}>端对端加密</h3>
+                  <p className={`text-sm ${textColor}`}>
+                    即使完整同步，云端也无法读取你的原始数据 —— 只有你握有解密密钥
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={settings.privacy_cloud_encryption !== false}
+                    onChange={(e) => setSettings({ ...settings, privacy_cloud_encryption: e.target.checked })}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+            </div>
+          )}
+
+          {/* 本地保留原始数据 */}
+          <div className="mb-4 p-4 border rounded border-gray-200 dark:border-gray-700">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className={`font-semibold ${titleColor} mb-1`}>本地保留原始数据</h3>
+                <p className={`text-sm ${textColor}`}>
+                  在本地始终保留完整原始数据，即使云端存的是汇总，本地也有完整记录
+                </p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={settings.privacy_retain_raw_local !== false}
+                  onChange={(e) => setSettings({ ...settings, privacy_retain_raw_local: e.target.checked })}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+              </label>
+            </div>
+          </div>
+
+          {/* 自动删除旧数据 */}
+          <div className="mb-4 p-4 border rounded border-gray-200 dark:border-gray-700">
+            <h3 className={`font-semibold ${titleColor} mb-3`}>自动删除旧原始数据</h3>
+            <p className={`text-sm ${textColor} mb-4`}>
+              N 天后自动删除本地原始窗口标题，只保留汇总 —— 进一步节省空间 + 增强隐私
+            </p>
+            <div>
+              <select
+                value={settings.privacy_auto_delete_days || 0}
+                onChange={(e) => setSettings({ ...settings, privacy_auto_delete_days: parseInt(e.target.value) })}
+                className={`w-48 px-3 py-2 border ${borderColor} rounded ${isDark ? 'bg-gray-700' : 'bg-white'}`}
+              >
+                <option value={0}>不自动删除</option>
+                <option value={7}>7 天后</option>
+                <option value={30}>30 天后</option>
+                <option value={90}>90 天后</option>
+                <option value={180}>180 天后</option>
+              </select>
+              <p className={`text-xs ${textColor} mt-2`}>
+                注意：删除后无法恢复，请谨慎选择
+              </p>
+            </div>
           </div>
         </div>
 

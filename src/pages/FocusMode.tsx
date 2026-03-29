@@ -1,10 +1,8 @@
 // 专注模式 - 番茄工作法
 // 25分钟工作 / 5分钟休息，支持自定义时长
-// 后端驱动计时器保证准确性
+// 浏览器模式前端独立运行，桌面应用使用后端驱动保证准确性
 
-import { useState, useEffect, useRef } from 'react'
-import { invoke } from '@tauri-apps/api/core'
-import { listen } from '@tauri-apps/api/event'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import type { Theme } from '../App'
 import type { PomodoroData, PomodoroState } from '../utils/tracking'
 
@@ -14,49 +12,82 @@ interface FocusModeProps {
 
 const FocusMode: React.FC<FocusModeProps> = ({ theme: _theme }) => {
   // FocusMode uses immersive fullscreen with mode-specific gradients regardless of app theme
-  const [pomodoro, setPomodoro] = useState<PomodoroData | null>(null)
+  const [pomodoro, setPomodoro] = useState<PomodoroData>({
+    state: 'Idle',
+    remaining_seconds: 25 * 60,
+    total_seconds: 25 * 60,
+    completed_sessions: 0,
+    progress_percent: 0,
+  })
   const [showSettings, setShowSettings] = useState(false)
   const [workMinutes, setWorkMinutes] = useState(25)
   const [breakMinutes, setBreakMinutes] = useState(5)
   const [longBreakMinutes, setLongBreakMinutes] = useState(15)
   const [sessionsBeforeLongBreak, setSessionsBeforeLongBreak] = useState(4)
 
+  const timerRef = useRef<number | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
-  const unlistenRef = useRef<(() => void) | null>(null)
 
-  // 获取初始状态
-  useEffect(() => {
-    const getInitialState = async () => {
-      const state = await invoke<PomodoroData>('get_pomodoro_state')
-      setPomodoro(state)
+  // 播放提示音
+  const playNotification = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.play().catch(e => console.error('播放提示音失败', e))
     }
-    getInitialState()
+  }, [])
 
+  // 初始化
+  useEffect(() => {
     // 创建音频元素
     audioRef.current = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-alarm-digital-clock-beep-989.mp3')
 
-    // 监听pomodoro滴答事件
-    const setupListeners = async () => {
-      // 监听每个tick更新状态
-      unlistenRef.current = await listen<PomodoroData>('pomodoro-tick', (event) => {
-        setPomodoro(event.payload)
-      })
+    // 计时tick
+    const tick = () => {
+      setPomodoro(prev => {
+        if (prev.state !== 'Running') return prev
 
-      // 监听状态变化事件，播放声音当session完成
-      await listen('pomodoro-session-complete', () => {
-        if (audioRef.current) {
-          audioRef.current.play().catch(e => console.error('播放提示音失败', e))
+        const remaining = prev.remaining_seconds - 1
+        const progress = 100 - (remaining / prev.total_seconds) * 100
+
+        if (remaining <= 0) {
+          // Session completed
+          playNotification()
+          const completed = prev.completed_sessions + 1
+          const isLongBreak = completed % sessionsBeforeLongBreak === 0
+
+          let newState: PomodoroState = 'Break'
+          let newTotal = breakMinutes * 60
+          if (isLongBreak) {
+            newState = 'LongBreak'
+            newTotal = longBreakMinutes * 60
+          }
+
+          return {
+            ...prev,
+            state: newState,
+            remaining_seconds: newTotal,
+            total_seconds: newTotal,
+            completed_sessions: completed,
+            progress_percent: 100,
+          }
+        }
+
+        return {
+          ...prev,
+          remaining_seconds: remaining,
+          progress_percent: progress,
         }
       })
     }
-    setupListeners()
+
+    // 启动定时器
+    timerRef.current = window.setInterval(tick, 1000)
 
     return () => {
-      if (unlistenRef.current) {
-        unlistenRef.current()
+      if (timerRef.current) {
+        clearInterval(timerRef.current)
       }
     }
-  }, [])
+  }, [playNotification, sessionsBeforeLongBreak, breakMinutes, longBreakMinutes])
 
   // 格式化时间为 mm:ss
   const formatTime = (seconds: number): string => {
@@ -66,18 +97,37 @@ const FocusMode: React.FC<FocusModeProps> = ({ theme: _theme }) => {
   }
 
   // 开始计时器
-  const startTimer = async () => {
-    await invoke('start_pomodoro')
+  const startTimer = () => {
+    setPomodoro(prev => ({
+      ...prev,
+      state: 'Running',
+    }))
   }
 
   // 暂停计时器
-  const pauseTimer = async () => {
-    await invoke('pause_pomodoro')
+  const pauseTimer = () => {
+    setPomodoro(prev => ({
+      ...prev,
+      state: 'Paused',
+    }))
   }
 
   // 重置计时器
-  const resetTimer = async () => {
-    await invoke('reset_pomodoro')
+  const resetTimer = () => {
+    const isBreak = pomodoro.state === 'Break' || pomodoro.state === 'LongBreak'
+    const newTotal = isBreak
+      ? (pomodoro.completed_sessions % sessionsBeforeLongBreak === 0 && pomodoro.completed_sessions > 0)
+        ? longBreakMinutes * 60
+        : breakMinutes * 60
+      : workMinutes * 60
+
+    setPomodoro(prev => ({
+      ...prev,
+      state: 'Idle',
+      remaining_seconds: newTotal,
+      total_seconds: newTotal,
+      progress_percent: 0,
+    }))
   }
 
   // Get the current mode display name
@@ -126,15 +176,25 @@ const FocusMode: React.FC<FocusModeProps> = ({ theme: _theme }) => {
     }
   }
 
-  if (!pomodoro) {
-    return (
-      <div className="min-h-full flex items-center justify-center bg-gray-900 text-white">
-        <div className="text-center">
-          <div className="text-2xl">加载中...</div>
-        </div>
-      </div>
-    )
-  }
+  // 当设置改变时，重置当前session
+  useEffect(() => {
+    // 计算新的总时间基于当前状态
+    let newTotal = workMinutes * 60;
+    const isBreak = pomodoro.state === 'Break' || pomodoro.state === 'LongBreak';
+    if (isBreak) {
+      newTotal = (pomodoro.completed_sessions % sessionsBeforeLongBreak === 0 && pomodoro.completed_sessions > 0)
+        ? longBreakMinutes * 60
+        : breakMinutes * 60;
+    }
+    // 只有当 idle 时才更新
+    if (pomodoro.state === 'Idle') {
+      setPomodoro(prev => ({
+        ...prev,
+        remaining_seconds: newTotal,
+        total_seconds: newTotal,
+      }));
+    }
+  }, [workMinutes, breakMinutes, longBreakMinutes, pomodoro.state, pomodoro.completed_sessions, sessionsBeforeLongBreak])
 
   // 计算今日总专注分钟 - 每个完成的工作session贡献workMinutes
   const totalFocusMinutes = pomodoro.completed_sessions * workMinutes
@@ -308,7 +368,7 @@ const FocusMode: React.FC<FocusModeProps> = ({ theme: _theme }) => {
                 </div>
               </div>
               <p className="text-xs text-white/60">
-                💡 配置会保存在本地，重启后生效
+                💡 配置会保存在本地，刷新后生效
               </p>
             </div>
           </div>

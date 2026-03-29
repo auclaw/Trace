@@ -1022,7 +1022,7 @@ async fn ai_reschedule_tasks(
     // 假设后端运行在 localhost:5000
     // 用户需要启动后端服务
     match client
-        .post("http://localhost:5000/api/ai/reschedule")
+        .post("http://localhost:2345/api/ai/reschedule")
         .json(&body)
         .send()
         .await
@@ -1285,15 +1285,18 @@ fn main() {
     use tauri::menu::{MenuBuilder, MenuItem};
     use tauri::tray::TrayIconBuilder;
 
+    let state_for_setup = state.clone();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None
         ))
         .manage(state)
-        .setup(|app| {
-            // 获取当前追踪状态
-            let state = app.try_state::<AppState>().unwrap();
+        .setup(move |app| {
+            // state is cloned for setup because state was moved into .manage()
+            let state = state_for_setup;
+            // state is already defined outside, use it directly
             let is_tracking = *state.is_tracking.lock().unwrap();
             let toggle_label = if is_tracking { "暂停追踪" } else { "开始追踪" };
 

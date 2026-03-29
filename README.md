@@ -16,7 +16,7 @@
 | ManicTime | ❌ | ❌ | 免费 | 界面老旧，没有AI |
 | Timing | ❌ | ✅ | $65一次性 | 贵，没有AI自动分类 |
 | 原版 Rize | ✅ | ❌ | $12/月 | 国内访问慢，没中文，价格贵 |
-| **Merize** | ✅ | ✅ | **¥29/月 或 ¥199/年** | **针对中国用户优化：开机自启 + 系统托盘 + 全中文界面** |
+| **Merize (MyTime)** | ✅ | ✅ | **¥29/月 或 ¥199/年** | **1. 针对中国用户优化：开机自启 + 系统托盘 + 全中文界面**<br>**2. 原生支持 AI Agent 调用**，未来入口已经占位<br>**3. 集成任务管理 + 番茄工作法**，一站式解决时间管理 |
 
 ## 核心功能 ✓ 全部完成
 
@@ -29,14 +29,38 @@
 | 每周统计饼图 | ✅ Done | 时间分布可视化 |
 | 数据导出 | ✅ Done | JSON / CSV 两种格式 |
 | 日历历史浏览 | ✅ Done | 按月查看，手动添加编辑活动 |
+| 日历热力图 | ✅ Done | 长期活动热力图，历史趋势一眼可见 |
 | 今日计划任务 | ✅ Done | 支持优先级 + AI 智能重排延误任务 |
 | 活动关联计划 | ✅ Done | 自动统计任务实际用时 |
+| 番茄工作法 | ✅ Done | 后端驱动专注番茄钟，自动暂停检测 |
 | 系统托盘菜单 | ✅ Done | 显示追踪状态，快速控制 |
 | 开机自启 | ✅ Done | 官方插件支持 |
+| 全局键盘快捷键 | ✅ Done | 快速操作专注模式 |
+| 新手交互式导览 | ✅ Done | 新用户一步一步上手 |
 | 忽略应用列表 | ✅ Done | 用户配置不追踪哪些app |
 | 手机号登录 | ✅ Done | 符合国内用户习惯 |
 | 微信一键登录 | ✅ Done | OAuth 流程已打通 |
-| 云端数据同步 | ❌ MVP 省略 | 第一版先本地存储验证 |
+| 云端数据同步 | ✅ Done | 多设备数据一致 |
+| PDF 数据导出 | ✅ Done | 美观报表导出 |
+
+## Agent 原生支持 - Skill 就是 Agent 时代的 App
+
+在 Agent 时代，入口从「用户打开 App」转向「Agent 帮用户完成任务」。MyTime 从设计之初就支持 AI Agent 调用，所有核心能力都通过标准化 API 开放：
+
+```typescript
+// Agent 可调用能力列表
+- get_time_summary(days: number) → 获取N天时间使用统计
+- create_task(title: string, scheduledTime?) → 创建任务
+- list_tasks(status?) → 列出任务
+- get_insights() → 获取时间使用洞察建议
+- update_activity_category(id, newCategory) → 修改活动分类
+```
+
+**架构预留**：当前使用 REST API + TypeScript 接口定义，未来生态成熟后可一键适配 MCP (Model Context Protocol) 协议，让任何 Agent 都能自动发现并调用我们的能力。
+
+### UI/UX 说明
+
+> 当前 MVP 功能全部完成，但 UI/UX 设计待优化。产品功能不影响，后续会安排专门的设计阶段进行 UI 重设计和交互优化。
 
 ## 项目结构
 
@@ -92,41 +116,146 @@ npm run tauri build
 
 ## 开发状态
 
-**核心功能 100% 完成，等待编译测试**
+**核心功能 100% 完成，包含 Agent 调用接口预留，等待 UI/UX 优化后正式发布**
 
-## 启动开发
+## 安装指南
 
-### 后端
+### 环境要求
+
+- **Node.js**: 18.x 或以上
+- **Rust**: 1.70 或以上（Tauri 编译需要）
+- **Python**: 3.8 或以上（后端 API）
+- **macOS** / **Windows**: 支持 Intel/Apple Silicon
+
+### 步骤 1：克隆项目
+
+```bash
+git clone https://github.com/auclaw/merize.git
+cd merize
+```
+
+### 步骤 2：配置后端
+
+```bash
+cd backend
+cp config.example.py config.py
+# 编辑 config.py 填入你的 API 密钥
+```
+
+**配置项说明**:
+| 配置项 | 说明 | 是否必填 |
+|--------|------|----------|
+| `SECRET_KEY` | JWT 加密密钥 | ✅ 必填 |
+| `ERNIE_API_KEY` | 百度文心一言 API 密钥 | 二选一 |
+| `DOUBAN_API_KEY` | 字节跳动豆包 API 密钥 | 二选一 |
+| `WECHAT_APP_ID` | 微信开放平台 App ID | 可选（微信登录） |
+| `WECHAT_APP_SECRET` | 微信开放平台 App Secret | 可选（微信登录） |
+
+### 步骤 3：安装后端依赖并启动
+
 ```bash
 cd backend
 pip install -r requirements.txt
-# 复制 config.example.py 为 config.py 填入你的配置
 python app.py
 ```
+后端将在 `http://localhost:5000` 启动
 
-### 前端
+### 步骤 4：安装前端依赖并启动开发模式
+
+打开**新的终端窗口**:
+
 ```bash
-# 安装依赖
+cd merize  # 项目根目录
 npm install
-
-# 开发模式
 npm run tauri dev
+```
 
-# 编译打包
+### 步骤 5：编译打包生产应用
+
+```bash
+# 编译打包生成 .app/.exe 安装包
 npm run tauri build
 ```
 
-## 你需要配置
+编译完成后，安装包位于 `src-tauri/target/release/bundle/` 目录
+
+## 开发启动
+
+完整开发启动流程：
+
+**终端 1 - 后端 API**:
+```bash
+cd backend
+python app.py
+```
+
+**终端 2 - 前端桌面应用**:
+```bash
+npm run tauri dev
+```
+
+## 配置说明
 
 后端 `backend/config.py`:
-1. `SECRET_KEY` - JWT密钥
-2. `ERNIE_API_KEY` / `DOUBAN_API_KEY` - 大模型API密钥
+1. `SECRET_KEY` - JWT 密钥
+2. `ERNIE_API_KEY` / `DOUBAN_API_KEY` - 大模型 API 密钥（二选一）
 3. `WECHAT_APP_ID` / `WECHAT_APP_SECRET` - 微信开放平台
+
+## 使用说明
+
+### 登录方式
+
+#### 方式一：生产环境 - 手机号验证码登录
+需要配置阿里云短信服务在 `backend/config.py`:
+```python
+SMS_PROVIDER = 'alicloud'
+SMS_ACCESS_KEY_ID = '你的阿里云AccessKey'
+SMS_ACCESS_KEY_SECRET = '你的阿里云AccessKeySecret'
+SMS_SIGN_NAME = '你的短信签名'
+SMS_TEMPLATE_CODE = '你的短信模板CODE'
+```
+启动后，用户输入手机号 → 获取验证码 → 输入验证码 → 登录。
+
+#### 方式二：生产环境 - 微信一键登录
+需要配置微信开放平台在 `backend/config.py`:
+```python
+WECHAT_APP_ID = '你的微信AppID'
+WECHAT_APP_SECRET = '你的微信AppSecret'
+```
+启动后，点击"微信一键登录" → 扫描二维码 → 确认登录。
+
+#### 方式三：开发模式 - 免验证码直接登录（推荐本地开发使用）
+当短信配置为空时，**自动启用开发模式**。在登录页面会显示"⚙️ 直接登录（无需验证码）"按钮：
+1. 输入手机号（任意11位格式正确即可）
+2. 点击"直接登录"
+3. 自动创建用户并登录，默认赠送14天免费试用
+
+如果短信配置了真实服务，该按钮会自动隐藏。
+
+### 完整启动命令
+
+```bash
+# 终端 1: 启动后端 API
+cd /path/to/merize/backend
+pip install -r requirements.txt
+python app.py
+
+# 终端 2: 启动桌面应用
+cd /path/to/merize
+npm install
+npm run tauri dev
+```
+
+### 查看验证码（测试短信配置时）
+当短信配置了但想查看验证码，可以在后端终端日志中看到：
+```
+[DEV MODE] Verification code for 13800138000 is: 123456
+```
 
 ## 技术栈
 
 - 后端API：Python Flask
-- 桌面端：Rust + Tauri（跨端，比Electron更轻量）
+- 桌面端：Rust + Tauri 2（跨端，比Electron更轻量）
 - 前端：React + TypeScript + Tailwind CSS
-- AI分类：调用文心一言/豆包API，可切换
-- 自动追踪：Tauri native对系统进程监控
+- AI分类：调用文心一言/豆包/通义千问 API，可切换
+- 自动追踪：Tauri native 系统进程监控

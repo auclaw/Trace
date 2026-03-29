@@ -1,26 +1,28 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { getTodayStats, getTodayActivities, classifyActivity, deleteActivity, updateActivityCategory, Activity, DailyStats } from '../utils/tracking'
-import { checkTrackingStatus } from '../utils/tracking'
+import { getTodayStats, getTodayActivities, classifyActivity, deleteActivity, updateActivityCategory, toggleTracking, Activity, DailyStats } from '../utils/tracking'
 import { toPng } from 'html-to-image'
 import Timeline from '../components/Timeline'
 import type { Theme } from '../App'
 
 interface DashboardProps {
   theme: Theme
+  isTracking: boolean
+  onTrackingChange: (status: boolean) => void
 }
 
 // 默认每日目标 4 小时 = 240 分钟
 const DEFAULT_DAILY_GOAL = 240
 const DAILY_GOAL_KEY = 'merize_daily_goal'
 
-const Dashboard: React.FC<DashboardProps> = ({ theme }) => {
+const Dashboard: React.FC<DashboardProps> = ({ theme, isTracking, onTrackingChange }) => {
   const isDark = theme === 'dark'
   const [stats, setStats] = useState<DailyStats | null>(null)
   const [activities, setActivities] = useState<Activity[]>([])
   const [loading, setLoading] = useState(true)
-  const [isTracking, setIsTracking] = useState(false)
   const [categoryStats, setCategoryStats] = useState<{category: string, duration: number}[]>([])
   const [generatingImage, setGeneratingImage] = useState(false)
+  const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null)
+  const [shareError, setShareError] = useState<string | null>(null)
   const [dailyGoalMinutes, setDailyGoalMinutes] = useState<number>(() => {
     const saved = localStorage.getItem(DAILY_GOAL_KEY)
     return saved ? parseInt(saved, 10) : DEFAULT_DAILY_GOAL
@@ -28,6 +30,9 @@ const Dashboard: React.FC<DashboardProps> = ({ theme }) => {
   const [showEditGoal, setShowEditGoal] = useState(false)
   const [editGoalValue, setEditGoalValue] = useState('')
   const todayShareRef = useRef<HTMLDivElement>(null)
+
+  // Check if native share is supported
+  const supportsShare = typeof navigator !== 'undefined' && navigator.share !== undefined
 
   const loadData = useCallback(async () => {
     try {
@@ -57,17 +62,10 @@ const Dashboard: React.FC<DashboardProps> = ({ theme }) => {
 
   useEffect(() => {
     loadData()
-    // 每分钟刷新一次
+    // 每分钟刷新一次数据，让当前活动时长实时更新
     const interval = setInterval(() => {
       loadData()
-      checkTrackingStatus().then(status => {
-        setIsTracking(status)
-      })
     }, 60000)
-
-    checkTrackingStatus().then(status => {
-      setIsTracking(status)
-    })
 
     return () => clearInterval(interval)
   }, [loadData])
@@ -124,21 +122,76 @@ const Dashboard: React.FC<DashboardProps> = ({ theme }) => {
 
     try {
       setGeneratingImage(true)
-      const dateStr = new Date().toLocaleDateString('zh-CN')
+      setShareError(null)
       const dataUrl = await toPng(todayShareRef.current, {
         backgroundColor: '#f97316',
         quality: 0.95
       })
+      setGeneratedImageUrl(dataUrl)
+
+      // Auto download on first generate
+      const dateStr = new Date().toLocaleDateString('zh-CN')
       const link = document.createElement('a')
       link.download = `merize-today-${dateStr.replace(/\//g, '-')}.png`
       link.href = dataUrl
       link.click()
-      alert('今日成就图片已生成！可以直接发到小红书打卡 #时间管理 #自律')
     } catch (error) {
       console.error('生成图片失败', error)
-      alert('生成图片失败: ' + error)
+      setShareError('生成图片失败: ' + error)
     } finally {
       setGeneratingImage(false)
+    }
+  }
+
+  // Download image to file
+  const downloadImage = () => {
+    if (!generatedImageUrl) return
+    const dateStr = new Date().toLocaleDateString('zh-CN')
+    const link = document.createElement('a')
+    link.download = `merize-today-${dateStr.replace(/\//g, '-')}.png`
+    link.href = generatedImageUrl
+    link.click()
+  }
+
+  // Copy image to clipboard
+  const copyImageToClipboard = async () => {
+    if (!generatedImageUrl) return
+    try {
+      setShareError(null)
+      // Convert data URL to blob
+      const response = await fetch(generatedImageUrl)
+      const blob = await response.blob()
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'image/png': blob
+        })
+      ])
+      alert('图片已复制到剪贴板！可以直接粘贴到小红书/微信了')
+    } catch (error) {
+      console.error('复制失败', error)
+      setShareError('复制到剪贴板失败: ' + error)
+    }
+  }
+
+  // Native share dialog
+  const shareImage = async () => {
+    if (!generatedImageUrl || !supportsShare) return
+    try {
+      setShareError(null)
+      const response = await fetch(generatedImageUrl)
+      const blob = await response.blob()
+      const file = new File([blob], `merize-today-${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}.png`, { type: 'image/png' })
+
+      await navigator.share({
+        files: [file],
+        title: 'merize 今日成就',
+        text: '#merize #时间管理 #自律 #效率提升',
+      })
+    } catch (error) {
+      console.error('分享失败', error)
+      if ((error as Error).name !== 'AbortError') {
+        setShareError('分享失败: ' + error)
+      }
     }
   }
 
@@ -180,16 +233,59 @@ const Dashboard: React.FC<DashboardProps> = ({ theme }) => {
   return (
     <div className="p-8">
       <div className="mb-8">
-        <h2 className={`text-2xl font-bold ${titleColor} mb-2`}>今日概览</h2>
-        <p className={textColor}>
-          {new Date().toLocaleDateString('zh-CN', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            weekday: 'long'
-          })}
-          {isTracking ? ' • 🔍 正在追踪中' : ' • ⏸️ 追踪已暂停'}
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className={`text-2xl font-bold ${titleColor} mb-2`}>今日概览</h2>
+            <p className={textColor}>
+              {new Date().toLocaleDateString('zh-CN', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                weekday: 'long'
+              })}
+              {isTracking ? ' • 🔍 正在追踪中' : ' • ⏸️ 追踪已暂停'}
+            </p>
+          </div>
+          <button
+            onClick={async () => {
+              const newStatus = await toggleTracking(!isTracking)
+              onTrackingChange(newStatus)
+            }}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              isTracking
+                ? (isDark ? 'bg-red-900/30 text-red-400 hover:bg-red-900/50' : 'bg-red-100 text-red-700 hover:bg-red-200')
+                : (isDark ? 'bg-green-900/30 text-green-400 hover:bg-green-900/50' : 'bg-green-100 text-green-700 hover:bg-green-200')
+            }`}
+          >
+            {isTracking ? '暂停追踪' : '开始追踪'}
+          </button>
+        </div>
+
+        {/* 当前活动显示 - 正在追踪时显示 */}
+        {isTracking && activities.length > 0 && (
+          <div className={`mt-4 p-4 rounded-xl border ${borderColor} ${cardBg}`}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className={`text-sm ${textColor} mb-1`}>当前正在处理</p>
+                {(() => {
+                  // 获取最后一个活动（当前正在进行）
+                  const sorted = [...activities].sort((a, b) => b.startTimeMs - a.startTimeMs)
+                  const current = sorted[0]
+                  const currentDuration = (Date.now() - current.startTimeMs) / (1000 * 60)
+                  return (
+                    <div>
+                      <p className={`font-semibold ${titleColor}`}>{current.windowTitle}</p>
+                      <p className={`text-sm ${textColor} mt-1`}>
+                        {current.name} • {current.category || '未分类'} • 已进行 {formatDurationMinutes(Math.round(currentDuration))}
+                      </p>
+                    </div>
+                  )
+                })()}
+              </div>
+              <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse"></div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Rize 风格时间线 */}
@@ -198,6 +294,7 @@ const Dashboard: React.FC<DashboardProps> = ({ theme }) => {
           activities={activities}
           onEditCategory={handleChangeCategory}
           onDelete={handleDelete}
+          isDark={isDark}
         />
       </div>
 
@@ -309,18 +406,62 @@ const Dashboard: React.FC<DashboardProps> = ({ theme }) => {
       {/* 分享按钮区域 */}
       {categoryStats.length > 0 && (
         <div className={`mb-8 ${cardBg} rounded-2xl shadow-sm p-6 border ${borderColor}`}>
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className={`text-lg font-semibold ${titleColor} mb-1`}>小红书分享</h3>
-              <p className={`text-sm ${textColor}`}>生成今日成就卡片，分享到小红书打卡自律</p>
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className={`text-lg font-semibold ${titleColor} mb-1`}>小红书分享</h3>
+                <p className={`text-sm ${textColor}`}>生成今日成就卡片，分享到小红书打卡自律</p>
+              </div>
+              {!generatedImageUrl && (
+                <button
+                  onClick={generateTodayShare}
+                  disabled={generatingImage}
+                  className="px-6 py-3 bg-primary text-white rounded-xl hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                >
+                  {generatingImage ? '生成中...' : '📷 生成今日分享图'}
+                </button>
+              )}
             </div>
-            <button
-              onClick={generateTodayShare}
-              disabled={generatingImage}
-              className="px-6 py-3 bg-primary text-white rounded-xl hover:bg-primary/90 disabled:opacity-50 transition-colors"
-            >
-              {generatingImage ? '生成中...' : '📷 生成今日分享图'}
-            </button>
+
+            {shareError && (
+              <div className={`p-3 rounded-lg ${isDark ? 'bg-red-900/20 text-red-400' : 'bg-red-50 text-red-700'} text-sm`}>
+                {shareError}
+              </div>
+            )}
+
+            {generatedImageUrl && (
+              <div className="flex flex-wrap gap-3">
+                <button
+                  onClick={downloadImage}
+                  className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  💾 下载图片
+                </button>
+                <button
+                  onClick={copyImageToClipboard}
+                  className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  📋 复制到剪贴板
+                </button>
+                {supportsShare && (
+                  <button
+                    onClick={shareImage}
+                    className="px-4 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition-colors"
+                  >
+                    📤 分享...
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    setGeneratedImageUrl(null)
+                    setShareError(null)
+                  }}
+                  className={`px-4 py-2 text-sm ${isDark ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'} rounded-lg transition-colors`}
+                >
+                  重新生成
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -410,10 +551,18 @@ const Dashboard: React.FC<DashboardProps> = ({ theme }) => {
             </div>
           ) : (
             <div className="space-y-2 max-h-96 overflow-y-auto">
-              {activities.slice().reverse().map(act => (
+              {activities.slice().reverse().map(act => {
+                const start = new Date(act.startTimeMs)
+                const startTimeStr = `${start.getHours().toString().padStart(2, '0')}:${start.getMinutes().toString().padStart(2, '0')}`
+                const endMs = act.startTimeMs + act.durationMinutes * 60 * 1000
+                const endDate = new Date(endMs)
+                const endTimeStr = `${endDate.getHours().toString().padStart(2, '0')}:${endDate.getMinutes().toString().padStart(2, '0')}`
+                return (
                 <div key={act.id} className={`flex items-center justify-between p-2 border ${cardBorder} rounded ${hoverBg} transition-colors`}>
                   <div className="flex-1 min-w-0">
-                    <div className={`text-sm font-medium ${titleColor} truncate`}>{act.windowTitle}</div>
+                    <div className={`text-sm font-medium ${titleColor} truncate`}>
+                      {startTimeStr} - {endTimeStr} • {act.windowTitle}
+                    </div>
                     <div className={textColor}>
                       {act.name} • {act.category || '未分类'} • {formatDurationMinutes(act.durationMinutes)}
                     </div>
@@ -433,7 +582,7 @@ const Dashboard: React.FC<DashboardProps> = ({ theme }) => {
                     </button>
                   </div>
                 </div>
-              ))}
+              )})}
             </div>
           )}
         </div>

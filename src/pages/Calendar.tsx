@@ -326,22 +326,36 @@ const Calendar: React.FC<CalendarProps> = ({ theme }) => {
 
       <div className={`${cardBg} rounded-xl shadow-sm p-6 border ${borderColor}`}>
         {/* 日历头部 */}
-        <div className="flex items-center justify-between mb-6">
-          <button
-            onClick={prevMonth}
-            className={`p-2 ${hoverBg} rounded-lg transition-colors ${textColor}`}
-          >
-            ←
-          </button>
-          <h3 className={`text-xl font-semibold ${titleColor}`}>
-            {currentYear} 年 {monthNames[currentMonth]}
-          </h3>
-          <button
-            onClick={nextMonth}
-            className={`p-2 ${hoverBg} rounded-lg transition-colors ${textColor}`}
-          >
-            →
-          </button>
+        <div className="flex flex-wrap items-center justify-between mb-6 gap-4">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={prevMonth}
+              className={`p-2 ${hoverBg} rounded-lg transition-colors ${textColor}`}
+            >
+              ←
+            </button>
+            <h3 className={`text-xl font-semibold ${titleColor}`}>
+              {currentYear} 年 {monthNames[currentMonth]}
+            </h3>
+            <button
+              onClick={nextMonth}
+              className={`p-2 ${hoverBg} rounded-lg transition-colors ${textColor}`}
+            >
+              →
+            </button>
+          </div>
+          {/* 热力图图例 - 移动到更显眼位置 */}
+          <div className="flex items-center gap-2">
+            <span className={`text-xs ${textColor}`}>活动强度: </span>
+            <div className="flex gap-1">
+              <div className={`w-4 h-4 rounded ${isDark ? 'bg-gray-800/20' : 'bg-gray-50'}`}></div>
+              <div className={`w-4 h-4 rounded ${isDark ? 'bg-green-900/30' : 'bg-green-100'}`}></div>
+              <div className={`w-4 h-4 rounded ${isDark ? 'bg-green-900/50' : 'bg-green-200'}`}></div>
+              <div className={`w-4 h-4 rounded ${isDark ? 'bg-green-800/70' : 'bg-green-300'}`}></div>
+              <div className={`w-4 h-4 rounded ${isDark ? 'bg-green-700' : 'bg-green-400'}`}></div>
+            </div>
+            <span className={`text-xs ${textColor}`}>少 → 多</span>
+          </div>
         </div>
 
         {/* 星期头部 */}
@@ -356,8 +370,8 @@ const Calendar: React.FC<CalendarProps> = ({ theme }) => {
           ))}
         </div>
 
-        {/* 日期网格 */}
-        <div className="grid grid-cols-7 gap-1">
+        {/* 日期网格 - 限制最大宽度420px在桌面 */}
+        <div className="grid grid-cols-7 gap-1 max-w-[420px] mx-auto">
           {generateCalendarDays().map((day, index) => {
             if (day === null) {
               return <div key={index} className="aspect-square"></div>
@@ -387,19 +401,6 @@ const Calendar: React.FC<CalendarProps> = ({ theme }) => {
               </div>
             )
           })}
-        </div>
-
-        {/* 热力图图例 */}
-        <div className="mt-4 flex items-center justify-end gap-2">
-          <span className={`text-xs ${textColor}`}>活动强度: </span>
-          <div className="flex gap-1">
-            <div className={`w-4 h-4 rounded ${isDark ? 'bg-gray-800/20' : 'bg-gray-50'}`}></div>
-            <div className={`w-4 h-4 rounded ${isDark ? 'bg-green-900/30' : 'bg-green-100'}`}></div>
-            <div className={`w-4 h-4 rounded ${isDark ? 'bg-green-900/50' : 'bg-green-200'}`}></div>
-            <div className={`w-4 h-4 rounded ${isDark ? 'bg-green-800/70' : 'bg-green-300'}`}></div>
-            <div className={`w-4 h-4 rounded ${isDark ? 'bg-green-700' : 'bg-green-400'}`}></div>
-          </div>
-          <span className={`text-xs ${textColor}`}>少 → 多</span>
         </div>
 
         {/* 选中日期统计 */}
@@ -444,6 +445,7 @@ const Calendar: React.FC<CalendarProps> = ({ theme }) => {
                       activities={activities}
                       onEditCategory={handleChangeCategory}
                       onDelete={handleDelete}
+                      isDark={isDark}
                     />
                   </div>
                 )}
@@ -476,6 +478,7 @@ const Calendar: React.FC<CalendarProps> = ({ theme }) => {
                       activities={activities}
                       onEditCategory={handleChangeCategory}
                       onDelete={handleDelete}
+                      isDark={isDark}
                     />
                   </div>
                 )}

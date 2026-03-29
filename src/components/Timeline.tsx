@@ -1,5 +1,4 @@
-// 今日活动时间线 - 模仿 Rize 原版设计
-// 水平滚动时间线，色块长度对应时长，不同分类不同颜色
+// 今日活动时间线 - 垂直时间线，色块高度对应时长，不同分类不同颜色
 
 import React, { useState, useRef } from 'react'
 import { Activity } from '../utils/tracking'
@@ -30,6 +29,12 @@ const COMMON_CATEGORIES = [
   '社交/通讯', '浏览', '工具使用', '笔记', '购物', '游戏', '其他', '未分类'
 ]
 
+// 合并配置 - 2分钟阈值
+const MERGE_GAP_THRESHOLD_MS = 2 * 60 * 1000 // 2分钟
+
+// 显示inline text的最小高度百分比 - 至少需要占 ~20 分钟 (20/1440 = ~1.4%)
+const MIN_HEIGHT_PERCENT_FOR_TEXT = 1.4
+
 const getCategoryColor = (category?: string): string => {
   if (!category) return CATEGORY_COLORS['未分类']
   if (CATEGORY_COLORS[category]) return CATEGORY_COLORS[category]
@@ -42,16 +47,82 @@ const getCategoryColor = (category?: string): string => {
   return `hsl(${h}, 70%, 60%)`
 }
 
+// 合并连续活动：间隙小于阈值且同一个应用 -> 合并为一个区块
+interface MergedActivity {
+  id: string
+  startTimeMs: number
+  endTimeMs: number
+  durationMinutes: number
+  name: string
+  windowTitle: string
+  category: string | null
+}
+
+const mergeContiguousActivities = (sorted: Activity[]): MergedActivity[] => {
+  if (sorted.length === 0) return []
+
+  const result: MergedActivity[] = []
+  let current: MergedActivity | null = null
+
+  for (const activity of sorted) {
+    const category = activity.category || '未分类'
+    if (!current) {
+      // Start first merged activity
+      current = {
+        id: activity.id,
+        startTimeMs: activity.startTimeMs,
+        endTimeMs: activity.startTimeMs + activity.durationMinutes * 60 * 1000,
+        durationMinutes: activity.durationMinutes,
+        name: activity.name,
+        windowTitle: activity.windowTitle,
+        category: category,
+      }
+    } else {
+      // Check if we can merge with current
+      const gap = activity.startTimeMs - current.endTimeMs
+      const sameName = activity.name === current.name
+      const sameCategory = (activity.category || '未分类') === current.category
+
+      if (gap <= MERGE_GAP_THRESHOLD_MS && sameName && sameCategory) {
+        // Merge it
+        current.endTimeMs = activity.startTimeMs + activity.durationMinutes * 60 * 1000
+        current.durationMinutes += activity.durationMinutes
+        // Keep the first id for editing - if user deletes, it removes the whole merged block
+        // This is acceptable behavior for automatic merging
+      } else {
+        // Push current and start new
+        result.push(current)
+        current = {
+          id: activity.id,
+          startTimeMs: activity.startTimeMs,
+          endTimeMs: activity.startTimeMs + activity.durationMinutes * 60 * 1000,
+          durationMinutes: activity.durationMinutes,
+          name: activity.name,
+          windowTitle: activity.windowTitle,
+          category: category,
+        }
+      }
+    }
+  }
+
+  if (current) {
+    result.push(current)
+  }
+
+  return result
+}
+
 interface TimelineProps {
   activities: Activity[]
   onEditCategory: (id: string, currentCategory: string | null) => void
   onDelete: (id: string) => void
+  isDark: boolean
 }
 
-const Timeline: React.FC<TimelineProps> = ({ activities, onEditCategory, onDelete }) => {
-  const [hoveredActivity, setHoveredActivity] = useState<Activity | null>(null)
+const Timeline: React.FC<TimelineProps> = ({ activities, onEditCategory, onDelete, isDark }) => {
+  const [hoveredActivity, setHoveredActivity] = useState<any | null>(null)
   const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 })
-  const [editingActivity, setEditingActivity] = useState<Activity | null>(null)
+  const [editingActivity, setEditingActivity] = useState<any | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
   // 按开始时间排序
@@ -59,10 +130,13 @@ const Timeline: React.FC<TimelineProps> = ({ activities, onEditCategory, onDelet
     return a.startTimeMs - b.startTimeMs
   })
 
+  // 合并连续活动
+  const mergedActivities = mergeContiguousActivities(sortedActivities)
+
   // 计算一天的开始毫秒（当天 0:00）
   const dayStart = sortedActivities.length > 0
     ? Math.floor(sortedActivities[0].startTimeMs / 86400000) * 86400000
-    : 0
+    : Math.floor(Date.now() / 86400000) * 86400000
   const totalDayMs = 86400000 // 24 小时 = 86400000 毫秒
 
   // 格式化开始时间
@@ -72,6 +146,7 @@ const Timeline: React.FC<TimelineProps> = ({ activities, onEditCategory, onDelet
     const minutes = date.getMinutes().toString().padStart(2, '0')
     return `${hours}:${minutes}`
   }
+
 
   // 格式化时长
   const formatDuration = (minutes: number): string => {
@@ -88,7 +163,7 @@ const Timeline: React.FC<TimelineProps> = ({ activities, onEditCategory, onDelet
       const rect = containerRef.current.getBoundingClientRect()
       setHoverPosition({
         x: e.clientX - rect.left,
-        y: e.clientY - rect.top
+        y: e.clientY - rect.top,
       })
     }
   }
@@ -118,60 +193,53 @@ const Timeline: React.FC<TimelineProps> = ({ activities, onEditCategory, onDelet
     }
   }
 
-  if (sortedActivities.length === 0) {
-    return (
-      <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">今日时间线</h3>
-        <div className="text-center py-12 text-gray-500">
-          暂无活动记录，等待追踪...
-        </div>
-      </div>
-    )
-  }
+  // 总高度 600px 对应 24 小时
+  const totalHeight = 600
 
   return (
-    <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200" ref={containerRef} onMouseMove={handleMouseMove}>
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">今日时间线</h3>
-      <div className="overflow-x-auto">
+    <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl shadow-sm p-6 border`} ref={containerRef} onMouseMove={handleMouseMove}>
+      <h3 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>今日时间线</h3>
+      <div className="overflow-y-auto">
         <div
-          className="min-w-[800px] relative"
-          style={{ height: '64px' }}
+          className="relative ml-12"
+          style={{ minHeight: `${totalHeight}px` }}
         >
-          {/* 时间线背景格子 - 每小时一条线，包含 24:00 */}
+          {/* 时间线背景格子 - 每小时一条水平线，包含 24:00 */}
           {Array.from({ length: 25 }).map((_, i) => (
             <div
               key={i}
-              className="absolute top-0 bottom-0 w-px bg-gray-100"
-              style={{ left: `${(i / 24) * 100}%` }}
+              className={`absolute left-0 right-0 h-px ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}
+              style={{ top: `${(i / 24) * 100}%` }}
             >
-              <span className="absolute -top-6 left-0 text-xs text-gray-400 transform -translate-x-1/2">
+              <span className={`absolute -left-12 -top-2 text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'} w-10 text-right`}>
                 {i}:00
               </span>
             </div>
           ))}
 
-          {/* 活动色块 - 每个活动根据绝对开始时间定位 */}
-          {sortedActivities.map((activity) => {
+          {/* 活动色块 - 每个活动根据绝对开始时间垂直定位，高度对应时长 */}
+          {mergedActivities.map((activity) => {
             // 计算相对于当天开始的偏移百分比
             const startMs = activity.startTimeMs - dayStart
-            const endMs = startMs + (activity.durationMinutes * 60 * 1000)
+            const endMs = activity.endTimeMs
 
             // Clamp to [0, 100%]
             const startPercentage = Math.max(0, (startMs / totalDayMs) * 100)
             const endPercentage = Math.min(100, (endMs / totalDayMs) * 100)
-            const widthPercentage = endPercentage - startPercentage
+            const heightPercentage = endPercentage - startPercentage
 
             const category = activity.category || '未分类'
             const color = getCategoryColor(category)
+            const showInlineText = heightPercentage >= MIN_HEIGHT_PERCENT_FOR_TEXT
 
             return (
               <div
                 key={activity.id}
-                className="absolute top-1 bottom-1 rounded-md cursor-pointer transition-all duration-200 hover:brightness-110 hover:shadow-lg hover:scale-y-110"
+                className="absolute left-1 right-1 rounded-md cursor-pointer transition-all duration-200 hover:brightness-110 hover:shadow-lg hover:scale-x-105"
                 style={{
-                  left: `${startPercentage}%`,
-                  width: `${widthPercentage}%`,
-                  minWidth: '8px',
+                  top: `${startPercentage}%`,
+                  height: `${heightPercentage}%`,
+                  minHeight: '8px',
                   backgroundColor: color,
                   opacity: editingActivity?.id === activity.id ? 1 : 0.85,
                   outline: editingActivity?.id === activity.id ? '2px solid white' : 'none',
@@ -188,10 +256,24 @@ const Timeline: React.FC<TimelineProps> = ({ activities, onEditCategory, onDelet
                     onDelete(activity.id)
                   }
                 }}
-              />
+              >
+                {showInlineText && (
+                  <div className="absolute inset-0 px-2 py-1 overflow-hidden">
+                    <div className="text-white text-xs font-medium truncate opacity-90">
+                      {activity.windowTitle || activity.name}
+                    </div>
+                  </div>
+                )}
+              </div>
             )
           })}
         </div>
+
+        {sortedActivities.length === 0 && (
+          <div className={`text-center py-12 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+            暂无活动记录，等待系统采集...
+          </div>
+        )}
 
         {/* 悬浮信息卡片 */}
         {hoveredActivity && (
@@ -204,14 +286,12 @@ const Timeline: React.FC<TimelineProps> = ({ activities, onEditCategory, onDelet
             }}
           >
             <div className="font-semibold truncate">{hoveredActivity.windowTitle}</div>
-            <div className="text-gray-300 flex gap-2 mt-1">
-              <span>{hoveredActivity.name}</span>
-              <span>•</span>
-              <span>{hoveredActivity.category || '未分类'}</span>
-              <span>•</span>
-              <span>{formatStartTime(hoveredActivity.startTimeMs)}</span>
-              <span>•</span>
-              <span>{formatDuration(hoveredActivity.durationMinutes)}</span>
+            <div className="text-gray-300 flex flex-col gap-1 mt-1">
+              <div>{hoveredActivity.name} • {hoveredActivity.category || '未分类'}</div>
+              <div>
+                {formatStartTime(hoveredActivity.startTimeMs)} ~ {formatStartTime(hoveredActivity.endTimeMs)}
+                • {formatDuration(hoveredActivity.durationMinutes)}
+              </div>
             </div>
           </div>
         )}
@@ -219,7 +299,7 @@ const Timeline: React.FC<TimelineProps> = ({ activities, onEditCategory, onDelet
         {/* 分类选择下拉框 */}
         {editingActivity && (
           <div
-            className="absolute bg-white rounded-xl shadow-xl border border-gray-200 p-3 z-20 w-64"
+            className={`absolute bg-white rounded-xl shadow-xl border border-gray-200 p-3 z-20 w-64`}
             style={{
               left: `${Math.min(hoverPosition.x, (containerRef.current?.clientWidth || 800) - 260)}px`,
               top: `${hoverPosition.y + 30}px`,
@@ -267,8 +347,8 @@ const Timeline: React.FC<TimelineProps> = ({ activities, onEditCategory, onDelet
           />
         )}
 
-        <div className="mt-8 text-xs text-gray-500 flex items-center gap-4">
-          <span>💡 点击色块修改分类，右键删除记录。色块长度对应耗时。</span>
+        <div className="mt-6 text-xs text-gray-500 flex items-center gap-4">
+          <span>💡 点击色块修改分类，右键删除记录。色块高度对应耗时。</span>
         </div>
       </div>
     </div>

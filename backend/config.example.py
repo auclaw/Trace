@@ -7,6 +7,17 @@ SECRET_KEY = 'change-this-to-your-secret-key'
 # 大模型API密钥，至少填一个
 ERNIE_API_KEY = ''  # 百度文心一言
 DOUBAN_API_KEY = ''  # 字节豆包
+QWEN_API_KEY = ''  # 阿里云通义千问
+DEEPSEEK_API_KEY = ''  # DeepSeek
+MINIMAX_API_KEY = ''  # MiniMax
+KIMI_API_KEY = ''  # Moonshot Kimi
+VOLCENGINE_API_KEY = ''  # 火山引擎方舟
+
+# Ollama 本地模型 - 不需要token，本地运行
+# OLLAMA_API_KEY 通常填 'ollama' 即可
+OLLAMA_API_KEY = 'ollama'
+OLLAMA_BASE_URL = 'http://localhost:11434/v1'
+OLLAMA_DEFAULT_MODEL = 'qwen2.5:7b'  # 可改成你本地拉取的模型名称
 
 # 微信开放平台配置，微信登录需要
 WECHAT_APP_ID = ''

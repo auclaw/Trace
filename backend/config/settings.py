@@ -10,6 +10,17 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'change-this-to-your-secret-key')
 # AI API Keys - at least one required
 ERNIE_API_KEY = os.environ.get('ERNIE_API_KEY', '')
 DOUBAN_API_KEY = os.environ.get('DOUBAN_API_KEY', '')
+QWEN_API_KEY = os.environ.get('QWEN_API_KEY', '')
+DEEPSEEK_API_KEY = os.environ.get('DEEPSEEK_API_KEY', '')
+MINIMAX_API_KEY = os.environ.get('MINIMAX_API_KEY', '')
+KIMI_API_KEY = os.environ.get('KIMI_API_KEY', '')
+VOLCENGINE_API_KEY = os.environ.get('VOLCENGINE_API_KEY', '')
+
+# Ollama local model - for local inference without API tokens
+# OLLAMA_API_KEY can be empty for local use
+OLLAMA_API_KEY = os.environ.get('OLLAMA_API_KEY', 'ollama')
+OLLAMA_BASE_URL = os.environ.get('OLLAMA_BASE_URL', 'http://localhost:11434/v1')
+OLLAMA_DEFAULT_MODEL = os.environ.get('OLLAMA_DEFAULT_MODEL', 'qwen2.5:7b')
 
 # WeChat Open Platform configuration
 WECHAT_APP_ID = os.environ.get('WECHAT_APP_ID', '')

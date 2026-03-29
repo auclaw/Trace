@@ -26,7 +26,12 @@ const Statistics: React.FC<StatisticsProps> = ({ theme }) => {
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
   const [generatingImage, setGeneratingImage] = useState(false)
+  const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null)
+  const [shareError, setShareError] = useState<string | null>(null)
   const shareCardRef = useRef<HTMLDivElement>(null)
+
+  // Check if native share is supported
+  const supportsShare = typeof navigator !== 'undefined' && navigator.share !== undefined
 
   useEffect(() => {
     loadStats()
@@ -240,6 +245,7 @@ const Statistics: React.FC<StatisticsProps> = ({ theme }) => {
 
     try {
       setGeneratingImage(true)
+      setShareError(null)
 
       // 计算本周日期
       const now = new Date()
@@ -247,25 +253,85 @@ const Statistics: React.FC<StatisticsProps> = ({ theme }) => {
       weekStart.setDate(now.getDate() - now.getDay())
       const weekEnd = new Date(now)
       weekEnd.setDate(now.getDate() + (6 - now.getDay()))
-      const dateStr = `${weekStart.getMonth() + 1}/${weekStart.getDate()} - ${weekEnd.getMonth() + 1}/${weekEnd.getDate()}`
 
       const dataUrl = await toPng(shareCardRef.current, {
         backgroundColor: '#f97316',
         quality: 0.95
       })
 
-      // 创建下载链接
+      setGeneratedImageUrl(dataUrl)
+
+      // Auto download on first generate
+      const dateStr = `${weekStart.getMonth() + 1}-${weekStart.getDate()}_${weekEnd.getMonth() + 1}-${weekEnd.getDate()}`
       const link = document.createElement('a')
-      link.download = `merize-weekly-${dateStr.replace('/', '-')}.png`
+      link.download = `merize-weekly-${dateStr}.png`
       link.href = dataUrl
       link.click()
-
-      alert('周总结图片已生成！可以直接发到小红书打卡 #时间管理 #效率提升')
     } catch (error) {
       console.error('生成图片失败', error)
-      alert('生成图片失败: ' + error)
+      setShareError('生成图片失败: ' + error)
     } finally {
       setGeneratingImage(false)
+    }
+  }
+
+  // Download image to file
+  const downloadImage = () => {
+    if (!generatedImageUrl) return
+    const now = new Date()
+    const weekStart = new Date(now)
+    weekStart.setDate(now.getDate() - now.getDay())
+    const weekEnd = new Date(now)
+    weekEnd.setDate(now.getDate() + (6 - now.getDay()))
+    const dateStr = `${weekStart.getMonth() + 1}-${weekStart.getDate()}_${weekEnd.getMonth() + 1}-${weekEnd.getDate()}`
+    const link = document.createElement('a')
+    link.download = `merize-weekly-${dateStr}.png`
+    link.href = generatedImageUrl
+    link.click()
+  }
+
+  // Copy image to clipboard
+  const copyImageToClipboard = async () => {
+    if (!generatedImageUrl) return
+    try {
+      setShareError(null)
+      // Convert data URL to blob
+      const response = await fetch(generatedImageUrl)
+      const blob = await response.blob()
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'image/png': blob
+        })
+      ])
+      alert('图片已复制到剪贴板！可以直接粘贴到小红书/微信了')
+    } catch (error) {
+      console.error('复制失败', error)
+      setShareError('复制到剪贴板失败: ' + error)
+    }
+  }
+
+  // Native share dialog
+  const shareImage = async () => {
+    if (!generatedImageUrl || !supportsShare) return
+    try {
+      setShareError(null)
+      const response = await fetch(generatedImageUrl)
+      const blob = await response.blob()
+      const now = new Date()
+      const weekStart = new Date(now)
+      weekStart.setDate(now.getDate() - now.getDay())
+      const file = new File([blob], `merize-weekly-${weekStart.getMonth() + 1}-${weekStart.getDate()}.png`, { type: 'image/png' })
+
+      await navigator.share({
+        files: [file],
+        title: 'merize 周总结',
+        text: '#merize #时间管理 #效率提升',
+      })
+    } catch (error) {
+      console.error('分享失败', error)
+      if ((error as Error).name !== 'AbortError') {
+        setShareError('分享失败: ' + error)
+      }
     }
   }
 
@@ -318,13 +384,52 @@ const Statistics: React.FC<StatisticsProps> = ({ theme }) => {
             <p className={`text-sm ${textColor} mb-4`}>
               生成精美周总结图片，打卡发小红书分享你的时间管理成果
             </p>
-            <button
-              onClick={generateShareImage}
-              disabled={generatingImage || stats.length === 0}
-              className="px-4 py-2 bg-primary text-white text-sm rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {generatingImage ? '生成中...' : '📷 生成周总结分享图'}
-            </button>
+            {shareError && (
+              <div className={`mb-3 p-3 rounded-lg ${isDark ? 'bg-red-900/20 text-red-400' : 'bg-red-50 text-red-700'} text-sm`}>
+                {shareError}
+              </div>
+            )}
+            {!generatedImageUrl ? (
+              <button
+                onClick={generateShareImage}
+                disabled={generatingImage || stats.length === 0}
+                className="px-4 py-2 bg-primary text-white text-sm rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {generatingImage ? '生成中...' : '📷 生成周总结分享图'}
+              </button>
+            ) : (
+              <div className="flex flex-wrap gap-3">
+                <button
+                  onClick={downloadImage}
+                  className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  💾 下载图片
+                </button>
+                <button
+                  onClick={copyImageToClipboard}
+                  className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  📋 复制到剪贴板
+                </button>
+                {supportsShare && (
+                  <button
+                    onClick={shareImage}
+                    className="px-4 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition-colors"
+                  >
+                    📤 分享...
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    setGeneratedImageUrl(null)
+                    setShareError(null)
+                  }}
+                  className={`px-4 py-2 text-sm ${isDark ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'} rounded-lg transition-colors`}
+                >
+                  重新生成
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
