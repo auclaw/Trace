@@ -28,11 +28,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isTracking, theme, onToggleTracking }
     plan: 'free',
   })
   const [loading, setLoading] = useState(false)
-  const bgClass = isDark ? 'bg-gray-800' : 'bg-white'
-  const borderClass = isDark ? 'border-gray-700' : 'border-gray-200'
-  const textClass = isDark ? 'text-gray-300' : 'text-gray-700'
-  const mutedTextClass = isDark ? 'text-gray-400' : 'text-gray-500'
-  const borderBottomClass = isDark ? 'border-b border-gray-700' : 'border-b border-gray-100'
+  // Zapier-inspired Design: Border-forward structure, no shadows
+  const bgClass = isDark ? 'bg-aether-dark-200' : 'bg-aether-200'
+  const borderClass = isDark ? 'border-[var(--color-border-subtle)]' : 'border-[var(--color-border-subtle)]'
+  const textClass = isDark ? 'text-aether-text-dark-primary' : 'text-aether-text-primary'
+  const mutedTextClass = isDark ? 'text-aether-text-dark-secondary' : 'text-aether-text-secondary'
+  const borderBottomClass = isDark ? 'border-b border-[var(--color-border-subtle)]' : 'border-b border-[var(--color-border-subtle)]'
 
   // Load user role permissions for dynamic menu
   useEffect(() => {
@@ -65,7 +66,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isTracking, theme, onToggleTracking }
   }
 
   return (
-    <div className={`w-64 ${bgClass} shadow-sm border-r ${borderClass} flex flex-col transition-colors duration-200`}>
+    <div className={`w-64 ${bgClass} border-r ${borderClass} flex flex-col transition-colors duration-300 rounded-container`}>
       <div className={`p-6 ${borderBottomClass}`}>
         <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-success bg-clip-text text-transparent">Merize</h1>
         <p className={`text-xs ${mutedTextClass}`}>AI 自动时间追踪</p>
@@ -96,11 +97,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isTracking, theme, onToggleTracking }
               end
               data-tour="dashboard"
               className={({ isActive }) => {
-                const base = 'flex items-center px-4 py-3 rounded-xl transition-all duration-200 transform'
+                // Zapier-inspired: active item indicated by orange left border, cleaner border-forward design
+                const base = 'flex items-center px-4 py-3 rounded-lg transition-all duration-200 border-l-3'
                 if (isActive) {
-                  return `${base} bg-gradient-to-r from-primary/10 to-success/10 text-primary font-medium scale-[1.02] shadow-sm`
+                  return `${base} bg-[color:var(--color-accent-soft)] text-[color:var(--color-accent)] font-medium border-[color:var(--color-accent)]`
                 } else {
-                  return `${base} ${textClass} hover:bg-opacity-10 ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} hover:scale-[1.01]`
+                  return `${base} ${textClass} hover:bg-[var(--color-border-light)] border-l-3 border-transparent`
                 }
               }}
             >
@@ -113,11 +115,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isTracking, theme, onToggleTracking }
               to="/statistics"
               data-tour="statistics"
               className={({ isActive }) => {
-                const base = 'flex items-center px-4 py-3 rounded-xl transition-all duration-200 transform'
+                // Zapier-inspired: active item indicated by orange left border, cleaner border-forward design
+                const base = 'flex items-center px-4 py-3 rounded-lg transition-all duration-200 border-l-3'
                 if (isActive) {
-                  return `${base} bg-gradient-to-r from-primary/10 to-success/10 text-primary font-medium scale-[1.02] shadow-sm`
+                  return `${base} bg-[color:var(--color-accent-soft)] text-[color:var(--color-accent)] font-medium border-[color:var(--color-accent)]`
                 } else {
-                  return `${base} ${textClass} hover:bg-opacity-10 ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} hover:scale-[1.01]`
+                  return `${base} ${textClass} hover:bg-[var(--color-border-light)] border-l-3 border-transparent`
                 }
               }}
             >
@@ -130,11 +133,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isTracking, theme, onToggleTracking }
               to="/planner"
               data-tour="planner"
               className={({ isActive }) => {
-                const base = 'flex items-center px-4 py-3 rounded-xl transition-all duration-200 transform'
+                // Zapier-inspired: active item indicated by orange left border, cleaner border-forward design
+                const base = 'flex items-center px-4 py-3 rounded-lg transition-all duration-200 border-l-3'
                 if (isActive) {
-                  return `${base} bg-gradient-to-r from-primary/10 to-success/10 text-primary font-medium scale-[1.02] shadow-sm`
+                  return `${base} bg-[color:var(--color-accent-soft)] text-[color:var(--color-accent)] font-medium border-[color:var(--color-accent)]`
                 } else {
-                  return `${base} ${textClass} hover:bg-opacity-10 ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} hover:scale-[1.01]`
+                  return `${base} ${textClass} hover:bg-[var(--color-border-light)] border-l-3 border-transparent`
                 }
               }}
             >
@@ -147,11 +151,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isTracking, theme, onToggleTracking }
               to="/calendar"
               data-tour="calendar"
               className={({ isActive }) => {
-                const base = 'flex items-center px-4 py-3 rounded-xl transition-all duration-200 transform'
+                // Zapier-inspired: active item indicated by orange left border, cleaner border-forward design
+                const base = 'flex items-center px-4 py-3 rounded-lg transition-all duration-200 border-l-3'
                 if (isActive) {
-                  return `${base} bg-gradient-to-r from-primary/10 to-success/10 text-primary font-medium scale-[1.02] shadow-sm`
+                  return `${base} bg-[color:var(--color-accent-soft)] text-[color:var(--color-accent)] font-medium border-[color:var(--color-accent)]`
                 } else {
-                  return `${base} ${textClass} hover:bg-opacity-10 ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} hover:scale-[1.01]`
+                  return `${base} ${textClass} hover:bg-[var(--color-border-light)] border-l-3 border-transparent`
                 }
               }}
             >
@@ -164,11 +169,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isTracking, theme, onToggleTracking }
               to="/focus"
               data-tour="focus-mode"
               className={({ isActive }) => {
-                const base = 'flex items-center px-4 py-3 rounded-xl transition-all duration-200 transform'
+                // Zapier-inspired: active item indicated by orange left border, cleaner border-forward design
+                const base = 'flex items-center px-4 py-3 rounded-lg transition-all duration-200 border-l-3'
                 if (isActive) {
-                  return `${base} bg-gradient-to-r from-primary/10 to-success/10 text-primary font-medium scale-[1.02] shadow-sm`
+                  return `${base} bg-[color:var(--color-accent-soft)] text-[color:var(--color-accent)] font-medium border-[color:var(--color-accent)]`
                 } else {
-                  return `${base} ${textClass} hover:bg-opacity-10 ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} hover:scale-[1.01]`
+                  return `${base} ${textClass} hover:bg-[var(--color-border-light)] border-l-3 border-transparent`
                 }
               }}
             >
@@ -185,11 +191,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isTracking, theme, onToggleTracking }
             <NavLink
               to="/habits"
               className={({ isActive }) => {
-                const base = 'flex items-center px-4 py-3 rounded-xl transition-all duration-200 transform'
+                // Zapier-inspired: active item indicated by orange left border, cleaner border-forward design
+                const base = 'flex items-center px-4 py-3 rounded-lg transition-all duration-200 border-l-3'
                 if (isActive) {
-                  return `${base} bg-gradient-to-r from-primary/10 to-success/10 text-primary font-medium scale-[1.02] shadow-sm`
+                  return `${base} bg-[color:var(--color-accent-soft)] text-[color:var(--color-accent)] font-medium border-[color:var(--color-accent)]`
                 } else {
-                  return `${base} ${textClass} hover:bg-opacity-10 ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} hover:scale-[1.01]`
+                  return `${base} ${textClass} hover:bg-[var(--color-border-light)] border-l-3 border-transparent`
                 }
               }}
             >
@@ -201,11 +208,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isTracking, theme, onToggleTracking }
             <NavLink
               to="/flow-blocks"
               className={({ isActive }) => {
-                const base = 'flex items-center px-4 py-3 rounded-xl transition-all duration-200 transform'
+                // Zapier-inspired: active item indicated by orange left border, cleaner border-forward design
+                const base = 'flex items-center px-4 py-3 rounded-lg transition-all duration-200 border-l-3'
                 if (isActive) {
-                  return `${base} bg-gradient-to-r from-primary/10 to-success/10 text-primary font-medium scale-[1.02] shadow-sm`
+                  return `${base} bg-[color:var(--color-accent-soft)] text-[color:var(--color-accent)] font-medium border-[color:var(--color-accent)]`
                 } else {
-                  return `${base} ${textClass} hover:bg-opacity-10 ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} hover:scale-[1.01]`
+                  return `${base} ${textClass} hover:bg-[var(--color-border-light)] border-l-3 border-transparent`
                 }
               }}
             >
@@ -255,15 +263,47 @@ const Sidebar: React.FC<SidebarProps> = ({ isTracking, theme, onToggleTracking }
             </>
           )}
 
-          {/* 团队/企业功能区 - 需要商业套餐及以上 */}
-          {roles.plan === 'business' && (
-            <>
-              <li className="pt-4">
-                <p className={`px-4 text-xs uppercase tracking-wider ${mutedTextClass} mb-2`}>团队协作</p>
-              </li>
+          {/* 团队/企业功能区 - 需要商业套餐及以上，临时强制显示用于测试 */}
+          <>
+            <li className="pt-4">
+              <p className={`px-4 text-xs uppercase tracking-wider ${mutedTextClass} mb-2`}>团队协作</p>
+            </li>
+            <li>
+              <NavLink
+                to="/team-focus"
+                className={({ isActive }) => {
+                  const base = 'flex items-center px-4 py-3 rounded-xl transition-all duration-200 transform'
+                  if (isActive) {
+                    return `${base} bg-gradient-to-r from-primary/10 to-success/10 text-primary font-medium scale-[1.02] shadow-sm`
+                  } else {
+                    return `${base} ${textClass} hover:bg-opacity-10 ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} hover:scale-[1.01]`
+                  }
+                }}
+              >
+                <span className="mr-3 text-lg">👥</span>
+                团队专注
+              </NavLink>
+            </li>
+            <li>
+              <NavLink
+                to="/approval"
+                className={({ isActive }) => {
+                  const base = 'flex items-center px-4 py-3 rounded-xl transition-all duration-200 transform'
+                  if (isActive) {
+                    return `${base} bg-gradient-to-r from-primary/10 to-success/10 text-primary font-medium scale-[1.02] shadow-sm`
+                  } else {
+                    return `${base} ${textClass} hover:bg-opacity-10 ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} hover:scale-[1.01]`
+                  }
+                }}
+              >
+                <span className="mr-3 text-lg">✅</span>
+                每周审批
+              </NavLink>
+            </li>
+            {roles.hasAnyTeam && (
               <li>
                 <NavLink
-                  to="/team-focus"
+                  to="/team-dashboard"
                   className={({ isActive }) => {
                     const base = 'flex items-center px-4 py-3 rounded-xl transition-all duration-200 transform'
                     if (isActive) {
@@ -273,13 +313,15 @@ const Sidebar: React.FC<SidebarProps> = ({ isTracking, theme, onToggleTracking }
                     }
                   }}
                 >
-                  <span className="mr-3 text-lg">👥</span>
-                  团队专注
+                  <span className="mr-3 text-lg">📊</span>
+                  团队仪表盘
                 </NavLink>
               </li>
+            )}
+            {roles.hasOrgAdmin && (
               <li>
                 <NavLink
-                  to="/approval"
+                  to="/org-admin"
                   className={({ isActive }) => {
                     const base = 'flex items-center px-4 py-3 rounded-xl transition-all duration-200 transform'
                     if (isActive) {
@@ -289,59 +331,41 @@ const Sidebar: React.FC<SidebarProps> = ({ isTracking, theme, onToggleTracking }
                     }
                   }}
                 >
-                  <span className="mr-3 text-lg">✅</span>
-                  每周审批
+                  <span className="mr-3 text-lg">🏢</span>
+                  组织管理
                 </NavLink>
               </li>
-              {roles.hasAnyTeam && (
-                <li>
-                  <NavLink
-                    to="/team-dashboard"
-                    className={({ isActive }) => {
-                      const base = 'flex items-center px-4 py-3 rounded-xl transition-all duration-200 transform'
-                      if (isActive) {
-                        return `${base} bg-gradient-to-r from-primary/10 to-success/10 text-primary font-medium scale-[1.02] shadow-sm`
-                      } else {
-                        return `${base} ${textClass} hover:bg-opacity-10 ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} hover:scale-[1.01]`
-                      }
-                    }}
-                  >
-                    <span className="mr-3 text-lg">📊</span>
-                    团队仪表盘
-                  </NavLink>
-                </li>
-              )}
-              {roles.hasOrgAdmin && (
-                <li>
-                  <NavLink
-                    to="/org-admin"
-                    className={({ isActive }) => {
-                      const base = 'flex items-center px-4 py-3 rounded-xl transition-all duration-200 transform'
-                      if (isActive) {
-                        return `${base} bg-gradient-to-r from-primary/10 to-success/10 text-primary font-medium scale-[1.02] shadow-sm`
-                      } else {
-                        return `${base} ${textClass} hover:bg-opacity-10 ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} hover:scale-[1.01]`
-                      }
-                    }}
-                  >
-                    <span className="mr-3 text-lg">🏢</span>
-                    组织管理
-                  </NavLink>
-                </li>
-              )}
-            </>
-          )}
+            )}
+          </>
 
+          <li>
+            <NavLink
+              to="/style-preview"
+              className={({ isActive }) => {
+                // Zapier-inspired: active item indicated by orange left border, cleaner border-forward design
+                const base = 'flex items-center px-4 py-3 rounded-lg transition-all duration-200 border-l-3'
+                if (isActive) {
+                  return `${base} bg-[color:var(--color-accent-soft)] text-[color:var(--color-accent)] font-medium border-[color:var(--color-accent)]`
+                } else {
+                  return `${base} ${textClass} hover:bg-[var(--color-border-light)] border-l-3 border-transparent`
+                }
+              }}
+            >
+              <span className="mr-3 text-lg">🎨</span>
+              选择风格
+            </NavLink>
+          </li>
           <li>
             <NavLink
               to="/settings"
               data-tour="settings"
               className={({ isActive }) => {
-                const base = 'flex items-center px-4 py-3 rounded-xl transition-all duration-200 transform'
+                // Zapier-inspired: active item indicated by orange left border, cleaner border-forward design
+                const base = 'flex items-center px-4 py-3 rounded-lg transition-all duration-200 border-l-3'
                 if (isActive) {
-                  return `${base} bg-gradient-to-r from-primary/10 to-success/10 text-primary font-medium scale-[1.02] shadow-sm`
+                  return `${base} bg-[color:var(--color-accent-soft)] text-[color:var(--color-accent)] font-medium border-[color:var(--color-accent)]`
                 } else {
-                  return `${base} ${textClass} hover:bg-opacity-10 ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} hover:scale-[1.01]`
+                  return `${base} ${textClass} hover:bg-[var(--color-border-light)] border-l-3 border-transparent`
                 }
               }}
             >

@@ -21,6 +21,7 @@ interface Member {
   id: number
   team_id: number | null
   user_id: number
+  user_name?: string
   role: string
   status: string
   invited_at: string
@@ -142,13 +143,24 @@ const OrgAdmin: React.FC<OrgAdminProps> = ({ theme }) => {
     }
   }
 
-  const bgClass = isDark ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'
-  const cardBgClass = isDark ? 'bg-gray-800' : 'bg-gray-50'
-  const borderClass = isDark ? 'border-gray-700' : 'border-gray-200'
-  const buttonPrimaryClass = 'bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded'
+  const getStatusBadgeClass = (status: string) => {
+    switch (status) {
+      case 'active': return 'bg-[rgba(34,197,94,0.15)] text-[#15803d] dark:text-[#4ade80]'
+      case 'pending': return 'bg-[rgba(255,190,0,0.15)] text-[#d97706] dark:text-[#fbbf24]'
+      case 'suspended': return 'bg-[rgba(239,68,68,0.15)] text-[#dc2626] dark:text-[#f87171]'
+      default: return 'bg-[var(--color-border-light)] text-[var(--color-text-secondary)] border border-[var(--color-border-subtle)]'
+    }
+  }
+
+  const bgClass = isDark ? 'bg-aether-dark-100 text-aether-text-dark-primary' : 'bg-aether-100 text-aether-text-primary'
+  const cardBgClass = isDark ? 'bg-aether-dark-200' : 'bg-aether-200'
+  const borderClass = isDark ? 'border-[var(--color-border-subtle)]' : 'border-[var(--color-border-subtle)]'
+  const mutedTextClass = isDark ? 'text-aether-text-dark-secondary' : 'text-aether-text-secondary'
+  const buttonPrimaryClass = 'bg-[var(--color-accent)] hover:opacity-90 text-[#fffefb] px-4 py-2 rounded transition-opacity'
   const buttonSecondaryClass = isDark
-    ? 'bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded'
-    : 'bg-gray-200 hover:bg-gray-300 text-gray-900 px-4 py-2 rounded'
+    ? 'bg-aether-dark-300 hover:bg-aether-dark-300/80 text-aether-text-dark-primary px-4 py-2 rounded transition-colors'
+    : 'bg-aether-300 hover:bg-aether-300/80 text-aether-text-primary px-4 py-2 rounded transition-colors'
+  const inputClass = `w-full px-3 py-2 border ${borderClass} rounded focus:ring-2 focus:ring-[var(--color-accent)] outline-none ${isDark ? 'bg-aether-dark-300 text-aether-text-dark-primary' : 'bg-aether-200 text-aether-text-primary'}`
 
   if (loading) {
     return (
@@ -161,10 +173,8 @@ const OrgAdmin: React.FC<OrgAdminProps> = ({ theme }) => {
   return (
     <div className={`${bgClass} min-h-screen p-4`}>
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-2xl font-bold mb-6">组织管理</h1>
-
-        {/* Create Organization Button */}
-        <div className="mb-6">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold">组织管理</h1>
           <button
             className={buttonPrimaryClass}
             onClick={() => setShowCreateOrg(true)}
@@ -184,7 +194,7 @@ const OrgAdmin: React.FC<OrgAdminProps> = ({ theme }) => {
                   type="text"
                   value={newOrgName}
                   onChange={(e) => setNewOrgName(e.target.value)}
-                  className={`w-full px-3 py-2 border ${borderClass} rounded ${isDark ? 'bg-gray-700' : 'bg-white'}`}
+                  className={inputClass}
                   placeholder="输入组织名称"
                 />
               </div>
@@ -194,7 +204,7 @@ const OrgAdmin: React.FC<OrgAdminProps> = ({ theme }) => {
                   type="text"
                   value={newOrgDomain}
                   onChange={(e) => setNewOrgDomain(e.target.value)}
-                  className={`w-full px-3 py-2 border ${borderClass} rounded ${isDark ? 'bg-gray-700' : 'bg-white'}`}
+                  className={inputClass}
                   placeholder="company.com"
                 />
               </div>
@@ -205,7 +215,7 @@ const OrgAdmin: React.FC<OrgAdminProps> = ({ theme }) => {
                   value={newOrgSeats}
                   onChange={(e) => setNewOrgSeats(parseInt(e.target.value) || 5)}
                   min={1}
-                  className={`w-full px-3 py-2 border ${borderClass} rounded ${isDark ? 'bg-gray-700' : 'bg-white'}`}
+                  className={inputClass}
                 />
               </div>
               <div className="flex space-x-3">
@@ -224,26 +234,26 @@ const OrgAdmin: React.FC<OrgAdminProps> = ({ theme }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           {organizations.length === 0 ? (
             <div className={`p-8 text-center border ${borderClass} rounded ${cardBgClass}`}>
-              <p className="text-gray-500">还没有加入任何组织</p>
+              <p className={`${mutedTextClass}`}>还没有加入任何组织</p>
             </div>
           ) : (
             organizations.map(org => (
               <div
                 key={org.id}
-                className={`p-4 border ${borderClass} rounded ${cardBgClass} cursor-pointer hover:border-blue-500 transition-colors ${selectedOrg?.id === org.id ? 'border-blue-500 ring-1 ring-blue-500' : ''}`}
+                className={`p-4 border ${borderClass} rounded ${cardBgClass} cursor-pointer hover:border-[var(--color-accent)] transition-colors ${selectedOrg?.id === org.id ? 'border-[var(--color-accent)] ring-1 ring-[var(--color-accent)]' : ''}`}
                 onClick={() => loadTeamsAndMembers(org)}
               >
                 <div className="flex justify-between items-start">
                   <div>
                     <h3 className="text-lg font-semibold">{org.name}</h3>
-                    {org.domain && <p className="text-sm text-gray-500">{org.domain}</p>}
+                    {org.domain && <p className={`text-sm ${mutedTextClass}`}>{org.domain}</p>}
                   </div>
-                  <span className={`px-2 py-1 text-xs rounded ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>
+                  <span className={`px-2 py-1 text-xs rounded ${isDark ? 'bg-aether-dark-300' : 'bg-aether-300'}`}>
                     {getRoleLabel(org.role)}
                   </span>
                 </div>
                 <div className="mt-2">
-                  <span className={`text-xs px-2 py-1 rounded ${org.status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'}`}>
+                  <span className={`text-xs px-2 py-1 rounded ${getStatusBadgeClass(org.status)}`}>
                     {getStatusLabel(org.status)}
                   </span>
                 </div>
@@ -276,7 +286,7 @@ const OrgAdmin: React.FC<OrgAdminProps> = ({ theme }) => {
                     type="text"
                     value={newTeamName}
                     onChange={(e) => setNewTeamName(e.target.value)}
-                    className={`flex-1 px-3 py-2 border ${borderClass} rounded ${isDark ? 'bg-gray-700' : 'bg-white'}`}
+                    className={`flex-1 px-3 py-2 border ${borderClass} rounded focus:ring-2 focus:ring-[var(--color-accent)] outline-none ${isDark ? 'bg-aether-dark-300 text-aether-text-dark-primary' : 'bg-aether-200 text-aether-text-primary'}`}
                     placeholder="团队名称"
                   />
                   <button className={buttonPrimaryClass} onClick={createTeam}>
@@ -294,7 +304,7 @@ const OrgAdmin: React.FC<OrgAdminProps> = ({ theme }) => {
               <table className="w-full">
                 <thead>
                   <tr className={`border-b ${borderClass}`}>
-                    <th className="text-left py-2 px-2">用户ID</th>
+                    <th className="text-left py-2 px-2">用户</th>
                     <th className="text-left py-2 px-2">团队</th>
                     <th className="text-left py-2 px-2">角色</th>
                     <th className="text-left py-2 px-2">状态</th>
@@ -303,13 +313,13 @@ const OrgAdmin: React.FC<OrgAdminProps> = ({ theme }) => {
                 <tbody>
                   {members.map(member => (
                     <tr key={member.id} className={`border-b ${borderClass} last:border-b-0`}>
-                      <td className="py-2 px-2">{member.user_id}</td>
+                      <td className="py-2 px-2">{member.user_name || member.user_id}</td>
                       <td className="py-2 px-2">
                         {member.team_id ? teams.find(t => t.id === member.team_id)?.name || member.team_id : '-'}
                       </td>
                       <td className="py-2 px-2">{getRoleLabel(member.role)}</td>
                       <td className="py-2 px-2">
-                        <span className={`text-xs px-2 py-1 rounded ${member.status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'}`}>
+                        <span className={`text-xs px-2 py-1 rounded ${getStatusBadgeClass(member.status)}`}>
                           {getStatusLabel(member.status)}
                         </span>
                       </td>
@@ -317,7 +327,7 @@ const OrgAdmin: React.FC<OrgAdminProps> = ({ theme }) => {
                   ))}
                   {members.length === 0 && (
                     <tr>
-                      <td colSpan={4} className="py-4 text-center text-gray-500">
+                      <td colSpan={4} className={`py-4 text-center ${mutedTextClass}`}>
                         暂无成员
                       </td>
                     </tr>

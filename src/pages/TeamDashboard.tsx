@@ -14,6 +14,7 @@ import {
 interface WeeklyApproval {
   id: number
   user_id: number
+  user_name?: string
   week_start: string
   status: string
   submitted_at: string
@@ -99,13 +100,13 @@ const TeamDashboard: React.FC<TeamDashboardProps> = ({ theme }) => {
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
       case 'submitted':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+        return 'bg-[rgba(255,190,0,0.15)] text-[#d97706] dark:text-[#fbbf24]'
       case 'approved':
-        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+        return 'bg-[rgba(34,197,94,0.15)] text-[#15803d] dark:text-[#4ade80]'
       case 'rejected':
-        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+        return 'bg-[rgba(239,68,68,0.15)] text-[#dc2626] dark:text-[#f87171]'
       default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+        return 'bg-[var(--color-border-light)] text-[var(--color-text-secondary)] border border-[var(--color-border-subtle)]'
     }
   }
 
@@ -122,19 +123,22 @@ const TeamDashboard: React.FC<TeamDashboardProps> = ({ theme }) => {
     return new Date(dateStr).toLocaleDateString('zh-CN')
   }
 
-  const formatDuration = (minutes: number) => {
-    const hours = Math.floor(minutes / 60)
-    const mins = Math.round(minutes % 60)
-    if (hours > 0) {
-      return `${hours}h${mins > 0 ? ` ${mins}m` : ''}`
+  const formatDuration = (hours: number) => {
+    const wholeHours = Math.floor(hours)
+    const minutes = Math.round((hours - wholeHours) * 60)
+    if (wholeHours > 0 && minutes > 0) {
+      return `${wholeHours}小时${minutes}分钟`
     }
-    return `${Math.round(minutes)}m`
+    if (wholeHours > 0) {
+      return `${wholeHours}小时`
+    }
+    return `${minutes}分钟`
   }
 
   const getUtilizationColor = (utilization: number) => {
-    if (utilization >= 80) return 'text-green-600'
-    if (utilization >= 60) return 'text-yellow-600'
-    return 'text-red-600'
+    if (utilization >= 80) return isDark ? 'text-green-400' : 'text-green-700'
+    if (utilization >= 60) return isDark ? 'text-yellow-400' : 'text-yellow-700'
+    return isDark ? 'text-red-400' : 'text-red-700'
   }
 
   useEffect(() => {
@@ -167,11 +171,12 @@ const TeamDashboard: React.FC<TeamDashboardProps> = ({ theme }) => {
     }
   }, [selectedOrg, selectedTeam, loadTeamData])
 
-  const bgClass = isDark ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'
-  const cardBgClass = isDark ? 'bg-gray-800' : 'bg-gray-50'
-  const borderClass = isDark ? 'border-gray-700' : 'border-gray-200'
-  const buttonGreenClass = 'bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm'
-  const buttonRedClass = 'bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm'
+  const bgClass = isDark ? 'bg-aether-dark-100 text-aether-text-dark-primary' : 'bg-aether-100 text-aether-text-primary'
+  const cardBgClass = isDark ? 'bg-aether-dark-200' : 'bg-aether-200'
+  const borderClass = isDark ? 'border-[var(--color-border-subtle)]' : 'border-[var(--color-border-subtle)]'
+  const mutedTextClass = isDark ? 'text-aether-text-dark-secondary' : 'text-aether-text-secondary'
+  const buttonGreenClass = 'bg-[var(--color-accent)] hover:opacity-90 text-[#fffefb] px-3 py-1 rounded text-sm transition-opacity'
+  const buttonRedClass = 'bg-[var(--color-text-muted)] hover:opacity-90 text-[#fffefb] px-3 py-1 rounded text-sm transition-opacity'
 
   if (loading) {
     return (
@@ -184,7 +189,9 @@ const TeamDashboard: React.FC<TeamDashboardProps> = ({ theme }) => {
   return (
     <div className={`${bgClass} min-h-screen p-4`}>
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-2xl font-bold mb-6">团队仪表盘</h1>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold">团队仪表盘</h1>
+        </div>
 
         {/* Organization Selection */}
         <div className="mb-6">
@@ -193,7 +200,7 @@ const TeamDashboard: React.FC<TeamDashboardProps> = ({ theme }) => {
             {organizations.map(org => (
               <button
                 key={org.id}
-                className={`p-3 border ${borderClass} rounded text-left ${selectedOrg === org.id ? 'border-blue-500 ring-1 ring-blue-500' : cardBgClass}`}
+                className={`p-3 border ${borderClass} rounded text-left transition-colors hover:bg-[var(--color-border-light)] ${selectedOrg === org.id ? 'border-[var(--color-accent)] ring-1 ring-[var(--color-accent)]' : cardBgClass}`}
                 onClick={() => {
                   setSelectedOrg(org.id)
                   setSelectedTeam(null)
@@ -214,7 +221,7 @@ const TeamDashboard: React.FC<TeamDashboardProps> = ({ theme }) => {
               {teams.map(team => (
                 <button
                   key={team.id}
-                  className={`p-3 border ${borderClass} rounded text-left ${selectedTeam === team.id ? 'border-blue-500 ring-1 ring-blue-500' : cardBgClass}`}
+                  className={`p-3 border ${borderClass} rounded text-left transition-colors hover:bg-[var(--color-border-light)] ${selectedTeam === team.id ? 'border-[var(--color-accent)] ring-1 ring-[var(--color-accent)]' : cardBgClass}`}
                   onClick={() => setSelectedTeam(team.id)}
                 >
                   {team.name}
@@ -230,19 +237,19 @@ const TeamDashboard: React.FC<TeamDashboardProps> = ({ theme }) => {
             {/* Key Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
               <div className={`${cardBgClass} border ${borderClass} rounded p-4`}>
-                <p className="text-sm text-gray-500 mb-1">总成员</p>
+                <p className={`text-sm ${mutedTextClass} mb-1`}>总成员</p>
                 <p className="text-2xl font-bold">{teamStats.total_members}</p>
               </div>
               <div className={`${cardBgClass} border ${borderClass} rounded p-4`}>
-                <p className="text-sm text-gray-500 mb-1">本周活跃</p>
-                <p className="text-2xl font-bold text-green-600">{teamStats.active_members}</p>
+                <p className={`text-sm ${mutedTextClass} mb-1`}>本周活跃</p>
+                <p className={`text-2xl font-bold ${getUtilizationColor(teamStats.active_members / teamStats.total_members * 100)}`}>{teamStats.active_members}</p>
               </div>
               <div className={`${cardBgClass} border ${borderClass} rounded p-4`}>
-                <p className="text-sm text-gray-500 mb-1">本周总工时</p>
-                <p className="text-2xl font-bold">{formatDuration(teamStats.total_hours_this_week * 60)}</p>
+                <p className={`text-sm ${mutedTextClass} mb-1`}>本周总工时</p>
+                <p className="text-2xl font-bold">{formatDuration(teamStats.total_hours_this_week)}</p>
               </div>
               <div className={`${cardBgClass} border ${borderClass} rounded p-4`}>
-                <p className="text-sm text-gray-500 mb-1">平均利用率</p>
+                <p className={`text-sm ${mutedTextClass} mb-1`}>平均利用率</p>
                 <p className={`text-2xl font-bold ${getUtilizationColor(teamStats.avg_utilization)}`}>
                   {teamStats.avg_utilization.toFixed(1)}%
                 </p>
@@ -273,7 +280,7 @@ const TeamDashboard: React.FC<TeamDashboardProps> = ({ theme }) => {
                         }}
                         formatter={(value: number) => [`${value.toFixed(1)}%`, '利用率']}
                       />
-                      <Bar dataKey="utilization" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="utilization" fill="var(--color-accent)" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -288,7 +295,7 @@ const TeamDashboard: React.FC<TeamDashboardProps> = ({ theme }) => {
             <h2 className="text-xl font-semibold mb-4">待审批每周总结</h2>
 
             {pendingApprovals.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
+              <div className={`text-center py-8 ${mutedTextClass}`}>
                 当前没有待审批的总结
               </div>
             ) : (
@@ -300,9 +307,9 @@ const TeamDashboard: React.FC<TeamDashboardProps> = ({ theme }) => {
                   >
                     <div>
                       <p className="font-medium">
-                        用户 {approval.user_id} · 周 {formatDate(approval.week_start)}
+                        {approval.user_name || `用户 ${approval.user_id}`} · 周 {formatDate(approval.week_start)}
                       </p>
-                      <p className="text-sm text-gray-500">
+                      <p className={`text-sm ${mutedTextClass}`}>
                         提交于 {formatDate(approval.submitted_at)}
                       </p>
                     </div>
@@ -310,18 +317,22 @@ const TeamDashboard: React.FC<TeamDashboardProps> = ({ theme }) => {
                       <span className={`px-2 py-1 rounded text-xs ${getStatusBadgeClass(approval.status)}`}>
                         {getStatusLabel(approval.status)}
                       </span>
-                      <button
-                        className={buttonGreenClass}
-                        onClick={() => handleApprove(approval.id, true)}
-                      >
-                        通过
-                      </button>
-                      <button
-                        className={buttonRedClass}
-                        onClick={() => handleApprove(approval.id, false)}
-                      >
-                        拒绝
-                      </button>
+                      {approval.status === 'submitted' && (
+                        <>
+                          <button
+                            className={buttonGreenClass}
+                            onClick={() => handleApprove(approval.id, true)}
+                          >
+                            通过
+                          </button>
+                          <button
+                            className={buttonRedClass}
+                            onClick={() => handleApprove(approval.id, false)}
+                          >
+                            拒绝
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -333,7 +344,7 @@ const TeamDashboard: React.FC<TeamDashboardProps> = ({ theme }) => {
         {/* Empty State */}
         {organizations.length === 0 && (
           <div className={`p-8 text-center border ${borderClass} rounded ${cardBgClass}`}>
-            <p className="text-gray-500">你没有可管理的团队或组织</p>
+            <p className={`${mutedTextClass}`}>你没有可管理的团队或组织</p>
           </div>
         )}
       </div>

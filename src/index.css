@@ -2,16 +2,152 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  margin: 0;
-  padding: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+/* Merize Zapier-inspired Warm Orange Design System */
+:root {
+  /* Warm cream canvas - like unbleached paper, not pure white */
+  --color-bg-base: #fffefb;
+  --color-bg-surface-1: #fffefb;
+  --color-bg-surface-2: #fffdf9;
+  /* Warm text colors with reddish undertones */
+  --color-text-primary: #201515;
+  --color-text-secondary: #36342e;
+  --color-text-muted: #939084;
+  /* Warm sand border */
+  --color-border-subtle: #c5c0b1;
+  /* Zapier Orange - vibrant warm accent */
+  --color-accent: #ff4f00;
+  --color-accent-soft: rgba(255, 79, 0, 0.15);
+  /* Semantic colors */
+  --color-success: #2e7d32;
+  --color-warning: #ff4f00;
+  /* Border-forward design - minimal shadows per Zapier philosophy */
+  --shadow-subtle: none;
+  --shadow-elevated: none;
+
+  /* Spacing (8px grid) */
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+  --spacing-12: 48px;
+  --spacing-16: 64px;
+
+  /* Transitions */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 600ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Dark Mode Colors - Warm dark palette */
+.dark {
+  --color-bg-base: #1a1614;
+  --color-bg-surface-1: #25201e;
+  --color-bg-surface-2: #2d2826;
+  --color-text-primary: #f8f5f0;
+  --color-text-secondary: #d1cdc4;
+  --color-text-muted: #a19d94;
+  --color-border-subtle: #4a4640;
+  --color-accent: #ff6b2a;
+  --color-accent-soft: rgba(255, 107, 42, 0.15);
+  --color-success: #4caf50;
+  --color-warning: #ff6b2a;
+  /* Border-forward design - no shadows in dark mode either */
+  --shadow-subtle: none;
+  --shadow-elevated: none;
 }
 
 * {
   box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--color-bg-base);
+  color: var(--color-text-primary);
+  transition: background-color var(--transition-normal), color var(--transition-normal);
+  line-height: 1.5;
+}
+
+/* Focus breathing animation */
+@keyframes breath {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+.animate-breath {
+  animation: breath 4s ease-in-out infinite;
+}
+
+/* Minimal scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--color-text-muted);
+  border-radius: 3px;
+}
+
+/* Focus-optimized utilities */
+@layer utilities {
+  .content-max-width {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .focus-session-active {
+    & *:not(.focus-essential) {
+      opacity: 0.3;
+      filter: blur(1px);
+      transition: all var(--transition-normal);
+      pointer-events: none;
+    }
+    .focus-essential {
+      opacity: 1;
+      filter: none;
+      pointer-events: auto;
+    }
+  }
+}
+
+/* Glassmorphism theme for glass skin */
+.glass-mode {
+  .bg-aether-200,
+  .bg-aether-dark-200 {
+    background-color: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  .dark .bg-aether-200,
+  .dark .bg-aether-dark-200 {
+    background-color: rgba(28, 28, 30, 0.7);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  .bg-aether-300,
+  .bg-aether-dark-300 {
+    background-color: rgba(248, 248, 248, 0.6);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+  .dark .bg-aether-300,
+  .dark .bg-aether-dark-300 {
+    background-color: rgba(44, 44, 46, 0.6);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
 }

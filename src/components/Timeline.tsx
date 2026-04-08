@@ -197,8 +197,8 @@ const Timeline: React.FC<TimelineProps> = ({ activities, onEditCategory, onDelet
   const totalHeight = 600
 
   return (
-    <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl shadow-sm p-6 border`} ref={containerRef} onMouseMove={handleMouseMove}>
-      <h3 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>今日时间线</h3>
+    <div className={`${isDark ? 'bg-aether-dark-200' : 'bg-aether-200'} rounded-card p-6 border border-[var(--color-border-subtle)]`} ref={containerRef} onMouseMove={handleMouseMove}>
+      <h3 className={`text-lg font-semibold mb-4 ${isDark ? 'text-aether-text-dark-primary' : 'text-aether-text-primary'}`}>今日时间线</h3>
       <div className="overflow-y-auto">
         <div
           className="relative ml-12"
@@ -208,10 +208,10 @@ const Timeline: React.FC<TimelineProps> = ({ activities, onEditCategory, onDelet
           {Array.from({ length: 25 }).map((_, i) => (
             <div
               key={i}
-              className={`absolute left-0 right-0 h-px ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}
+              className={`absolute left-0 right-0 h-px ${isDark ? 'bg-aether-dark-300' : 'bg-aether-300'}`}
               style={{ top: `${(i / 24) * 100}%` }}
             >
-              <span className={`absolute -left-12 -top-2 text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'} w-10 text-right`}>
+              <span className={`absolute -left-12 -top-2 text-xs ${isDark ? 'text-aether-text-dark-muted' : 'text-aether-text-muted'} w-10 text-right`}>
                 {i}:00
               </span>
             </div>
@@ -270,7 +270,7 @@ const Timeline: React.FC<TimelineProps> = ({ activities, onEditCategory, onDelet
         </div>
 
         {sortedActivities.length === 0 && (
-          <div className={`text-center py-12 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+          <div className={`text-center py-12 ${isDark ? 'text-aether-text-dark-muted' : 'text-aether-text-muted'}`}>
             暂无活动记录，等待系统采集...
           </div>
         )}
@@ -278,7 +278,7 @@ const Timeline: React.FC<TimelineProps> = ({ activities, onEditCategory, onDelet
         {/* 悬浮信息卡片 */}
         {hoveredActivity && (
           <div
-            className="absolute bg-gray-900 text-white px-3 py-2 rounded-lg shadow-xl text-xs z-10 pointer-events-none animate-in fade-in duration-150"
+            className="absolute bg-gray-900 text-white px-3 py-2 rounded-lg border border-gray-700 text-xs z-10 pointer-events-none animate-in fade-in duration-150"
             style={{
               left: `${Math.min(hoverPosition.x + 10, (containerRef.current?.clientWidth || 800) - 200)}px`,
               top: `${hoverPosition.y + 20}px`,
@@ -299,13 +299,13 @@ const Timeline: React.FC<TimelineProps> = ({ activities, onEditCategory, onDelet
         {/* 分类选择下拉框 */}
         {editingActivity && (
           <div
-            className={`absolute bg-white rounded-xl shadow-xl border border-gray-200 p-3 z-20 w-64`}
+            className={`absolute ${isDark ? 'bg-aether-dark-200' : 'bg-aether-200'} rounded-card border border-[var(--color-border-subtle)] p-3 z-20 w-64`}
             style={{
               left: `${Math.min(hoverPosition.x, (containerRef.current?.clientWidth || 800) - 260)}px`,
               top: `${hoverPosition.y + 30}px`,
             }}
           >
-            <div className="text-sm font-medium text-gray-900 mb-2">选择分类</div>
+            <div className={`text-sm font-medium ${isDark ? 'text-aether-text-dark-primary' : 'text-aether-text-primary'} mb-2`}>选择分类</div>
             <div className="grid grid-cols-2 gap-1">
               {COMMON_CATEGORIES.map(cat => (
                 <button
@@ -314,7 +314,7 @@ const Timeline: React.FC<TimelineProps> = ({ activities, onEditCategory, onDelet
                   className={`px-2 py-1 text-sm rounded text-left transition-colors ${
                     editingActivity.category === cat
                       ? 'bg-primary text-white'
-                      : 'hover:bg-gray-100 text-gray-700'
+                      : `${isDark ? 'hover:bg-aether-dark-300 text-aether-text-dark-secondary' : 'hover:bg-aether-300 text-aether-text-secondary'}`
                   }`}
                   style={editingActivity.category !== cat ? { backgroundColor: `${getCategoryColor(cat)}20` } : {}}
                 >
@@ -322,17 +322,17 @@ const Timeline: React.FC<TimelineProps> = ({ activities, onEditCategory, onDelet
                 </button>
               ))}
             </div>
-            <div className="mt-2 pt-2 border-t border-gray-100">
+            <div className="mt-2 pt-2 border-t border-[var(--color-border-subtle)]">
               <button
                 onClick={handleCustomCategory}
-                className="w-full px-2 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                className={`w-full px-2 py-1 text-sm ${isDark ? 'text-aether-text-dark-secondary hover:bg-aether-dark-300' : 'text-aether-text-secondary hover:bg-aether-300'} rounded transition-colors`}
               >
                 + 自定义分类
               </button>
             </div>
             <button
               onClick={() => setEditingActivity(null)}
-              className="absolute top-1 right-1 text-gray-400 hover:text-gray-600 w-6 h-6 flex items-center justify-center rounded-full"
+              className={`absolute top-1 right-1 ${isDark ? 'text-aether-text-dark-muted hover:text-aether-text-dark-secondary' : 'text-aether-text-muted hover:text-aether-text-secondary'} w-6 h-6 flex items-center justify-center rounded-full`}
             >
               ×
             </button>
@@ -347,7 +347,7 @@ const Timeline: React.FC<TimelineProps> = ({ activities, onEditCategory, onDelet
           />
         )}
 
-        <div className="mt-6 text-xs text-gray-500 flex items-center gap-4">
+        <div className={`mt-6 text-xs ${isDark ? 'text-aether-text-dark-muted' : 'text-aether-text-muted'} flex items-center gap-4`}>
           <span>💡 点击色块修改分类，右键删除记录。色块高度对应耗时。</span>
         </div>
       </div>

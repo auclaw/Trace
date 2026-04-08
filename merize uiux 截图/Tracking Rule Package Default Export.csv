@@ -1,0 +1,14 @@
+Name,Category Key,Category Name,Source,App Name,URL,Keyword,Block in Break,Block in Focus,Block in Meeting,Always Block,Do Not Track Any URLs,Track Full URL Enabled,Track Titles Enabled
+Rize,productivity,Productivity,macos,Rize,,,,,,,false,true,true
+docs.google.com,documenting,Documenting,website,.*,docs.google.com,,,,,,false,true,true
+mail.google.com,email,Email,website,.*,mail.google.com,,,,,,false,true,true
+meet.google.com,video_conferencing,Video Conferencing,website,.*,meet.google.com,,,,,,false,true,true
+calendar.google.com,scheduling,Scheduling,website,.*,calendar.google.com,,,,,,false,true,true
+cloud.google.com,code,Code,website,.*,cloud.google.com,,,,,,false,true,true
+aws.amazon.com,code,Code,website,.*,aws.amazon.com,,,,,,false,true,true
+youtube.com,entertainment,Entertainment,website,.*,youtube.com,,,,,,false,true,true
+rize.io,productivity,Productivity,website,.*,rize.io,,,,,,false,true,true
+微信,messaging,Messaging,macos,微信,,,,,,,false,true,true
+Google Chrome,browsing,Browsing,macos,Google Chrome,,,,,,,false,true,true
+docs.rize.io,miscellaneous,Miscellaneous,website,.*,docs.rize.io,,,,,,false,true,true
+loom.com,video_conferencing,Video Conferencing,website,.*,loom.com,,,,,,false,true,true

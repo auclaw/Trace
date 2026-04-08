@@ -123,11 +123,11 @@ const WeeklyApproval: React.FC<WeeklyApprovalProps> = ({ theme }) => {
 
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
-      case 'draft': return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
-      case 'submitted': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-      case 'approved': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-      case 'rejected': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+      case 'draft': return 'bg-[var(--color-border-light)] text-[var(--color-text-secondary)] border border-[var(--color-border-subtle)]'
+      case 'submitted': return 'bg-[rgba(255,190,0,0.15)] text-[#d97706] dark:text-[#fbbf24]'
+      case 'approved': return 'bg-[rgba(34,197,94,0.15)] text-[#15803d] dark:text-[#4ade80]'
+      case 'rejected': return 'bg-[rgba(239,68,68,0.15)] text-[#dc2626] dark:text-[#f87171]'
+      default: return 'bg-[var(--color-border-light)] text-[var(--color-text-secondary)] border border-[var(--color-border-subtle)]'
     }
   }
 
@@ -155,10 +155,11 @@ const WeeklyApproval: React.FC<WeeklyApprovalProps> = ({ theme }) => {
     }
   }, [selectedOrg, loadHistory])
 
-  const bgClass = isDark ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'
-  const cardBgClass = isDark ? 'bg-gray-800' : 'bg-gray-50'
-  const borderClass = isDark ? 'border-gray-700' : 'border-gray-200'
-  const buttonPrimaryClass = 'bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded disabled:opacity-50'
+  const bgClass = isDark ? 'bg-aether-dark-100 text-aether-text-dark-primary' : 'bg-aether-100 text-aether-text-primary'
+  const cardBgClass = isDark ? 'bg-aether-dark-200' : 'bg-aether-200'
+  const borderClass = isDark ? 'border-[var(--color-border-subtle)]' : 'border-[var(--color-border-subtle)]'
+  const mutedTextClass = isDark ? 'text-aether-text-dark-secondary' : 'text-aether-text-secondary'
+  const buttonPrimaryClass = 'bg-[var(--color-accent)] hover:opacity-90 text-[#fffefb] px-4 py-2 rounded transition-opacity disabled:opacity-50'
 
   if (loading) {
     return (
@@ -171,7 +172,9 @@ const WeeklyApproval: React.FC<WeeklyApprovalProps> = ({ theme }) => {
   return (
     <div className={`${bgClass} min-h-screen p-4`}>
       <div className="max-w-3xl mx-auto">
-        <h1 className="text-2xl font-bold mb-6">每周工时审批</h1>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold">每周工时审批</h1>
+        </div>
 
         {/* Organization Selection */}
         <div className={`mb-6 p-4 border ${borderClass} rounded ${cardBgClass}`}>
@@ -180,7 +183,7 @@ const WeeklyApproval: React.FC<WeeklyApprovalProps> = ({ theme }) => {
             {organizations.map(org => (
               <button
                 key={org.id}
-                className={`p-3 border ${borderClass} rounded text-left ${selectedOrg === org.id ? 'border-blue-500 ring-1 ring-blue-500' : 'bg-transparent'}`}
+                className={`p-3 border ${borderClass} rounded text-left transition-colors hover:bg-[var(--color-border-light)] ${selectedOrg === org.id ? 'border-[var(--color-accent)] ring-1 ring-[var(--color-accent)]' : cardBgClass}`}
                 onClick={() => setSelectedOrg(org.id)}
               >
                 {org.name}
@@ -197,7 +200,7 @@ const WeeklyApproval: React.FC<WeeklyApprovalProps> = ({ theme }) => {
               {teams.map(team => (
                 <button
                   key={team.id}
-                  className={`p-3 border ${borderClass} rounded text-left ${selectedTeam === team.id ? 'border-blue-500 ring-1 ring-blue-500' : 'bg-transparent'}`}
+                  className={`p-3 border ${borderClass} rounded text-left transition-colors hover:bg-[var(--color-border-light)] ${selectedTeam === team.id ? 'border-[var(--color-accent)] ring-1 ring-[var(--color-accent)]' : cardBgClass}`}
                   onClick={() => setSelectedTeam(team.id)}
                 >
                   {team.name}
@@ -215,7 +218,7 @@ const WeeklyApproval: React.FC<WeeklyApprovalProps> = ({ theme }) => {
               type="date"
               value={weekStart}
               onChange={(e) => setWeekStart(e.target.value)}
-              className={`px-3 py-2 border ${borderClass} rounded ${isDark ? 'bg-gray-700' : 'bg-white'}`}
+              className={`px-3 py-2 border ${borderClass} rounded focus:ring-2 focus:ring-[var(--color-accent)] outline-none ${isDark ? 'bg-aether-dark-300 text-aether-text-dark-primary' : 'bg-aether-200 text-aether-text-primary'}`}
             />
           </div>
         )}
@@ -246,11 +249,11 @@ const WeeklyApproval: React.FC<WeeklyApprovalProps> = ({ theme }) => {
                   <div className="flex justify-between items-center">
                     <div>
                       <p className="font-medium">周起始：{formatDate(item.week_start)}</p>
-                      <p className="text-sm text-gray-500">
+                      <p className={`text-sm ${mutedTextClass}`}>
                         提交于 {formatDate(item.submitted_at)}
                       </p>
                       {item.feedback && (
-                        <p className="text-sm mt-1">
+                        <p className={`text-sm mt-1 ${mutedTextClass}`}>
                           <span className="font-medium">反馈：</span> {item.feedback}
                         </p>
                       )}
@@ -268,7 +271,7 @@ const WeeklyApproval: React.FC<WeeklyApprovalProps> = ({ theme }) => {
         {/* Empty State */}
         {organizations.length === 0 && (
           <div className={`p-8 text-center border ${borderClass} rounded ${cardBgClass}`}>
-            <p className="text-gray-500">你还没有加入任何需要审批的组织</p>
+            <p className={`${mutedTextClass}`}>你还没有加入任何需要审批的组织</p>
           </div>
         )}
       </div>

@@ -6,6 +6,7 @@ import Statistics from './pages/Statistics'
 import Planner from './pages/Planner'
 import Calendar from './pages/Calendar'
 import FocusMode from './pages/FocusMode'
+import StylePreview from './pages/StylePreview'
 import Login from './pages/Login'
 import OrgAdmin from './pages/OrgAdmin'
 import TeamDashboard from './pages/TeamDashboard'
@@ -24,6 +25,82 @@ import { getFeatureFlag } from './utils/feature-flags'
 // 主题上下文
 export type Theme = 'light' | 'dark'
 
+// 颜色主题选项 - 多种彩色方案供用户选择
+export type ColorTheme = 'blue' | 'green' | 'purple' | 'orange' | 'pink'
+
+export interface ColorThemeConfig {
+  name: string
+  accent: string
+  accentSoft: string
+  description: string
+}
+
+export const colorThemeConfigs: Record<ColorTheme, ColorThemeConfig> = {
+  blue: {
+    name: '清爽天蓝',
+    accent: '#5aa9e6',
+    accentSoft: 'rgba(90, 169, 230, 0.15)',
+    description: '干净清爽，适合长时间工作',
+  },
+  green: {
+    name: '自然翠绿',
+    accent: '#34c759',
+    accentSoft: 'rgba(52, 199, 89, 0.15)',
+    description: '清新自然，缓解视觉疲劳',
+  },
+  purple: {
+    name: '优雅紫调',
+    accent: '#af52de',
+    accentSoft: 'rgba(175, 82, 222, 0.15)',
+    description: '优雅知性，适合创意工作',
+  },
+  orange: {
+    name: '活力橙黄',
+    accent: '#ff9500',
+    accentSoft: 'rgba(255, 149, 0, 0.15)',
+    description: '充满活力，提升专注力',
+  },
+  pink: {
+    name: '柔粉樱花',
+    accent: '#ff2d55',
+    accentSoft: 'rgba(255, 45, 85, 0.15)',
+    description: '柔美清新，女生最爱',
+  },
+}
+
+// 背景皮肤/模式 - 不同整体风格
+export type BackgroundSkin = 'gradient' | 'solid' | 'glass'
+
+export interface BackgroundSkinConfig {
+  name: string
+  description: string
+  getBgClass: (isDark: boolean) => string
+}
+
+export const backgroundSkinConfigs: Record<BackgroundSkin, BackgroundSkinConfig> = {
+  gradient: {
+    name: '通透渐变',
+    description: '柔和渐变背景 + 纯白卡片，现代 SaaS 风格（参考 Prodigy 设计）',
+    getBgClass: (isDark: boolean) => {
+      return isDark ? 'bg-gradient-to-br from-aether-dark-100 to-[#1a1a2e]' : 'bg-gradient-to-br from-[#f8f8ff] to-[#f0f5ff]'
+    }
+  },
+  solid: {
+    name: '纯净纯色',
+    description: '纯色背景干净简洁，传统简约风格',
+    getBgClass: (isDark: boolean) => {
+      return isDark ? 'bg-aether-dark-100' : 'bg-aether-100'
+    }
+  },
+  glass: {
+    name: '玻璃拟态',
+    description: '半透明磨砂效果，新潮玻璃风格',
+    getBgClass: (isDark: boolean) => {
+      return isDark ? 'bg-gradient-to-br from-aether-dark-100 to-[#1a1a2e]' : 'bg-gradient-to-br from-[#f8f8ff] to-[#f0f5ff]'
+    }
+  },
+}
+
 // AppContent 需要在 Router 内部才能使用 useNavigate
 function AppContent() {
   const navigate = useNavigate()
@@ -34,11 +111,24 @@ function AppContent() {
     const saved = localStorage.getItem('merize-theme')
     return (saved as Theme) || 'light'
   })
+  const [colorTheme, setColorTheme] = useState<ColorTheme>(() => {
+    const saved = localStorage.getItem('merize-color-theme')
+    return (saved as ColorTheme) || 'orange'
+  })
+  const [backgroundSkin, setBackgroundSkin] = useState<BackgroundSkin>(() => {
+    const saved = localStorage.getItem('merize-background-skin')
+    return (saved as BackgroundSkin) || 'gradient'
+  })
   const [showTour, setShowTour] = useState(() => {
     // Only show on first visit
     const tourCompleted = localStorage.getItem('merize-onboarding-completed')
     return getFeatureFlag('onboardingTour') && !tourCompleted
   })
+
+  // 立即应用保存的颜色主题，保证第一次渲染就是正确的
+  const initialConfig = colorThemeConfigs[colorTheme]
+  document.documentElement.style.setProperty('--color-accent', initialConfig.accent)
+  document.documentElement.style.setProperty('--color-accent-soft', initialConfig.accentSoft)
 
   const handleTourComplete = () => {
     localStorage.setItem('merize-onboarding-completed', 'true')
@@ -60,6 +150,20 @@ function AppContent() {
       document.documentElement.classList.remove('dark')
     }
   }, [theme])
+
+  useEffect(() => {
+    // 保存颜色主题选择
+    localStorage.setItem('merize-color-theme', colorTheme)
+    // 应用 CSS 变量
+    const config = colorThemeConfigs[colorTheme]
+    document.documentElement.style.setProperty('--color-accent', config.accent)
+    document.documentElement.style.setProperty('--color-accent-soft', config.accentSoft)
+  }, [colorTheme])
+
+  useEffect(() => {
+    // 保存背景皮肤选择
+    localStorage.setItem('merize-background-skin', backgroundSkin)
+  }, [backgroundSkin])
 
   const toggleTheme = () => {
     setTheme(prev => prev === 'light' ? 'dark' : 'light')
@@ -136,8 +240,8 @@ function AppContent() {
   // 等待认证检查完成
   if (loading) {
     return (
-      <div className={`min-h-screen ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'} flex items-center justify-center transition-colors duration-200`}>
-        <div className={theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}>加载中...</div>
+      <div className={`min-h-screen ${theme === 'dark' ? 'bg-aether-dark-100' : 'bg-aether-100'} flex items-center justify-center transition-colors duration-300`}>
+        <div className={theme === 'dark' ? 'text-aether-text-dark-secondary' : 'text-aether-text-secondary'}>加载中...</div>
       </div>
     )
   }
@@ -150,14 +254,15 @@ function AppContent() {
     )
   }
 
-  const bgClass = theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'
+  // 根据选择的皮肤获取背景类
+  const bgClass = backgroundSkinConfigs[backgroundSkin].getBgClass(theme === 'dark')
 
   const handleToggleTracking = async (newStatus: boolean) => {
     setIsTracking(newStatus)
   }
 
   return (
-    <div className={`flex h-screen ${bgClass} transition-colors duration-200`}>
+    <div className={`flex h-screen ${bgClass} transition-colors duration-300 ${backgroundSkin === 'glass' ? 'glass-mode' : ''}`}>
       <Sidebar isTracking={isTracking} theme={theme} onToggleTracking={handleToggleTracking} />
       <main className="flex-1 overflow-auto">
         <Routes>
@@ -174,7 +279,8 @@ function AppContent() {
           <Route path="/team-focus" element={<TeamFocus theme={theme} />} />
           <Route path="/ai-summary" element={<AiSummary theme={theme} />} />
           <Route path="/deep-work-stats" element={<DeepWorkStats theme={theme} />} />
-          <Route path="/settings" element={<Settings theme={theme} toggleTheme={toggleTheme} isTracking={isTracking} onTrackingChange={setIsTracking} />} />
+          <Route path="/settings" element={<Settings theme={theme} toggleTheme={toggleTheme} colorTheme={colorTheme} onColorThemeChange={setColorTheme} backgroundSkin={backgroundSkin} onBackgroundSkinChange={setBackgroundSkin} isTracking={isTracking} onTrackingChange={setIsTracking} />} />
+          <Route path="/style-preview" element={<StylePreview />} />
         </Routes>
       </main>
       <OnboardingTour

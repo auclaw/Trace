@@ -11,6 +11,7 @@ interface Team {
 
 interface TeamFocusMember {
   user_id: number
+  user_name?: string
   status: 'focusing' | 'break' | 'finished'
 }
 
@@ -133,10 +134,10 @@ const TeamFocus: React.FC<TeamFocusProps> = ({ theme }) => {
 
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
-      case 'focusing': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-      case 'break': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-      case 'finished': return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
-      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+      case 'focusing': return 'bg-[rgba(255,79,0,0.15)] text-[var(--color-accent)]'
+      case 'break': return 'bg-[var(--color-border-light)] text-[var(--color-text-secondary)] border border-[var(--color-border-subtle)]'
+      case 'finished': return 'bg-[var(--color-border-light)] text-[var(--color-text-secondary)] border border-[var(--color-border-subtle)]'
+      default: return 'bg-[var(--color-border-light)] text-[var(--color-text-secondary)] border border-[var(--color-border-subtle)]'
     }
   }
 
@@ -189,17 +190,15 @@ const TeamFocus: React.FC<TeamFocusProps> = ({ theme }) => {
     }
   }, [selectedTeam, loadCurrentSession])
 
-  const bgClass = isDark ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'
-  const cardBgClass = isDark ? 'bg-gray-800' : 'bg-gray-50'
-  const borderClass = isDark ? 'border-gray-700' : 'border-gray-200'
-  const buttonPrimaryClass = 'bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded'
-  const buttonFocusClass = 'bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm'
-  const buttonBreakClass = isDark
-    ? 'bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1 rounded text-sm'
-    : 'bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-sm'
-  const buttonFinishClass = isDark
-    ? 'bg-gray-600 hover:bg-gray-500 text-white px-3 py-1 rounded text-sm'
-    : 'bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded text-sm'
+  const bgClass = isDark ? 'bg-aether-dark-100 text-aether-text-dark-primary' : 'bg-aether-100 text-aether-text-primary'
+  const cardBgClass = isDark ? 'bg-aether-dark-200' : 'bg-aether-200'
+  const borderClass = isDark ? 'border-[var(--color-border-subtle)]' : 'border-[var(--color-border-subtle)]'
+  const mutedTextClass = isDark ? 'text-aether-text-dark-secondary' : 'text-aether-text-secondary'
+  const buttonPrimaryClass = 'bg-[var(--color-accent)] hover:opacity-90 text-[#fffefb] px-4 py-2 rounded transition-opacity'
+  const buttonFocusClass = 'bg-[var(--color-accent)] hover:opacity-90 text-[#fffefb] px-3 py-1 rounded text-sm transition-opacity'
+  const buttonBreakClass = 'bg-[var(--color-accent)] hover:opacity-90 text-[#fffefb] px-3 py-1 rounded text-sm transition-opacity'
+  const buttonFinishClass = 'bg-[var(--color-text-muted)] hover:opacity-90 text-[#fffefb] px-3 py-1 rounded text-sm transition-opacity'
+  const inputClass = `px-3 py-2 border ${borderClass} rounded focus:ring-2 focus:ring-[var(--color-accent)] outline-none ${isDark ? 'bg-aether-dark-300 text-aether-text-dark-primary' : 'bg-aether-200 text-aether-text-primary'}`
 
   if (loading) {
     return (
@@ -231,7 +230,7 @@ const TeamFocus: React.FC<TeamFocusProps> = ({ theme }) => {
             {organizations.map(org => (
               <button
                 key={org.id}
-                className={`p-3 border ${borderClass} rounded text-left ${selectedOrg === org.id ? 'border-blue-500 ring-1 ring-blue-500' : cardBgClass}`}
+                className={`p-3 border ${borderClass} rounded text-left transition-colors hover:bg-[var(--color-border-light)] ${selectedOrg === org.id ? 'border-[var(--color-accent)] ring-1 ring-[var(--color-accent)]' : cardBgClass}`}
                 onClick={() => {
                   setSelectedOrg(org.id)
                   setSelectedTeam(null)
@@ -251,7 +250,7 @@ const TeamFocus: React.FC<TeamFocusProps> = ({ theme }) => {
               {teams.map(team => (
                 <button
                   key={team.id}
-                  className={`p-3 border ${borderClass} rounded text-left ${selectedTeam === team.id ? 'border-blue-500 ring-1 ring-blue-500' : cardBgClass}`}
+                  className={`p-3 border ${borderClass} rounded text-left transition-colors hover:bg-[var(--color-border-light)] ${selectedTeam === team.id ? 'border-[var(--color-accent)] ring-1 ring-[var(--color-accent)]' : cardBgClass}`}
                   onClick={() => setSelectedTeam(team.id)}
                 >
                   {team.name}
@@ -272,7 +271,7 @@ const TeamFocus: React.FC<TeamFocusProps> = ({ theme }) => {
                   type="time"
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
-                  className={`px-3 py-2 border ${borderClass} rounded ${isDark ? 'bg-gray-700' : 'bg-white'}`}
+                  className={inputClass}
                 />
               </div>
               <div>
@@ -284,7 +283,7 @@ const TeamFocus: React.FC<TeamFocusProps> = ({ theme }) => {
                   min="15"
                   max="240"
                   step="5"
-                  className={`px-3 py-2 border ${borderClass} rounded w-32 ${isDark ? 'bg-gray-700' : 'bg-white'}`}
+                  className={`${inputClass} w-32`}
                 />
               </div>
               <div className="flex space-x-3">
@@ -292,7 +291,7 @@ const TeamFocus: React.FC<TeamFocusProps> = ({ theme }) => {
                   开启
                 </button>
                 <button
-                  className={isDark ? 'bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded' : 'bg-gray-200 hover:bg-gray-300 text-gray-900 px-4 py-2 rounded'}
+                  className={isDark ? 'bg-aether-dark-300 hover:bg-aether-dark-300/80 text-aether-text-dark-primary px-4 py-2 rounded transition-colors' : 'bg-aether-300 hover:bg-aether-300/80 text-aether-text-primary px-4 py-2 rounded transition-colors'}
                   onClick={() => setShowCreate(false)}
                 >
                   取消
@@ -308,7 +307,7 @@ const TeamFocus: React.FC<TeamFocusProps> = ({ theme }) => {
             <div className="flex justify-between items-start mb-4">
               <div>
                 <h2 className="text-xl font-semibold">当前专注会议</h2>
-                <p className="text-sm text-gray-500">
+                <p className={`text-sm ${mutedTextClass}`}>
                   剩余时间：{calculateRemaining(currentSession.end_time)}
                 </p>
               </div>
@@ -325,7 +324,7 @@ const TeamFocus: React.FC<TeamFocusProps> = ({ theme }) => {
                   className={`p-3 border ${borderClass} rounded`}
                 >
                   <div className="flex justify-between items-center">
-                    <span className="font-medium">用户 {member.user_id}</span>
+                    <span className="font-medium">{member.user_name || `用户 ${member.user_id}`}</span>
                     <span className={`px-2 py-1 rounded text-xs ${getStatusBadgeClass(member.status)}`}>
                       {getStatusLabel(member.status)}
                     </span>
@@ -370,8 +369,8 @@ const TeamFocus: React.FC<TeamFocusProps> = ({ theme }) => {
         {/* Empty State */}
         {!currentSession && selectedTeam && !showCreate && (
           <div className={`p-8 text-center border ${borderClass} rounded ${cardBgClass}`}>
-            <p className="text-gray-500">当前没有进行中的专注会议</p>
-            <p className="text-sm text-gray-400 mt-1">
+            <p className={`${mutedTextClass}`}>当前没有进行中的专注会议</p>
+            <p className={`text-sm ${mutedTextClass} mt-1`}>
               点击上方"开启专注会议"开始团队同步专注
             </p>
           </div>
@@ -380,7 +379,7 @@ const TeamFocus: React.FC<TeamFocusProps> = ({ theme }) => {
         {/* Empty State when no org */}
         {organizations.length === 0 && (
           <div className={`p-8 text-center border ${borderClass} rounded ${cardBgClass}`}>
-            <p className="text-gray-500">你还没有加入任何团队</p>
+            <p className={`${mutedTextClass}`}>你还没有加入任何团队</p>
           </div>
         )}
       </div>

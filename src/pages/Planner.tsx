@@ -23,12 +23,12 @@ interface PlannerProps {
 
 const Planner: React.FC<PlannerProps> = ({ theme }) => {
   const isDark = theme === 'dark'
-  const titleColor = isDark ? 'text-white' : 'text-gray-900'
-  const textColor = isDark ? 'text-gray-400' : 'text-gray-500'
-  const cardBg = isDark ? 'bg-gray-800' : 'bg-white'
-  const borderColor = isDark ? 'border-gray-700' : 'border-gray-200'
-  const labelText = isDark ? 'text-gray-300' : 'text-gray-700'
-  const inputBg = isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
+  const titleColor = isDark ? 'text-aether-text-dark-primary' : 'text-aether-text-primary'
+  const textColor = isDark ? 'text-aether-text-dark-secondary' : 'text-aether-text-secondary'
+  const cardBg = isDark ? 'bg-aether-dark-200' : 'bg-aether-200'
+  const borderColor = isDark ? 'border-[var(--color-border-subtle)]' : 'border-[var(--color-border-subtle)]'
+  const labelText = isDark ? 'text-aether-text-dark-secondary' : 'text-aether-text-secondary'
+  const inputBg = isDark ? 'bg-aether-dark-300 border-[var(--color-border-subtle)] text-aether-text-dark-primary' : 'bg-aether-200 border-[var(--color-border-subtle)] text-aether-text-primary'
   const [tasks, setTasks] = useState<PlannedTask[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddForm, setShowAddForm] = useState(false)
@@ -242,9 +242,9 @@ const Planner: React.FC<PlannerProps> = ({ theme }) => {
       case 1: return 'bg-red-100 text-red-700'
       case 2: return 'bg-orange-100 text-orange-700'
       case 3: return 'bg-yellow-100 text-yellow-700'
-      case 4: return 'bg-blue-100 text-blue-700'
-      case 5: return 'bg-gray-100 text-gray-700'
-      default: return 'bg-gray-100 text-gray-700'
+      case 4: return 'bg-[rgba(255,79,0,0.15)] text-[var(--color-accent)]'
+      case 5: return 'bg-[var(--color-border-light)] text-[var(--color-text-secondary)]'
+      default: return 'bg-[var(--color-border-light)] text-[var(--color-text-secondary)]'
     }
   }
 
@@ -298,25 +298,25 @@ const Planner: React.FC<PlannerProps> = ({ theme }) => {
 
       {/* 统计卡片 */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className={`${cardBg} rounded-xl shadow-sm p-6 border ${borderColor} transition-all duration-200 hover:shadow-md`}>
+        <div className={`${cardBg} rounded-xl p-6 border ${borderColor} transition-all duration-200`}>
           <div className={`text-sm font-medium ${textColor} mb-1`}>总任务</div>
           <div className={`text-3xl font-bold ${titleColor}`}>
             {completedCount} / {totalCount}
           </div>
         </div>
-        <div className={`${cardBg} rounded-xl shadow-sm p-6 border ${borderColor} transition-all duration-200 hover:shadow-md`}>
+        <div className={`${cardBg} rounded-xl p-6 border ${borderColor} transition-all duration-200`}>
           <div className={`text-sm font-medium ${textColor} mb-1`}>预估总时间</div>
           <div className={`text-3xl font-bold ${titleColor}`}>
             {formatDuration(totalEstimated)}
           </div>
         </div>
-        <div className={`${cardBg} rounded-xl shadow-sm p-6 border ${borderColor} transition-all duration-200 hover:shadow-md`}>
+        <div className={`${cardBg} rounded-xl p-6 border ${borderColor} transition-all duration-200`}>
           <div className={`text-sm font-medium ${textColor} mb-1`}>实际已用</div>
           <div className="text-3xl font-bold text-primary">
             {formatDuration(totalActual)}
           </div>
         </div>
-        <div className="bg-gradient-to-br from-primary to-success rounded-xl shadow-sm p-6 text-white transition-all duration-200 hover:shadow-md">
+        <div className="bg-gradient-to-br from-primary to-success rounded-xl p-6 text-white transition-all duration-200">
           <div className="text-sm font-medium text-orange-100 mb-1">进度</div>
           <div className="text-3xl font-bold">
             {totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0}%
@@ -326,7 +326,7 @@ const Planner: React.FC<PlannerProps> = ({ theme }) => {
 
       {/* 添加任务表单 */}
       {showAddForm && (
-        <div className={`${cardBg} rounded-xl shadow-sm p-6 border ${borderColor} mb-6 animate-in fade-in slide-in-from-top-2 duration-300`}>
+        <div className={`${cardBg} rounded-xl p-6 border ${borderColor} mb-6 animate-in fade-in slide-in-from-top-2 duration-300`}>
           <h3 className={`text-lg font-semibold mb-4 ${titleColor}`}>添加新任务</h3>
           <div className="space-y-4">
             <div>
@@ -405,7 +405,7 @@ const Planner: React.FC<PlannerProps> = ({ theme }) => {
               </button>
               <button
                 onClick={() => setShowAddForm(false)}
-                className={`px-4 py-2 ${isDark ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700'} rounded-lg hover:bg-gray-300 transition-colors`}
+                className={`px-4 py-2 ${isDark ? 'bg-aether-dark-300 text-aether-text-dark-secondary hover:bg-aether-dark-300/80' : 'bg-aether-300 text-aether-text-secondary hover:bg-aether-300/80'} rounded-lg transition-colors`}
               >
                 取消
               </button>
@@ -420,7 +420,7 @@ const Planner: React.FC<PlannerProps> = ({ theme }) => {
           <button
             onClick={handleAiReschedule}
             disabled={rescheduling}
-            className="w-full px-4 py-3 bg-gradient-to-r from-green-500 to-blue-600 text-white rounded-lg hover:from-green-600 hover:to-blue-700 disabled:opacity-50 transition-all duration-200 transform hover:scale-[1.01]"
+            className="w-full px-4 py-3 bg-[var(--color-accent)] text-[#fffefb] rounded-lg hover:opacity-90 disabled:opacity-50 transition-all duration-200 transform hover:scale-[1.01]"
           >
             {rescheduling ? 'AI 重排中...' : '🤖 AI 自动重排延误任务'}
           </button>
@@ -443,10 +443,10 @@ const Planner: React.FC<PlannerProps> = ({ theme }) => {
           {tasks.map(task => (
             <div
               key={task.id}
-              className={`${cardBg} rounded-lg shadow-sm p-4 border transition-all duration-200 ${
+              className={`${cardBg} rounded-lg p-4 border transition-all duration-200 ${
                 task.completed
-                  ? (isDark ? 'border-gray-700 opacity-60' : 'border-gray-200 opacity-60')
-                  : (isDark ? 'border-gray-700 hover:border-primary/50 hover:shadow-md' : 'border-blue-200 hover:border-primary/50 hover:shadow-md')
+                  ? (isDark ? 'border-[var(--color-border-subtle)] opacity-60' : 'border-[var(--color-border-subtle)] opacity-60')
+                  : (isDark ? 'border-[var(--color-border-subtle)] hover:border-[var(--color-accent)]/50' : 'border-[var(--color-border-subtle)] hover:border-[var(--color-accent)]/50')
               } ${editingId === task.id ? 'ring-2 ring-primary/20' : ''}`}
             >
               {editingId === task.id ? (
@@ -513,7 +513,7 @@ const Planner: React.FC<PlannerProps> = ({ theme }) => {
                   <div className="flex justify-end space-x-2">
                     <button
                       onClick={cancelEdit}
-                      className={`px-3 py-1 text-sm ${isDark ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700'} rounded hover:bg-gray-300 transition-colors`}
+                      className={`px-3 py-1 text-sm ${isDark ? 'bg-aether-dark-300 text-aether-text-dark-secondary hover:bg-aether-dark-300/80' : 'bg-aether-300 text-aether-text-secondary hover:bg-aether-300/80'} rounded hover:opacity-90 transition-colors`}
                     >
                       取消
                     </button>
@@ -546,12 +546,12 @@ const Planner: React.FC<PlannerProps> = ({ theme }) => {
                             {task.title}
                           </h4>
                           {task.project && (
-                            <span className={`text-xs ${isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'} px-2 py-0.5 rounded-full`}>
+                            <span className={`text-xs ${isDark ? 'bg-aether-dark-300 text-aether-text-dark-secondary' : 'bg-aether-300 text-aether-text-secondary'} px-2 py-0.5 rounded-full`}>
                               {task.project}
                             </span>
                           )}
                           {task.repeat_type && task.repeat_type !== 'none' && (
-                            <span className={`text-xs ${isDark ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-100 text-blue-600'} px-2 py-0.5 rounded-full`}>
+                            <span className={`text-xs ${isDark ? 'bg-[rgba(255,79,0,0.2)] text-[var(--color-accent)]' : 'bg-[rgba(255,79,0,0.1)] text-[var(--color-accent)]'} px-2 py-0.5 rounded-full`}>
                               {getRepeatLabel(task.repeat_type)}
                             </span>
                           )}
@@ -582,14 +582,14 @@ const Planner: React.FC<PlannerProps> = ({ theme }) => {
                       {(task.subtasks?.length || 0) > 0 && (
                         <button
                           onClick={() => toggleExpand(task.id)}
-                          className={`px-2 py-1 text-xs ${isDark ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-700'} rounded hover:bg-gray-200 transition-colors`}
+                          className={`px-2 py-1 text-xs ${isDark ? 'bg-aether-dark-300 text-aether-text-dark-secondary hover:bg-aether-dark-300/80' : 'bg-aether-300 text-aether-text-secondary hover:bg-aether-300/80'} rounded hover:opacity-90 transition-colors`}
                         >
                           {expandedTasks.has(task.id) ? '收起' : `子任务(${task.subtasks?.length || 0})`}
                         </button>
                       )}
                       <button
                         onClick={() => startEdit(task)}
-                        className={`px-2 py-1 text-xs ${isDark ? 'bg-blue-900/30 text-blue-400 hover:bg-blue-900/50' : 'bg-blue-100 text-blue-700'} rounded hover:bg-blue-200 transition-colors`}
+                        className={`px-2 py-1 text-xs ${isDark ? 'bg-[rgba(255,79,0,0.2)] text-[var(--color-accent)] hover:bg-[rgba(255,79,0,0.3)]' : 'bg-[rgba(255,79,0,0.1)] text-[var(--color-accent)]'} rounded hover:bg-[rgba(255,79,0,0.2)] transition-colors`}
                       >
                         编辑
                       </button>

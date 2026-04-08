@@ -70,17 +70,18 @@ export default function Login({ theme, onLoginSuccess }: LoginProps) {
   }
 
   const bgGradient = isDark
-    ? 'from-gray-800 to-gray-900'
-    : 'from-blue-50 to-indigo-100'
-  const cardBg = isDark ? 'bg-gray-800' : 'bg-white'
-  const titleColor = isDark ? 'text-white' : 'text-gray-900'
-  const textColor = isDark ? 'text-gray-300' : 'text-gray-500'
-  const borderColor = isDark ? 'border-gray-600' : 'border-gray-300'
+    ? 'from-aether-dark-100 to-[#25201e]'
+    : 'from-[#fffefb] to-[#f8f5ed]'
+  const cardBg = isDark ? 'bg-aether-dark-200' : 'bg-aether-200'
+  const titleColor = isDark ? 'text-aether-text-dark-primary' : 'text-aether-text-primary'
+  const textColor = isDark ? 'text-aether-text-dark-secondary' : 'text-aether-text-secondary'
+  const borderColor = isDark ? 'border-[var(--color-border-subtle)]' : 'border-[var(--color-border-subtle)]'
+  const inputBg = isDark ? 'bg-aether-dark-300 text-aether-text-dark-primary' : 'bg-aether-200 text-aether-text-primary'
 
   return (
     <div className={`min-h-screen flex items-center justify-center bg-gradient-to-br ${bgGradient} px-4 transition-colors duration-200`}>
       <div className="w-full max-w-md">
-        <div className={`${cardBg} rounded-2xl shadow-xl p-8 transition-colors duration-200`}>
+        <div className={`${cardBg} rounded-2xl border ${borderColor} p-8 transition-colors duration-200`}>
           <div className="text-center mb-8">
             <h1 className={`text-3xl font-bold ${titleColor} mb-2`}>
               Merize
@@ -92,7 +93,7 @@ export default function Login({ theme, onLoginSuccess }: LoginProps) {
 
           <div className="space-y-4">
             <div>
-              <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
+              <label className={`block text-sm font-medium ${isDark ? 'text-aether-text-dark-secondary' : 'text-aether-text-secondary'} mb-1`}>
                 手机号
               </label>
               <input
@@ -100,15 +101,13 @@ export default function Login({ theme, onLoginSuccess }: LoginProps) {
                 placeholder="请输入手机号"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className={`w-full px-4 py-2 border ${borderColor} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                  isDark ? 'bg-gray-700 text-white' : 'bg-white text-gray-900'
-                }`}
+                className={`w-full px-4 py-2 border ${borderColor} rounded-lg focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent transition-colors ${inputBg}`}
               />
             </div>
 
             <div className="flex gap-3">
               <div className="flex-1">
-                <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
+                <label className={`block text-sm font-medium ${isDark ? 'text-aether-text-dark-secondary' : 'text-aether-text-secondary'} mb-1`}>
                   验证码
                 </label>
                 <input
@@ -116,15 +115,13 @@ export default function Login({ theme, onLoginSuccess }: LoginProps) {
                   placeholder="6位验证码"
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
-                  className={`w-full px-4 py-2 border ${borderColor} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                    isDark ? 'bg-gray-700 text-white' : 'bg-white text-gray-900'
-                  }`}
+                  className={`w-full px-4 py-2 border ${borderColor} rounded-lg focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent transition-colors ${inputBg}`}
                 />
               </div>
               <div className="flex-none pt-5">
                 <button
                   onClick={handleSendCode}
-                  className={`px-4 py-2 ${isDark ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'} rounded-lg hover:bg-gray-200 whitespace-nowrap transition-colors`}
+                  className={`px-4 py-2 ${isDark ? 'bg-aether-dark-300 text-aether-text-dark-secondary hover:bg-aether-dark-300/80' : 'bg-aether-300 text-aether-text-secondary hover:bg-aether-300/80'} rounded-lg transition-colors`}
                 >
                   获取验证码
                 </button>
@@ -132,7 +129,7 @@ export default function Login({ theme, onLoginSuccess }: LoginProps) {
             </div>
 
             {error && (
-              <div className={`text-sm ${error.includes('已发送') ? 'text-green-500' : 'text-red-500'}`}>
+              <div className={`text-sm ${error.includes('已发送') ? (isDark ? 'text-green-400' : 'text-green-600') : (isDark ? 'text-red-400' : 'text-red-600')}`}>
                 {error}
               </div>
             )}
@@ -140,23 +137,23 @@ export default function Login({ theme, onLoginSuccess }: LoginProps) {
             <button
               onClick={handleLogin}
               disabled={loading}
-              className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium rounded-lg hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+              className="w-full py-3 bg-[var(--color-accent)] text-[#fffefb] font-medium rounded-lg hover:bg-[var(--color-accent-hover)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--color-accent)] disabled:opacity-50 transition-colors"
             >
               {loading ? '登录中...' : '登录'}
             </button>
 
             <div className="relative my-6">
               <div className="absolute inset-0 flex items-center">
-                <div className={`w-full border-t ${isDark ? 'border-gray-600' : 'border-gray-300'}`}></div>
+                <div className={`w-full border-t ${borderColor}`}></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className={`px-2 ${isDark ? 'bg-gray-800' : 'bg-white'} ${textColor}`}>或者</span>
+                <span className={`px-2 ${cardBg} ${textColor}`}>或者</span>
               </div>
             </div>
 
             <button
               onClick={handleWechatLogin}
-              className="w-full py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+              className="w-full py-3 bg-[#07c160] text-white font-medium rounded-lg hover:bg-[#06ad56] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#07c160]"
             >
               📱 微信一键登录
             </button>
@@ -166,17 +163,17 @@ export default function Login({ theme, onLoginSuccess }: LoginProps) {
               <>
                 <div className="relative my-6">
                   <div className="absolute inset-0 flex items-center">
-                    <div className={`w-full border-t ${isDark ? 'border-gray-600' : 'border-gray-300'}`}></div>
+                    <div className={`w-full border-t ${borderColor}`}></div>
                   </div>
                   <div className="relative flex justify-center text-sm">
-                    <span className={`px-2 ${isDark ? 'bg-gray-800' : 'bg-white'} ${textColor}`}>开发模式</span>
+                    <span className={`px-2 ${cardBg} ${textColor}`}>开发模式</span>
                   </div>
                 </div>
 
                 <button
                   onClick={handleDevLogin}
                   disabled={loading}
-                  className="w-full py-2 bg-gray-600 text-white text-sm font-medium rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50"
+                  className="w-full py-2 bg-[var(--color-text-secondary)] text-[var(--color-bg-base)] text-sm font-medium rounded-lg hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--color-text-secondary)] disabled:opacity-50 transition-colors"
                 >
                   ⚙️ 直接登录（无需验证码）
                 </button>

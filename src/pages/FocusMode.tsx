@@ -1,6 +1,7 @@
 // 专注模式 - 番茄工作法
 // 25分钟工作 / 5分钟休息，支持自定义时长
 // 浏览器模式前端独立运行，桌面应用使用后端驱动保证准确性
+// Aether Design: 呼吸动画 + 零干扰专注体验
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import type { Theme } from '../App'
@@ -10,8 +11,9 @@ interface FocusModeProps {
   theme: Theme
 }
 
-const FocusMode: React.FC<FocusModeProps> = ({ theme: _theme }) => {
-  // FocusMode uses immersive fullscreen with mode-specific gradients regardless of app theme
+const FocusMode: React.FC<FocusModeProps> = ({ theme }) => {
+  const isDark = theme === 'dark'
+  // FocusMode uses immersive fullscreen with mode-specific gradients
   const [pomodoro, setPomodoro] = useState<PomodoroData>({
     state: 'Idle',
     remaining_seconds: 25 * 60,
@@ -134,46 +136,66 @@ const FocusMode: React.FC<FocusModeProps> = ({ theme: _theme }) => {
   const getModeName = (state: PomodoroState): string => {
     switch (state) {
       case 'Idle': return '准备开始'
-      case 'Running': return '专注中'
+      case 'Running': return '深度专注'
       case 'Paused': return '已暂停'
-      case 'Break': return '休息中'
+      case 'Break': return '短暂休息'
       case 'LongBreak': return '长休息'
       default: return '未知'
     }
   }
 
-  // Get background gradient based on current state
+  // Get background gradient based on current state - Aether Design System
   const getBgGradient = (state: PomodoroState): string => {
     switch (state) {
-      case 'Running': return 'from-blue-900 to-indigo-900'
-      case 'Break': return 'from-green-700 to-teal-800'
-      case 'LongBreak': return 'from-green-800 to-teal-900'
-      case 'Paused': return 'from-yellow-700 to-orange-800'
-      case 'Idle': return 'from-gray-800 to-gray-900'
-      default: return 'from-gray-800 to-gray-900'
+      case 'Running':
+        return isDark
+          ? 'from-aether-dark-100 to-aether-dark-200'
+          : 'from-aether-100 to-aether-200'
+      case 'Break':
+      case 'LongBreak':
+        return isDark
+          ? 'from-[#1A2F20] to-aether-dark-100'
+          : 'from-[#E6F8F0] to-aether-100'
+      case 'Paused':
+        return isDark
+          ? 'from-[#2A2618] to-aether-dark-100'
+          : 'from-[#FFF8E6] to-aether-100'
+      case 'Idle':
+        return isDark
+          ? 'from-aether-dark-200 to-aether-dark-300'
+          : 'from-aether-200 to-aether-300'
+      default:
+        return isDark
+          ? 'from-aether-dark-200 to-aether-dark-300'
+          : 'from-aether-200 to-aether-300'
     }
   }
 
-  // Get progress color based on current state
-  const getProgressColor = (state: PomodoroState): string => {
+  // Get accent color based on current state - Aether Design System
+  const getAccentColor = (state: PomodoroState): string => {
     switch (state) {
-      case 'Running': return 'bg-blue-400'
-      case 'Break': case 'LongBreak': return 'bg-green-400'
-      case 'Paused': return 'bg-yellow-400'
-      case 'Idle': return 'bg-gray-400'
-      default: return 'bg-gray-400'
+      case 'Running': return isDark ? 'var(--color-accent)' : '#5aa9e6'
+      case 'Break': case 'LongBreak': return isDark ? 'var(--color-success)' : '#34c759'
+      case 'Paused': return isDark ? 'var(--color-warning)' : '#ff9500'
+      case 'Idle': return isDark ? 'var(--color-text-muted)' : 'var(--color-text-muted)'
+      default: return isDark ? 'var(--color-text-muted)' : 'var(--color-text-muted)'
     }
   }
 
-  // Get button background based on current state
-  const getButtonBg = (state: PomodoroState): string => {
-    switch (state) {
-      case 'Running': return 'bg-blue-500 hover:bg-blue-600'
-      case 'Break': case 'LongBreak': return 'bg-green-500 hover:bg-green-600'
-      case 'Paused': return 'bg-yellow-500 hover:bg-yellow-600'
-      case 'Idle': return 'bg-gray-500 hover:bg-gray-600'
-      default: return 'bg-gray-500 hover:bg-gray-600'
+  // Get text color based on current state
+  const getTextColor = (state: PomodoroState): string => {
+    // Always maintain good contrast in immersive mode
+    if (isDark) {
+      return 'var(--color-text-primary)'
     }
+    return state === 'Running' || state === 'Break' || state === 'LongBreak'
+      ? 'var(--color-text-primary)'
+      : 'var(--color-text-primary)'
+  }
+
+  // Get secondary text opacity
+  const getSecondaryOpacity = (): string => {
+    return isDark ? 'opacity-70' : 'opacity-60'
   }
 
   // 当设置改变时，重置当前session
@@ -201,79 +223,125 @@ const FocusMode: React.FC<FocusModeProps> = ({ theme: _theme }) => {
 
   // 背景颜色根据模式变化
   const bgGradient = getBgGradient(pomodoro.state)
-  const progressColor = getProgressColor(pomodoro.state)
-  const buttonBg = getButtonBg(pomodoro.state)
+  const accentColor = getAccentColor(pomodoro.state)
+  const textColor = getTextColor(pomodoro.state)
+  const secondaryOpacity = getSecondaryOpacity()
 
   const isIdleOrPaused = pomodoro.state === 'Idle' || pomodoro.state === 'Paused'
+  const isRunning = pomodoro.state === 'Running'
+
+  // Apply breathing animation when running
+  const timerContainerClasses = `w-72 h-72 mx-auto rounded-full border-[12px] flex items-center justify-center relative overflow-hidden ${
+    isRunning ? 'animate-breath' : ''
+  }`
 
   return (
-    <div className={`min-h-screen flex flex-col items-center justify-center p-8 bg-gradient-to-br ${bgGradient} text-white`}>
+    <div className={`min-h-screen flex flex-col items-center justify-center p-4 md:p-8 bg-gradient-to-br ${bgGradient} transition-colors duration-300`}>
       <div className="w-full max-w-md text-center">
-        {/* 标题 */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2">
+        {/* 标题 - Zenith Flow: Minimal Cognitive Load */}
+        <div className={`mb-8 ${isRunning ? 'opacity-70' : 'opacity-100'} transition-opacity duration-300`}>
+          <h1 className={`font-serif text-3xl md:text-4xl font-semibold mb-2 ${textColor}`}>
             {getModeName(pomodoro.state)}
           </h1>
-          <p className="text-white/70">
+          <p className={`${textColor} ${secondaryOpacity}`}>
             {pomodoro.state === 'Running'
-              ? '关闭通知，专注当下一件事'
+              ? '减少干扰，专注当下这一件事'
               : pomodoro.state === 'Break' || pomodoro.state === 'LongBreak'
-              ? '站起来活动一下，喝杯水休息一下'
-              : '点击开始开始专注之旅'
+              ? '站起来活动一下，喝杯水，让眼睛休息'
+              : '准备好开始深度专注了吗？'
             }
           </p>
         </div>
 
-        {/* 计时器圆圈 */}
+        {/* 计时器圆圈 - with breathing animation when running */}
         <div className="relative mb-8">
-          <div className="w-64 h-64 mx-auto rounded-full border-8 border-white/20 flex items-center justify-center relative overflow-hidden">
-            {/* 进度条 */}
-            <div
-              className={`absolute inset-0 ${progressColor} opacity-20 transition-all duration-1000 ease-linear`}
-              style={{ width: `${pomodoro.progress_percent}%`, clipPath: 'polygon(0 0, 100% 0, 100% 100%, 0 100%)' }}
-            />
+          <div
+            className={timerContainerClasses}
+            style={{
+              borderColor: `${accentColor}30`,
+              backgroundColor: 'transparent'
+            }}
+          >
+            {/* 圆形进度环 - 使用扇形填充 */}
+            <svg className="absolute inset-0 w-full h-full" style={{ transform: 'rotate(-90deg)' }}>
+              <circle
+                cx="50%"
+                cy="50%"
+                r="calc(50% - 6px)"
+                fill="none"
+                stroke={`${accentColor}20`}
+                strokeWidth="8"
+              />
+              <circle
+                cx="50%"
+                cy="50%"
+                r="calc(50% - 6px)"
+                fill="none"
+                stroke={accentColor}
+                strokeWidth="8"
+                strokeDasharray={`${pomodoro.progress_percent * 2.83} 283`}
+                strokeLinecap="round"
+                className="transition-all duration-1000 ease-linear"
+              />
+            </svg>
+
             <div className="relative z-10">
-              <div className="text-6xl font-bold tracking-wider">
+              <div className={`font-sans font-light tracking-[0.1em] ${textColor}`} style={{
+                fontSize: 'clamp(3rem, 15vw, 4.5rem)'
+              }}>
                 {formatTime(pomodoro.remaining_seconds)}
               </div>
-              <div className="text-white/70 text-sm mt-2">
+              <div className={`${textColor} ${secondaryOpacity} text-sm mt-3`}>
                 {pomodoro.completed_sessions} 个番茄钟 • {totalFocusMinutes} 分钟
               </div>
             </div>
           </div>
         </div>
 
-        {/* 控制按钮 */}
-        <div className="flex items-center justify-center gap-4 mb-8 flex-wrap">
-          {isIdleOrPaused && pomodoro.remaining_seconds > 0 && (
+        {/* 控制按钮 - hide completely when running to reduce distraction */}
+        {!isRunning && (
+          <div className="flex items-center justify-center gap-4 mb-8 flex-wrap animate-in fade-in duration-300">
+            {isIdleOrPaused && pomodoro.remaining_seconds > 0 && (
+              <button
+                onClick={startTimer}
+                className={`px-8 py-3 rounded-full font-semibold transition-all hover:scale-105`}
+                style={{
+                  backgroundColor: `${accentColor}`,
+                  color: 'white'
+                }}
+              >
+                {pomodoro.state === 'Idle' ? '开始专注' : '继续'}
+              </button>
+            )}
             <button
-              onClick={startTimer}
-              className={`px-8 py-3 rounded-full font-semibold ${buttonBg} transition-all hover:scale-105`}
+              onClick={resetTimer}
+              className="px-6 py-3 rounded-full font-semibold bg-white/10 hover:bg-white/20 backdrop-blur transition-all hover:scale-105"
+              style={{
+                color: textColor
+              }}
             >
-              {pomodoro.state === 'Idle' ? '开始' : '继续'}
+              重置
             </button>
-          )}
-          {pomodoro.state === 'Running' && (
+          </div>
+        )}
+
+        {isRunning && (
+          <div className="mb-8">
             <button
               onClick={pauseTimer}
-              className={`px-8 py-3 rounded-full font-semibold bg-white/20 hover:bg-white/30 transition-all hover:scale-105`}
+              className="px-8 py-3 rounded-full font-semibold bg-white/10 hover:bg-white/20 backdrop-blur transition-all"
+              style={{ color: textColor }}
             >
               暂停
             </button>
-          )}
-          <button
-            onClick={resetTimer}
-            className="px-6 py-3 rounded-full font-semibold bg-white/10 hover:bg-white/20 transition-all hover:scale-105"
-          >
-            重置
-          </button>
-        </div>
+          </div>
+        )}
 
-        {/* 设置开关 */}
+        {/* 设置开关 - always visible but subtle */}
         <div className="mb-4">
           <button
             onClick={() => setShowSettings(!showSettings)}
-            className="text-white/70 hover:text-white text-sm underline"
+            className={`${textColor} ${secondaryOpacity} hover:opacity-100 text-sm underline transition-opacity`}
           >
             {showSettings ? '收起设置' : '调整时长 ⚙️'}
           </button>
@@ -281,10 +349,10 @@ const FocusMode: React.FC<FocusModeProps> = ({ theme: _theme }) => {
 
         {/* 设置面板 */}
         {showSettings && (
-          <div className="bg-white/10 backdrop-blur rounded-xl p-6 mb-8 text-left animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className={`bg-white/10 backdrop-blur rounded-card p-6 mb-8 text-left animate-in fade-in slide-in-from-top-2 duration-300 border border-[var(--color-border-subtle)]`}>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2">
+                <label className={`block text-sm font-medium mb-2 ${textColor} ${secondaryOpacity}`}>
                   工作时长: {workMinutes} 分钟
                 </label>
                 <input
@@ -297,15 +365,15 @@ const FocusMode: React.FC<FocusModeProps> = ({ theme: _theme }) => {
                     const val = parseInt(e.target.value)
                     setWorkMinutes(val)
                   }}
-                  className="w-full"
+                  className="w-full accent-[var(--color-accent)]"
                 />
-                <div className="flex justify-between text-xs text-white/60">
+                <div className={`flex justify-between text-xs ${textColor} ${secondaryOpacity}`}>
                   <span>5m</span>
                   <span>60m</span>
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">
+                <label className={`block text-sm font-medium mb-2 ${textColor} ${secondaryOpacity}`}>
                   休息时长: {breakMinutes} 分钟
                 </label>
                 <input
@@ -318,15 +386,15 @@ const FocusMode: React.FC<FocusModeProps> = ({ theme: _theme }) => {
                     const val = parseInt(e.target.value)
                     setBreakMinutes(val)
                   }}
-                  className="w-full"
+                  className="w-full accent-[var(--color-accent)]"
                 />
-                <div className="flex justify-between text-xs text-white/60">
+                <div className={`flex justify-between text-xs ${textColor} ${secondaryOpacity}`}>
                   <span>1m</span>
                   <span>30m</span>
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">
+                <label className={`block text-sm font-medium mb-2 ${textColor} ${secondaryOpacity}`}>
                   长休息时长: {longBreakMinutes} 分钟
                 </label>
                 <input
@@ -339,15 +407,15 @@ const FocusMode: React.FC<FocusModeProps> = ({ theme: _theme }) => {
                     const val = parseInt(e.target.value)
                     setLongBreakMinutes(val)
                   }}
-                  className="w-full"
+                  className="w-full accent-[var(--color-accent)]"
                 />
-                <div className="flex justify-between text-xs text-white/60">
+                <div className={`flex justify-between text-xs ${textColor} ${secondaryOpacity}`}>
                   <span>10m</span>
                   <span>45m</span>
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">
+                <label className={`block text-sm font-medium mb-2 ${textColor} ${secondaryOpacity}`}>
                   长休息间隔: 每 {sessionsBeforeLongBreak} 个番茄钟
                 </label>
                 <input
@@ -360,41 +428,41 @@ const FocusMode: React.FC<FocusModeProps> = ({ theme: _theme }) => {
                     const val = parseInt(e.target.value)
                     setSessionsBeforeLongBreak(val)
                   }}
-                  className="w-full"
+                  className="w-full accent-[var(--color-accent)]"
                 />
-                <div className="flex justify-between text-xs text-white/60">
+                <div className={`flex justify-between text-xs ${textColor} ${secondaryOpacity}`}>
                   <span>2</span>
                   <span>6</span>
                 </div>
               </div>
-              <p className="text-xs text-white/60">
+              <p className={`text-xs ${textColor} ${secondaryOpacity}`}>
                 💡 配置会保存在本地，刷新后生效
               </p>
             </div>
           </div>
         )}
 
-        {/* 今日统计 */}
-        {pomodoro.completed_sessions > 0 && (
-          <div className="bg-white/10 backdrop-blur rounded-xl p-6 text-left">
-            <h3 className="font-semibold mb-3">今日统计</h3>
+        {/* 今日统计 - Only show when not running to reduce distraction */}
+        {!isRunning && pomodoro.completed_sessions > 0 && (
+          <div className={`bg-white/10 backdrop-blur rounded-card p-6 text-left border border-[var(--color-border-subtle)] animate-in fade-in duration-300`}>
+            <h3 className={`font-semibold mb-3 ${textColor}`}>今日统计</h3>
             <div className="grid grid-cols-2 gap-4 text-center">
               <div>
-                <div className="text-2xl font-bold">{pomodoro.completed_sessions}</div>
-                <div className="text-sm text-white/70">完成番茄钟</div>
+                <div className={`text-2xl font-bold ${textColor}`}>{pomodoro.completed_sessions}</div>
+                <div className={`text-sm ${textColor} ${secondaryOpacity}`}>完成番茄钟</div>
               </div>
               <div>
-                <div className="text-2xl font-bold">{totalFocusMinutes}</div>
-                <div className="text-sm text-white/70">总专注分钟</div>
+                <div className={`text-2xl font-bold ${textColor}`}>{totalFocusMinutes}</div>
+                <div className={`text-sm ${textColor} ${secondaryOpacity}`}>总专注分钟</div>
               </div>
             </div>
           </div>
         )}
 
-        {/* 小贴士 */}
-        <div className="mt-8 text-white/50 text-sm">
-          <p>番茄工作法: 专注工作 → 休息，循环往复。</p>
-          <p className="mt-1">每完成多个番茄钟，建议延长休息时间恢复精力。</p>
+        {/* 小贴士 - very subtle, low opacity */}
+        <div className={`mt-8 ${textColor} ${secondaryOpacity} text-sm`}>
+          <p>深度专注: 一次只做一件事，保持节奏比长时间更重要。</p>
+          <p className="mt-1">完成多个番茄钟后，延长休息帮助精力恢复。</p>
         </div>
       </div>
     </div>

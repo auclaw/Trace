@@ -16,14 +16,14 @@ interface CalendarProps {
 
 const Calendar: React.FC<CalendarProps> = ({ theme }) => {
   const isDark = theme === 'dark'
-  const titleColor = isDark ? 'text-white' : 'text-gray-900'
-  const textColor = isDark ? 'text-gray-400' : 'text-gray-500'
-  const cardBg = isDark ? 'bg-gray-800' : 'bg-white'
-  const borderColor = isDark ? 'border-gray-700' : 'border-gray-200'
-  const borderLight = isDark ? 'border-gray-600' : 'border-gray-100'
-  const bodyText = isDark ? 'text-gray-300' : 'text-gray-600'
-  const hoverBg = isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
-  const inputBg = isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
+  const titleColor = isDark ? 'text-aether-text-dark-primary' : 'text-aether-text-primary'
+  const textColor = isDark ? 'text-aether-text-dark-secondary' : 'text-aether-text-secondary'
+  const cardBg = isDark ? 'bg-aether-dark-200' : 'bg-aether-200'
+  const borderColor = isDark ? 'border-[var(--color-border-subtle)]' : 'border-[var(--color-border-subtle)]'
+  const borderLight = isDark ? 'border-[var(--color-border-subtle)]' : 'border-[var(--color-border-subtle)]'
+  const bodyText = isDark ? 'text-aether-text-dark-secondary' : 'text-aether-text-secondary'
+  const hoverBg = isDark ? 'hover:bg-aether-dark-300' : 'hover:bg-aether-300'
+  const inputBg = isDark ? 'bg-aether-dark-300 border-[var(--color-border-subtle)] text-aether-text-dark-primary' : 'bg-aether-200 border-[var(--color-border-subtle)] text-aether-text-primary'
   const today = new Date()
   const [currentMonth, setCurrentMonth] = useState(today.getMonth())
   const [currentYear, setCurrentYear] = useState(today.getFullYear())
@@ -131,23 +131,23 @@ const Calendar: React.FC<CalendarProps> = ({ theme }) => {
     )
   }
 
-  // 获取热力图背景色根据专注时长
+  // 获取热力图背景色根据专注时长 - 使用橙色系适配整体设计
   const getHeatmapColor = (day: number): string => {
     const minutes = monthlyStats.get(day) || 0
     if (minutes === 0) {
-      return isDark ? 'bg-gray-800/20' : 'bg-gray-50'
+      return isDark ? 'bg-[var(--color-border-subtle)]/20' : 'bg-[var(--color-border-light)]'
     }
-    // 根据时长分等级: 0, 1-30min, 30-120min, 120-240min, 240+
+    // 根据时长分等级: 0, 1-30min, 30-120min, 120-240min, 240+ - orange scale
     if (isDark) {
-      if (minutes < 30) return 'bg-green-900/30'
-      if (minutes < 120) return 'bg-green-900/50'
-      if (minutes < 240) return 'bg-green-800/70'
-      return 'bg-green-700'
+      if (minutes < 30) return 'bg-[rgba(255,79,0,0.2)]'
+      if (minutes < 120) return 'bg-[rgba(255,79,0,0.35)]'
+      if (minutes < 240) return 'bg-[rgba(255,79,0,0.55)]'
+      return 'bg-[rgba(255,79,0,0.8)]'
     } else {
-      if (minutes < 30) return 'bg-green-100'
-      if (minutes < 120) return 'bg-green-200'
-      if (minutes < 240) return 'bg-green-300'
-      return 'bg-green-400'
+      if (minutes < 30) return 'bg-[rgba(255,79,0,0.1)]'
+      if (minutes < 120) return 'bg-[rgba(255,79,0,0.2)]'
+      if (minutes < 240) return 'bg-[rgba(255,79,0,0.35)]'
+      return 'bg-[rgba(255,79,0,0.5)]'
     }
   }
 
@@ -324,7 +324,7 @@ const Calendar: React.FC<CalendarProps> = ({ theme }) => {
         </p>
       </div>
 
-      <div className={`${cardBg} rounded-xl shadow-sm p-6 border ${borderColor}`}>
+      <div className={`${cardBg} rounded-xl p-6 border ${borderColor}`}>
         {/* 日历头部 */}
         <div className="flex flex-wrap items-center justify-between mb-6 gap-4">
           <div className="flex items-center gap-4">
@@ -348,11 +348,11 @@ const Calendar: React.FC<CalendarProps> = ({ theme }) => {
           <div className="flex items-center gap-2">
             <span className={`text-xs ${textColor}`}>活动强度: </span>
             <div className="flex gap-1">
-              <div className={`w-4 h-4 rounded ${isDark ? 'bg-gray-800/20' : 'bg-gray-50'}`}></div>
-              <div className={`w-4 h-4 rounded ${isDark ? 'bg-green-900/30' : 'bg-green-100'}`}></div>
-              <div className={`w-4 h-4 rounded ${isDark ? 'bg-green-900/50' : 'bg-green-200'}`}></div>
-              <div className={`w-4 h-4 rounded ${isDark ? 'bg-green-800/70' : 'bg-green-300'}`}></div>
-              <div className={`w-4 h-4 rounded ${isDark ? 'bg-green-700' : 'bg-green-400'}`}></div>
+              <div className={`w-4 h-4 rounded ${isDark ? 'bg-[var(--color-border-subtle)]/20' : 'bg-[var(--color-border-light)]'}`}></div>
+              <div className={`w-4 h-4 rounded ${isDark ? 'bg-[rgba(255,79,0,0.2)]' : 'bg-[rgba(255,79,0,0.1)]'}`}></div>
+              <div className={`w-4 h-4 rounded ${isDark ? 'bg-[rgba(255,79,0,0.35)]' : 'bg-[rgba(255,79,0,0.2)]'}`}></div>
+              <div className={`w-4 h-4 rounded ${isDark ? 'bg-[rgba(255,79,0,0.55)]' : 'bg-[rgba(255,79,0,0.35)]'}`}></div>
+              <div className={`w-4 h-4 rounded ${isDark ? 'bg-[rgba(255,79,0,0.8)]' : 'bg-[rgba(255,79,0,0.5)]'}`}></div>
             </div>
             <span className={`text-xs ${textColor}`}>少 → 多</span>
           </div>
@@ -383,13 +383,13 @@ const Calendar: React.FC<CalendarProps> = ({ theme }) => {
                 className={`
                   aspect-square flex items-center justify-center rounded-lg cursor-pointer text-sm transition-colors
                   ${getHeatmapColor(day)}
-                  ${isToday(day) ? (isDark ? 'ring-2 ring-blue-400 text-blue-200' : 'ring-2 ring-blue-500 bg-blue-100 font-semibold') : ''}
-                  ${isSelected(day) ? 'bg-blue-500 text-white font-semibold ring-2 ring-blue-300' : ''}
+                  ${isToday(day) ? (isDark ? 'ring-2 ring-[var(--color-accent)] text-[var(--color-accent)]' : 'ring-2 ring-[var(--color-accent)] bg-[rgba(255,79,0,0.1)] font-semibold') : ''}
+                  ${isSelected(day) ? 'bg-[var(--color-accent)] text-[#fffefb] font-semibold ring-2 ring-[rgba(255,79,0,0.3)]' : ''}
                   ${!isSelected(day) && !isToday(day) ? hoverBg : ''}
-                  ${!isSelected(day) && !isToday(day) && (monthlyStats.get(day) || 0) === 0 && isDark ? 'text-gray-500' : ''}
-                  ${!isSelected(day) && !isToday(day) && (monthlyStats.get(day) || 0) === 0 && !isDark ? 'text-gray-400' : ''}
-                  ${!isSelected(day) && !isToday(day) && (monthlyStats.get(day) || 0) > 0 && isDark ? 'text-gray-100' : ''}
-                  ${!isSelected(day) && !isToday(day) && (monthlyStats.get(day) || 0) > 0 && !isDark ? 'text-gray-800' : ''}
+                  ${!isSelected(day) && !isToday(day) && (monthlyStats.get(day) || 0) === 0 && isDark ? 'text-aether-text-dark-muted' : ''}
+                  ${!isSelected(day) && !isToday(day) && (monthlyStats.get(day) || 0) === 0 && !isDark ? 'text-aether-text-muted' : ''}
+                  ${!isSelected(day) && !isToday(day) && (monthlyStats.get(day) || 0) > 0 && isDark ? 'text-aether-text-dark-primary' : ''}
+                  ${!isSelected(day) && !isToday(day) && (monthlyStats.get(day) || 0) > 0 && !isDark ? 'text-aether-text-primary' : ''}
                 `}
                 onClick={() => {
                   const date = new Date(currentYear, currentMonth, day)
@@ -464,7 +464,7 @@ const Calendar: React.FC<CalendarProps> = ({ theme }) => {
                   <div className="mb-4">
                     <button
                       onClick={openAddModal}
-                      className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors"
+                      className="px-4 py-2 bg-[var(--color-accent)] text-[#fffefb] text-sm rounded-lg hover:opacity-90 transition-colors"
                     >
                       + 手动添加活动
                     </button>
@@ -485,7 +485,7 @@ const Calendar: React.FC<CalendarProps> = ({ theme }) => {
 
                 {/* 分类统计 */}
                 {categoryStats.length > 0 && (
-                  <div className={`${cardBg} rounded-xl shadow-sm p-4 border ${borderColor} mb-6`}>
+                  <div className={`${cardBg} rounded-xl p-4 border ${borderColor} mb-6`}>
                     <h5 className={`text-lg font-semibold ${titleColor} mb-3`}>分类统计</h5>
                     <div className="space-y-2">
                       {categoryStats
@@ -504,7 +504,7 @@ const Calendar: React.FC<CalendarProps> = ({ theme }) => {
 
                 {/* 活动列表（可编辑） */}
                 {activities.length > 0 && (
-                  <div className={`${cardBg} rounded-xl shadow-sm p-4 border ${borderColor}`}>
+                  <div className={`${cardBg} rounded-xl p-4 border ${borderColor}`}>
                     <h5 className={`text-lg font-semibold ${titleColor} mb-3`}>活动列表</h5>
                     <div className="space-y-2 max-h-80 overflow-y-auto">
                       {activities.slice().sort((a, b) => a.startTimeMs - b.startTimeMs).map(act => {
@@ -523,7 +523,7 @@ const Calendar: React.FC<CalendarProps> = ({ theme }) => {
                             <div className="flex space-x-1 ml-2">
                               <button
                                 onClick={() => openEditModal(act)}
-                                className={`px-2 py-1 text-xs ${isDark ? 'bg-blue-900/30 text-blue-400 hover:bg-blue-900/50' : 'bg-blue-100 text-blue-700'} rounded hover:bg-blue-200 transition-colors`}
+                                className={`px-2 py-1 text-xs ${isDark ? 'bg-[rgba(255,79,0,0.2)] text-[var(--color-accent)] hover:bg-[rgba(255,79,0,0.3)]' : 'bg-[rgba(255,79,0,0.1)] text-[var(--color-accent)]'} rounded hover:bg-[rgba(255,79,0,0.2)] transition-colors`}
                               >
                                 编辑
                               </button>
@@ -549,7 +549,7 @@ const Calendar: React.FC<CalendarProps> = ({ theme }) => {
                       <div className="mt-4">
                         <button
                           onClick={openAddModal}
-                          className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors"
+                          className="px-4 py-2 bg-[var(--color-accent)] text-[#fffefb] text-sm rounded-lg hover:opacity-90 transition-colors"
                         >
                           添加第一条活动
                         </button>
@@ -565,7 +565,7 @@ const Calendar: React.FC<CalendarProps> = ({ theme }) => {
         {/* 添加/编辑活动模态框 */}
         {showModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className={`${cardBg} rounded-xl shadow-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto`}>
+            <div className={`${cardBg} rounded-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto border ${borderColor}`}>
               <h3 className={`text-xl font-semibold ${titleColor} mb-4`}>
                 {editingActivity ? '编辑活动' : '添加手动活动'}
               </h3>
@@ -578,7 +578,7 @@ const Calendar: React.FC<CalendarProps> = ({ theme }) => {
                     value={formName}
                     onChange={(e) => setFormName(e.target.value)}
                     placeholder="例如: Google Chrome"
-                    className={`w-full px-3 py-2 border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${inputBg}`}
+                    className={`w-full px-3 py-2 border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] ${inputBg}`}
                   />
                 </div>
 
@@ -589,7 +589,7 @@ const Calendar: React.FC<CalendarProps> = ({ theme }) => {
                     value={formWindowTitle}
                     onChange={(e) => setFormWindowTitle(e.target.value)}
                     placeholder="例如: GitHub - 代码仓库"
-                    className={`w-full px-3 py-2 border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${inputBg}`}
+                    className={`w-full px-3 py-2 border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] ${inputBg}`}
                   />
                 </div>
 
@@ -600,7 +600,7 @@ const Calendar: React.FC<CalendarProps> = ({ theme }) => {
                     value={formCategory}
                     onChange={(e) => setFormCategory(e.target.value)}
                     placeholder="例如: 开发、工作、学习"
-                    className={`w-full px-3 py-2 border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${inputBg}`}
+                    className={`w-full px-3 py-2 border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] ${inputBg}`}
                   />
                 </div>
 
@@ -615,7 +615,7 @@ const Calendar: React.FC<CalendarProps> = ({ theme }) => {
                         value={formStartHours}
                         onChange={(e) => setFormStartHours(e.target.value)}
                         placeholder="时"
-                        className={`w-full px-3 py-2 border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${inputBg}`}
+                        className={`w-full px-3 py-2 border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] ${inputBg}`}
                       />
                       <span className={`text-xs ${textColor}`}>小时 (0-23)</span>
                     </div>
@@ -627,7 +627,7 @@ const Calendar: React.FC<CalendarProps> = ({ theme }) => {
                         value={formStartMinutes}
                         onChange={(e) => setFormStartMinutes(e.target.value)}
                         placeholder="分"
-                        className={`w-full px-3 py-2 border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${inputBg}`}
+                        className={`w-full px-3 py-2 border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] ${inputBg}`}
                       />
                       <span className={`text-xs ${textColor}`}>分钟 (0-59)</span>
                     </div>
@@ -644,7 +644,7 @@ const Calendar: React.FC<CalendarProps> = ({ theme }) => {
                         value={formDurationHours}
                         onChange={(e) => setFormDurationHours(e.target.value)}
                         placeholder="时"
-                        className={`w-full px-3 py-2 border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${inputBg}`}
+                        className={`w-full px-3 py-2 border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] ${inputBg}`}
                       />
                       <span className={`text-xs ${textColor}`}>小时</span>
                     </div>
@@ -656,7 +656,7 @@ const Calendar: React.FC<CalendarProps> = ({ theme }) => {
                         value={formDurationMinutes}
                         onChange={(e) => setFormDurationMinutes(e.target.value)}
                         placeholder="分"
-                        className={`w-full px-3 py-2 border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${inputBg}`}
+                        className={`w-full px-3 py-2 border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] ${inputBg}`}
                       />
                       <span className={`text-xs ${textColor}`}>分钟</span>
                     </div>
@@ -673,7 +673,7 @@ const Calendar: React.FC<CalendarProps> = ({ theme }) => {
                 </button>
                 <button
                   onClick={handleSubmit}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="px-4 py-2 bg-[var(--color-accent)] text-[#fffefb] rounded-lg hover:opacity-90 transition-colors"
                 >
                   {editingActivity ? '保存修改' : '添加活动'}
                 </button>

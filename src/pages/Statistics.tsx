@@ -16,12 +16,12 @@ interface StatisticsProps {
 
 const Statistics: React.FC<StatisticsProps> = ({ theme }) => {
   const isDark = theme === 'dark'
-  const titleColor = isDark ? 'text-white' : 'text-gray-900'
-  const textColor = isDark ? 'text-gray-400' : 'text-gray-500'
-  const cardBg = isDark ? 'bg-gray-800' : 'bg-white'
-  const borderColor = isDark ? 'border-gray-700' : 'border-gray-200'
-  const borderLight = isDark ? 'border-gray-700' : 'border-gray-100'
-  const bodyText = isDark ? 'text-gray-300' : 'text-gray-600'
+  const titleColor = isDark ? 'text-aether-text-dark-primary' : 'text-aether-text-primary'
+  const textColor = isDark ? 'text-aether-text-dark-secondary' : 'text-aether-text-secondary'
+  const cardBg = isDark ? 'bg-aether-dark-200' : 'bg-aether-200'
+  const borderColor = isDark ? 'border-[var(--color-border-subtle)]' : 'border-[var(--color-border-subtle)]'
+  const borderLight = isDark ? 'border-[var(--color-border-subtle)]' : 'border-[var(--color-border-subtle)]'
+  const bodyText = isDark ? 'text-aether-text-dark-secondary' : 'text-aether-text-secondary'
   const [stats, setStats] = useState<WeeklyStatItem[]>([])
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
@@ -348,7 +348,7 @@ const Statistics: React.FC<StatisticsProps> = ({ theme }) => {
       </div>
 
       {/* 导出和分享区域 */}
-      <div className={`mb-6 ${cardBg} rounded-2xl shadow-sm p-6 border ${borderColor}`}>
+      <div className={`mb-6 ${cardBg} rounded-2xl p-6 border ${borderColor}`}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <h3 className={`text-lg font-semibold ${titleColor} mb-3`}>数据导出</h3>
@@ -359,7 +359,7 @@ const Statistics: React.FC<StatisticsProps> = ({ theme }) => {
               <button
                 onClick={exportJSON}
                 disabled={exporting}
-                className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="px-4 py-2 bg-[var(--color-accent)] text-[#fffefb] text-sm rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {exporting ? '导出中...' : '导出 JSON'}
               </button>
@@ -401,7 +401,7 @@ const Statistics: React.FC<StatisticsProps> = ({ theme }) => {
               <div className="flex flex-wrap gap-3">
                 <button
                   onClick={downloadImage}
-                  className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                  className="px-4 py-2 bg-[var(--color-accent)] text-[#fffefb] text-sm rounded-lg hover:opacity-90 transition-colors"
                 >
                   💾 下载图片
                 </button>
@@ -424,7 +424,7 @@ const Statistics: React.FC<StatisticsProps> = ({ theme }) => {
                     setGeneratedImageUrl(null)
                     setShareError(null)
                   }}
-                  className={`px-4 py-2 text-sm ${isDark ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'} rounded-lg transition-colors`}
+                  className={`px-4 py-2 text-sm ${isDark ? 'bg-aether-dark-300 text-aether-text-dark-secondary hover:bg-aether-dark-300/80' : 'bg-aether-300 text-aether-text-secondary hover:bg-aether-300/80'} rounded-lg transition-colors`}
                 >
                   重新生成
                 </button>
@@ -479,7 +479,7 @@ const Statistics: React.FC<StatisticsProps> = ({ theme }) => {
 
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className={`${cardBg} rounded-2xl shadow-sm p-6 border ${borderColor}`}>
+        <div className={`${cardBg} rounded-2xl p-6 border ${borderColor}`}>
           <h3 className={`text-lg font-semibold ${titleColor} mb-4`}>时间分布饼图</h3>
           {loading ? (
             <div className={`text-center py-12 ${textColor}`}>加载中...</div>
@@ -518,7 +518,7 @@ const Statistics: React.FC<StatisticsProps> = ({ theme }) => {
           )}
         </div>
 
-        <div className={`${cardBg} rounded-2xl shadow-sm p-6 border ${borderColor}`}>
+        <div className={`${cardBg} rounded-2xl p-6 border ${borderColor}`}>
           <h3 className={`text-lg font-semibold ${titleColor} mb-4`}>详细数据</h3>
           {loading ? (
             <div className={`text-center py-12 ${textColor}`}>加载中...</div>
@@ -527,7 +527,7 @@ const Statistics: React.FC<StatisticsProps> = ({ theme }) => {
           ) : (
             <div className="space-y-4">
               <div className={`pb-2 border-b ${borderLight}`}>
-                <div className={`flex justify-between font-medium ${isDark ? 'text-gray-300' : 'text-gray-900'}`}>
+                <div className={`flex justify-between font-medium ${isDark ? 'text-aether-text-dark-secondary' : 'text-aether-text-primary'}`}>
                   <span>分类</span>
                   <span>总计 • 占比</span>
                 </div>

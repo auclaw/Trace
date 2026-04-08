@@ -20,26 +20,26 @@ const StatsCard: React.FC<StatsCardProps> = ({
   theme = 'light'
 }) => {
   const isDark = theme === 'dark'
-  const titleColor = isDark ? 'text-white' : 'text-gray-900'
-  const textColor = isDark ? 'text-gray-400' : 'text-gray-500'
-  const cardBg = isDark ? 'bg-gray-800' : 'bg-white'
-  const borderColor = isDark ? 'border-gray-700' : 'border-gray-200'
+  const titleColor = isDark ? 'text-aether-text-dark-primary' : 'text-aether-text-primary'
+  const textColor = isDark ? 'text-aether-text-dark-secondary' : 'text-aether-text-secondary'
+  const cardBg = isDark ? 'bg-aether-dark-200' : 'bg-aether-200'
+  const borderColor = isDark ? 'border-[var(--color-border-subtle)]' : 'border-[var(--color-border-subtle)]'
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-      <div className="bg-gradient-to-br from-primary to-success rounded-2xl shadow-md p-6 text-white">
+      <div className="bg-gradient-to-br from-primary to-success rounded-2xl p-6 text-[#fffefb]">
         <div className="text-sm font-medium text-orange-100 mb-1">总记录时间</div>
         <div className="text-2xl font-bold">
           {formatDurationMinutes(totalMinutes)}
         </div>
       </div>
-      <div className={`${cardBg} rounded-2xl shadow-sm p-6 border ${borderColor}`}>
+      <div className={`${cardBg} rounded-2xl p-6 border ${borderColor}`}>
         <div className={`text-sm font-medium ${textColor} mb-1`}>活动数量</div>
         <div className={`text-2xl font-bold ${titleColor}`}>
           {activitiesCount}
         </div>
       </div>
-      <div className={`${cardBg} rounded-2xl shadow-sm p-6 border ${borderColor}`}>
+      <div className={`${cardBg} rounded-2xl p-6 border ${borderColor}`}>
         <div className={`text-sm font-medium ${textColor} mb-1`}>分类数量</div>
         <div className={`text-2xl font-bold ${titleColor}`}>
           {totalCategories || 0}

@@ -8,7 +8,8 @@ import {
   featureFlagCategories,
   type FeatureFlagKey,
 } from '../utils/feature-flags'
-import type { Theme } from '../App'
+import type { Theme, ColorTheme, BackgroundSkin } from '../App'
+import { colorThemeConfigs, backgroundSkinConfigs } from '../App'
 
 type SubscriptionPlan = 'free' | 'personal' | 'business'
 
@@ -22,21 +23,25 @@ interface UserRole {
 interface SettingsProps {
   theme: Theme
   toggleTheme: () => void
+  colorTheme: ColorTheme
+  onColorThemeChange: (theme: ColorTheme) => void
+  backgroundSkin: BackgroundSkin
+  onBackgroundSkinChange: (skin: BackgroundSkin) => void
   isTracking: boolean
   onTrackingChange: (status: boolean) => void
 }
 
-const Settings: React.FC<SettingsProps> = ({ theme, toggleTheme, isTracking, onTrackingChange }) => {
+const Settings: React.FC<SettingsProps> = ({ theme, toggleTheme, colorTheme, onColorThemeChange, backgroundSkin, onBackgroundSkinChange, isTracking, onTrackingChange }) => {
   const isDark = theme === 'dark'
-  const titleColor = isDark ? 'text-white' : 'text-gray-900'
-  const textColor = isDark ? 'text-gray-400' : 'text-gray-500'
-  const cardBg = isDark ? 'bg-gray-800' : 'bg-white'
-  const borderColor = isDark ? 'border-gray-700' : 'border-gray-200'
-  const borderLight = isDark ? 'border-gray-600' : 'border-gray-100'
-  const labelColor = isDark ? 'text-gray-300' : 'text-gray-700'
-  const inputBg = isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
-  const tagBg = isDark ? 'bg-gray-700' : 'bg-gray-100'
-  const trackingBg = isDark ? 'bg-blue-900/20' : 'bg-blue-50'
+  const titleColor = isDark ? 'text-aether-text-dark-primary' : 'text-aether-text-primary'
+  const textColor = isDark ? 'text-aether-text-dark-secondary' : 'text-aether-text-secondary'
+  const cardBg = isDark ? 'bg-aether-dark-200' : 'bg-aether-200'
+  const borderColor = isDark ? 'border-[var(--color-border-subtle)]' : 'border-[var(--color-border-subtle)]'
+  const borderLight = isDark ? 'border-[var(--color-border-subtle)]' : 'border-[var(--color-border-subtle)]'
+  const labelColor = isDark ? 'text-aether-text-dark-secondary' : 'text-aether-text-secondary'
+  const inputBg = isDark ? 'bg-aether-dark-300 border-[var(--color-border-subtle)] text-aether-text-dark-primary' : 'bg-aether-200 border-[var(--color-border-subtle)] text-aether-text-primary'
+  const tagBg = isDark ? 'bg-aether-dark-300' : 'bg-aether-300'
+  const trackingBg = isDark ? 'bg-aether-accentSoftDark' : 'bg-aether-accentSoft'
   const [settings, setSettings] = useState<SettingsType | null>(null)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -252,10 +257,10 @@ const Settings: React.FC<SettingsProps> = ({ theme, toggleTheme, isTracking, onT
       </div>
 
       <div className={`${cardBg} rounded-xl shadow-sm p-6 border ${borderColor} space-y-6 max-w-2xl mx-auto`}>
-        {/* 主题切换 */}
+        {/* 明暗主题切换 */}
         <div className="flex items-center justify-between p-4 rounded-lg border">
           <div>
-            <h3 className={`font-semibold ${titleColor}`}>外观主题</h3>
+            <h3 className={`font-semibold ${titleColor}`}>明暗模式</h3>
             <p className={`text-sm ${textColor}`}>
               当前: {isDark ? '深色模式' : '浅色模式'}
             </p>
@@ -264,12 +269,81 @@ const Settings: React.FC<SettingsProps> = ({ theme, toggleTheme, isTracking, onT
             onClick={toggleTheme}
             className={`px-4 py-2 rounded-lg font-medium ${
               isDark
-                ? 'bg-gray-700 text-gray-200 hover:bg-gray-600'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ? 'bg-aether-dark-300 text-aether-text-dark-secondary hover:bg-aether-dark-300/80'
+                : 'bg-aether-300 text-aether-text-secondary hover:bg-aether-300/80'
             }`}
           >
             {isDark ? '切换浅色' : '切换深色'}
           </button>
+        </div>
+
+        {/* 颜色主题选择 */}
+        <div className="p-4 rounded-lg border border-[var(--color-border-subtle)]">
+          <div>
+            <h3 className={`font-semibold ${titleColor} mb-3`}>主题配色</h3>
+            <p className={`text-sm ${textColor} mb-4`}>
+              选择你喜欢的主色调，个性化你的工作空间
+            </p>
+            <div className="grid grid-cols-5 gap-3">
+              {(Object.entries(colorThemeConfigs) as [ColorTheme, any][]).map(([key, config]) => (
+                <button
+                  key={key}
+                  onClick={() => onColorThemeChange(key)}
+                  className={`aspect-square rounded-card transition-all duration-200 hover:scale-105 ${
+                    colorTheme === key ? 'ring-2 ring-offset-2' : ''
+                  }`}
+                  style={{
+                    backgroundColor: config.accent,
+                    ...(colorTheme === key ? { outline: `2px solid ${config.accent}`, outlineOffset: '4px' } : {})
+                  }}
+                  title={config.name}
+                />
+              ))}
+            </div>
+            <p className={`text-xs ${textColor} mt-3`}>
+              当前: {colorThemeConfigs[colorTheme].name} - {colorThemeConfigs[colorTheme].description}
+            </p>
+          </div>
+        </div>
+
+        {/* 背景皮肤选择 */}
+        <div className="p-4 rounded-lg border border-[var(--color-border-subtle)]">
+          <div>
+            <h3 className={`font-semibold ${titleColor} mb-3`}>整体风格</h3>
+            <p className={`text-sm ${textColor} mb-4`}>
+              选择不同的背景皮肤风格，打造你喜欢的视觉体验
+            </p>
+            <div className="space-y-3">
+              {(Object.entries(backgroundSkinConfigs) as [BackgroundSkin, any][]).map(([key, config]) => (
+                <label
+                  key={key}
+                  className={`block p-4 rounded cursor-pointer border ${borderColor} ${
+                    backgroundSkin === key
+                      ? (isDark ? 'border-[var(--color-accent)] ring-1 ring-[var(--color-accent)] bg-[var(--color-accent-soft)]' : 'border-[var(--color-accent)] ring-1 ring-[var(--color-accent)] bg-[var(--color-accent-soft)]')
+                      : ''
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="backgroundSkin"
+                    value={key}
+                    checked={backgroundSkin === key}
+                    onChange={(e) => onBackgroundSkinChange(e.target.value as BackgroundSkin)}
+                    className="mr-3"
+                  />
+                  <div>
+                    <strong className={titleColor}>{config.name}</strong>
+                    <p className={`text-sm ${textColor} mt-1`}>
+                      {config.description}
+                    </p>
+                  </div>
+                </label>
+              ))}
+            </div>
+            <p className={`text-xs ${textColor} mt-3`}>
+              当前: {backgroundSkinConfigs[backgroundSkin].name}
+            </p>
+          </div>
         </div>
 
         <div className={`flex items-center justify-between p-4 ${trackingBg} rounded-lg`}>
