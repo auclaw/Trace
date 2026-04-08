@@ -3,6 +3,7 @@ Database connection management
 """
 import sqlite3
 from contextlib import contextmanager
+from flask_sqlalchemy import SQLAlchemy
 from config.settings import DATABASE_PATH
 from models.database_models import (
     USER_TABLE_SQL,
@@ -20,9 +21,19 @@ from models.database_models import (
     INTERRUPTION_TABLE_SQL,
     TEAM_FOCUS_SESSION_TABLE_SQL,
     TEAM_FOCUS_MEMBER_TABLE_SQL,
+    DEEP_FLOW_BLOCK_TABLE_SQL,
     MELEGAL_DOCUMENTS_TABLE_SQL,
-    MELEGAL_REVIEW_ORDER_TABLE_SQL
+    MELEGAL_REVIEW_ORDER_TABLE_SQL,
+    TASKS_TABLE_SQL,
+    TIMEBLOCKS_TABLE_SQL,
+    PET_TABLE_SQL,
+    TEAM_MEMBER_STAT_TABLE_SQL,
+    TEAM_ACHIEVEMENT_TABLE_SQL,
+    PET_ITEMS_TABLE_SQL
 )
+
+# SQLAlchemy ORM instance for service layer
+db = SQLAlchemy()
 
 @contextmanager
 def get_db_connection():
@@ -59,6 +70,16 @@ def init_database():
         cursor.execute(TEAM_FOCUS_SESSION_TABLE_SQL)
         cursor.execute(TEAM_FOCUS_MEMBER_TABLE_SQL)
         # melegal 可颂法务 tables
+        cursor.execute(DEEP_FLOW_BLOCK_TABLE_SQL)
         cursor.execute(MELEGAL_DOCUMENTS_TABLE_SQL)
         cursor.execute(MELEGAL_REVIEW_ORDER_TABLE_SQL)
+        # Tasks and Timeblocks
+        cursor.execute(TASKS_TABLE_SQL)
+        cursor.execute(TIMEBLOCKS_TABLE_SQL)
+        # Virtual Pet
+        cursor.execute(PET_TABLE_SQL)
+        cursor.execute(PET_ITEMS_TABLE_SQL)
+        # HR Gamification
+        cursor.execute(TEAM_MEMBER_STAT_TABLE_SQL)
+        cursor.execute(TEAM_ACHIEVEMENT_TABLE_SQL)
         conn.commit()

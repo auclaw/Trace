@@ -221,6 +221,22 @@ const Sidebar: React.FC<SidebarProps> = ({ isTracking, theme, onToggleTracking }
               分心屏蔽
             </NavLink>
           </li>
+          <li>
+            <NavLink
+              to="/pet"
+              className={({ isActive }) => {
+                const base = 'flex items-center px-4 py-3 rounded-xl transition-all duration-200 transform'
+                if (isActive) {
+                  return `${base} bg-gradient-to-r from-primary/10 to-success/10 text-primary font-medium scale-[1.02] shadow-sm`
+                } else {
+                  return `${base} ${textClass} hover:bg-opacity-10 ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} hover:scale-[1.01]`
+                }
+              }}
+            >
+              <span className="mr-3 text-lg">🐱</span>
+              效率宠物
+            </NavLink>
+          </li>
 
           {/* AI 效率分析 - 需要个人套餐及以上 */}
           {roles.plan !== 'free' && (

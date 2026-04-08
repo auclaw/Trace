@@ -264,3 +264,109 @@ CREATE TABLE IF NOT EXISTS melegal_review_orders (
     FOREIGN KEY (user_id) REFERENCES users (id)
 )
 '''
+
+# Tasks table (任务管理)
+TASKS_TABLE_SQL = '''
+CREATE TABLE IF NOT EXISTS tasks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    category TEXT,
+    estimated_minutes INTEGER DEFAULT 0,
+    status TEXT NOT NULL, -- 'pending', 'in_progress', 'completed', 'cancelled'
+    due_date DATE,
+    completed_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users (id)
+)
+'''
+
+# Timeblocks table (时间块计划)
+TIMEBLOCKS_TABLE_SQL = '''
+CREATE TABLE IF NOT EXISTS timeblocks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    task_id INTEGER NULL,
+    title TEXT NOT NULL,
+    start_time TIMESTAMP NOT NULL,
+    end_time TIMESTAMP NOT NULL,
+    duration_minutes INTEGER NOT NULL,
+    category TEXT,
+    notes TEXT,
+    is_completed INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users (id),
+    FOREIGN KEY (task_id) REFERENCES tasks (id)
+)
+'''
+
+# Virtual Pet table (虚拟宠物)
+PET_TABLE_SQL = '''
+CREATE TABLE IF NOT EXISTS pets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL UNIQUE,
+    pet_type TEXT DEFAULT 'cat', -- 'cat', 'dog', 'rabbit'
+    name TEXT DEFAULT 'Merize',
+    level INTEGER DEFAULT 1,
+    experience INTEGER DEFAULT 0,
+    hunger INTEGER DEFAULT 100, -- 0-100
+    mood INTEGER DEFAULT 100, -- 0-100
+    coins INTEGER DEFAULT 0, -- 游戏币
+    last_fed TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_interacted TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users (id)
+)
+'''
+
+# Team Member Statistics (HR游戏化 - 成员统计)
+TEAM_MEMBER_STAT_TABLE_SQL = '''
+CREATE TABLE IF NOT EXISTS team_member_stats (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    team_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    level INTEGER DEFAULT 1,
+    experience INTEGER DEFAULT 0,
+    points INTEGER DEFAULT 0,
+    total_hours REAL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (team_id) REFERENCES teams (id),
+    FOREIGN KEY (user_id) REFERENCES users (id),
+    UNIQUE(team_id, user_id)
+)
+'''
+
+# Team Achievement (HR游戏化 - 成就解锁)
+TEAM_ACHIEVEMENT_TABLE_SQL = '''
+CREATE TABLE IF NOT EXISTS team_achievements (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    team_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    achievement_key TEXT NOT NULL,
+    achievement_name TEXT NOT NULL,
+    unlocked_at TIMESTAMP NOT NULL,
+    points_reward INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (team_id) REFERENCES teams (id),
+    FOREIGN KEY (user_id) REFERENCES users (id),
+    UNIQUE(team_id, user_id, achievement_key)
+)
+'''
+
+# Pet items table (宠物道具/物品)
+PET_ITEMS_TABLE_SQL = '''
+CREATE TABLE IF NOT EXISTS pet_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    pet_id INTEGER NOT NULL,
+    item_type TEXT NOT NULL, -- 'food', 'toy', 'decoration'
+    item_key TEXT NOT NULL,
+    quantity INTEGER DEFAULT 1,
+    acquired_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (pet_id) REFERENCES pets (id)
+)
+'''

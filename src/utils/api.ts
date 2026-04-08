@@ -245,3 +245,253 @@ export async function updateActivity(
     duration_minutes: durationMinutes
   })
 }
+
+// ========== 新增 API: Tasks 任务 ==========
+
+export interface TaskDTO {
+  id: number
+  user_id: number
+  title: string
+  description?: string
+  category?: string
+  estimated_minutes: number
+  status: 'pending' | 'in_progress' | 'completed' | 'cancelled'
+  due_date?: string
+  completed_at?: string
+  created_at?: string
+  updated_at?: string
+}
+
+// 获取任务列表
+export async function getTasks(status?: string): Promise<TaskDTO[]> {
+  const res = await apiRequest<TaskDTO[]>(
+    `/api/tasks${status ? `?status=${status}` : ''}`,
+    'GET'
+  )
+  return res.code === 200 ? res.data : []
+}
+
+// 获取单个任务
+export async function getTask(taskId: number): Promise<TaskDTO | null> {
+  const res = await apiRequest<TaskDTO>(`/api/tasks/${taskId}`, 'GET')
+  return res.code === 200 ? res.data : null
+}
+
+// 创建任务
+export async function createTask(data: Partial<TaskDTO>): Promise<number> {
+  const res = await apiRequest<{ id: number }>('/api/tasks/create', 'POST', data)
+  return res.data.id
+}
+
+// 更新任务
+export async function updateTask(taskId: number, data: Partial<TaskDTO>): Promise<void> {
+  await apiRequest(`/api/tasks/${taskId}/update`, 'POST', data)
+}
+
+// 删除任务
+export async function deleteTask(taskId: number): Promise<void> {
+  await apiRequest(`/api/tasks/${taskId}/delete`, 'POST')
+}
+
+// 切换任务完成状态
+export async function toggleTaskCompleted(taskId: number): Promise<string> {
+  const res = await apiRequest<{ status: string }>(`/api/tasks/${taskId}/toggle`, 'POST')
+  return res.data.status
+}
+
+// ========== 新增 API: Timeblocks 时间块 ==========
+
+export interface TimeBlockDTO {
+  id: number
+  user_id: number
+  task_id?: number
+  title: string
+  start_time: string  // ISO datetime
+  end_time: string
+  duration_minutes: number
+  category?: string
+  notes?: string
+  is_completed: number
+  created_at?: string
+  updated_at?: string
+}
+
+// 获取指定日期时间块
+export async function getTimeblocks(date: string): Promise<TimeBlockDTO[]> {
+  const res = await apiRequest<TimeBlockDTO[]>(`/api/timeblocks?date=${date}`, 'GET')
+  return res.code === 200 ? res.data : []
+}
+
+// 创建时间块
+export async function createTimeblock(data: Partial<TimeBlockDTO>): Promise<number> {
+  const res = await apiRequest<{ id: number }>('/api/timeblocks/create', 'POST', data)
+  return res.data.id
+}
+
+// 更新时间块
+export async function updateTimeblock(blockId: number, data: Partial<TimeBlockDTO>): Promise<void> {
+  await apiRequest(`/api/timeblocks/${blockId}/update`, 'POST', data)
+}
+
+// 删除时间块
+export async function deleteTimeblock(blockId: number): Promise<void> {
+  await apiRequest(`/api/timeblocks/${blockId}/delete`, 'POST')
+}
+
+// 切换时间块完成状态
+export async function toggleTimeblockCompleted(blockId: number): Promise<number> {
+  const res = await apiRequest<{ is_completed: number }>(`/api/timeblocks/${blockId}/toggle`, 'POST')
+  return res.data.is_completed
+}
+
+// AI 建议日程安排
+export async function aiSuggestSchedule(
+  tasks: { title: string; estimated_minutes: number }[],
+  totalHoursAvailable: number
+): Promise<TimeBlockDTO[]> {
+  const res = await apiRequest<TimeBlockDTO[]>(
+    '/api/ai/suggest-schedule',
+    'POST',
+    { tasks, total_hours_available: totalHoursAvailable }
+  )
+  return res.code === 200 ? res.data : []
+}
+
+// ========== 新增 API: Virtual Pet 虚拟宠物 ==========
+
+export interface PetDTO {
+  id: number
+  user_id: number
+  pet_type: 'cat' | 'dog' | 'rabbit'
+  name: string
+  level: number
+  experience: number
+  hunger: number
+  mood: number
+  coins: number
+  last_fed?: string
+  last_interacted?: string
+  created_at?: string
+}
+
+// 获取宠物信息
+export async function getPet(): Promise<PetDTO> {
+  const res = await apiRequest<PetDTO>('/api/pet', 'GET')
+  return res.data
+}
+
+// 喂食
+export async function feedPet(foodType: string = 'normal'): Promise<{
+  hunger: number
+  mood: number
+  coins: number
+  leveled_up: boolean
+  new_level: number
+}> {
+  const res = await apiRequest('/api/pet/feed', 'POST', { food_type: foodType })
+  return res.data
+}
+
+// 互动
+export async function interactPet(petId: number): Promise<{
+  mood: number
+  experience_gained: number
+}> {
+  const res = await apiRequest('/api/pet/interact', 'POST', { pet_id: petId })
+  return res.data
+}
+
+// 重命名/更换宠物类型
+export async function renamePet(name: string, petType?: 'cat' | 'dog' | 'rabbit'): Promise<PetDTO> {
+  const res = await apiRequest<PetDTO>('/api/pet/rename', 'POST', { name, pet_type: petType })
+  return res.data
+}
+
+// 添加专注经验
+export async function addPetFocus(minutes: number): Promise<{
+  leveled_up: boolean
+  new_level: number
+  exp_gained: number
+  pet: PetDTO
+}> {
+  const res = await apiRequest('/api/pet/add-focus', 'POST', { minutes })
+  return res.data
+}
+
+// ========== 新增 API: AI Analysis AI分析 ==========
+
+export interface WeeklyReportData {
+  total_hours: number
+  by_category: { category: string; hours: number }[]
+  tasks_completed: number
+  tasks_total: number
+}
+
+// 生成周报告
+export async function generateWeeklyReport(data: WeeklyReportData): Promise<string> {
+  const res = await apiRequest<{ report: string }>('/api/ai/weekly-report', 'POST', data)
+  return res.data.report
+}
+
+// AI 分类活动（新火山引擎接口）
+export async function aiClassifyActivity(
+  appName: string,
+  windowTitle: string,
+  existingCategories: string[]
+): Promise<string> {
+  const res = await apiRequest<{ category: string }>(
+    '/api/ai/classify-activity',
+    'POST',
+    { app_name: appName, window_title: windowTitle, existing_categories: existingCategories }
+  )
+  return res.data.category
+}
+
+// 建议任务分类
+export async function aiSuggestCategory(title: string, description: string): Promise<string> {
+  const res = await apiRequest<{ category: string }>(
+    '/api/ai/suggest-category',
+    'POST',
+    { title, description }
+  )
+  return res.data.category
+}
+
+// ========== 新增 API: HR Gamification HR游戏化 ==========
+
+export interface TeamRankingItem {
+  user_id: number
+  user_name: string
+  level: number
+  points: number
+  total_hours: number
+  experience: number
+}
+
+// 获取团队排行榜
+export async function getTeamRanking(
+  teamId: number,
+  startDate: string,
+  endDate: string
+): Promise<TeamRankingItem[]> {
+  const res = await apiRequest<TeamRankingItem[]>(
+    `/api/team/ranking?team_id=${teamId}&start_date=${startDate}&end_date=${endDate}`,
+    'GET'
+  )
+  return res.code === 200 ? res.data : []
+}
+
+// 获取成员统计
+export async function getMemberStat(teamId: number): Promise<{
+  id: number
+  team_id: number
+  user_id: number
+  level: number
+  experience: number
+  points: number
+  total_hours: number
+  exp_to_next_level: number
+}> {
+  const res = await apiRequest(`/api/team/member-stat?team_id=${teamId}`, 'GET')
+  return res.data
+}

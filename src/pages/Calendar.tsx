@@ -1,10 +1,11 @@
 // 日历视图 - 模仿 Rize 原版设计
-// 按月浏览，点击日期查看当天统计
+// 按月浏览，点击日期查看当天统计 + 时间块规划
 
 import React, { useState, useEffect } from 'react'
 import { getActivitiesByDate, getStatsByDate, getMonthlyStats, Activity, DailyStats, deleteActivity, updateActivityCategory, createActivity, updateActivity } from '../utils/tracking'
 import Timeline from '../components/Timeline'
 import StatsCard from '../components/StatsCard'
+import TimeBlockPlanner from '../components/TimeBlockPlanner'
 import type { Theme } from '../App'
 
 interface CalendarProps {
@@ -558,6 +559,11 @@ const Calendar: React.FC<CalendarProps> = ({ theme }) => {
                   </div>
                 )}
               </>
+            )}
+
+            {/* 时间块规划 */}
+            {selectedDate && (
+              <TimeBlockPlanner selectedDate={selectedDate} theme={theme} />
             )}
           </div>
         )}

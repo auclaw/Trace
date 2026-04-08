@@ -6,6 +6,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import type { Theme } from '../App'
 import type { PomodoroData, PomodoroState } from '../utils/tracking'
+import { addPetFocus } from '../utils/api'
 
 interface FocusModeProps {
   theme: Theme
@@ -22,13 +23,17 @@ const FocusMode: React.FC<FocusModeProps> = ({ theme }) => {
     progress_percent: 0,
   })
   const [showSettings, setShowSettings] = useState(false)
+  const [showBreakReminder, setShowBreakReminder] = useState(false)
   const [workMinutes, setWorkMinutes] = useState(25)
   const [breakMinutes, setBreakMinutes] = useState(5)
   const [longBreakMinutes, setLongBreakMinutes] = useState(15)
   const [sessionsBeforeLongBreak, setSessionsBeforeLongBreak] = useState(4)
+  const [reminderThreshold, setReminderThreshold] = useState(45) // 连续专注提醒阈值 (分钟)
+  const [totalContinuousFocus, setTotalContinuousFocus] = useState(0) // 累计连续专注分钟
 
   const timerRef = useRef<number | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const lastReminderTime = useRef<number>(0) // 上次提醒时间，防止频繁提醒
 
   // 播放提示音
   const playNotification = useCallback(() => {
@@ -44,6 +49,11 @@ const FocusMode: React.FC<FocusModeProps> = ({ theme }) => {
 
     // 计时tick
     const tick = () => {
+      // 累计连续专注
+      if (pomodoro.state === 'Running') {
+        setTotalContinuousFocus(prev => prev + 1/60) // 每秒加 1/60 分钟
+      }
+
       setPomodoro(prev => {
         if (prev.state !== 'Running') return prev
 
@@ -63,6 +73,11 @@ const FocusMode: React.FC<FocusModeProps> = ({ theme }) => {
             newTotal = longBreakMinutes * 60
           }
 
+          // 给宠物增加经验，每完成一个番茄钟加 workMinutes 经验
+          addPetFocus(workMinutes).catch(err => {
+            console.error('添加宠物经验失败', err)
+          })
+
           return {
             ...prev,
             state: newState,
@@ -79,6 +94,19 @@ const FocusMode: React.FC<FocusModeProps> = ({ theme }) => {
           progress_percent: progress,
         }
       })
+
+      // 检查是否需要提醒休息
+      const now = Date.now()
+      if (
+        pomodoro.state === 'Running' &&
+        totalContinuousFocus >= reminderThreshold &&
+        !showBreakReminder &&
+        now - lastReminderTime.current > 10 * 60 * 1000 // 至少间隔 10 分钟才能提醒一次
+      ) {
+        playNotification()
+        setShowBreakReminder(true)
+        lastReminderTime.current = now
+      }
     }
 
     // 启动定时器
@@ -89,7 +117,42 @@ const FocusMode: React.FC<FocusModeProps> = ({ theme }) => {
         clearInterval(timerRef.current)
       }
     }
-  }, [playNotification, sessionsBeforeLongBreak, breakMinutes, longBreakMinutes])
+  }, [playNotification, sessionsBeforeLongBreak, breakMinutes, longBreakMinutes, reminderThreshold, totalContinuousFocus, showBreakReminder])
+
+  // 处理提醒弹窗 - 开始休息
+  const handleStartBreak = () => {
+    setShowBreakReminder(false)
+    // 当前会话立即结束，开始休息
+    setPomodoro(prev => {
+      const completed = prev.completed_sessions + 1
+      const isLongBreak = completed % sessionsBeforeLongBreak === 0
+      const newTotal = isLongBreak ? longBreakMinutes * 60 : breakMinutes * 60
+      return {
+        ...prev,
+        state: isLongBreak ? 'LongBreak' : 'Break',
+        remaining_seconds: newTotal,
+        total_seconds: newTotal,
+        completed_sessions: completed,
+        progress_percent: 100,
+      }
+    })
+    // 给宠物增加经验
+    const completedMinutes = workMinutes - (pomodoro.remaining_seconds / 60)
+    if (completedMinutes > 1) {
+      addPetFocus(Math.round(completedMinutes)).catch(err => {
+        console.error('添加宠物经验失败', err)
+      })
+    }
+    setTotalContinuousFocus(0)
+  }
+
+  // 处理提醒弹窗 - 推迟 5 分钟
+  const handleSnooze = () => {
+    setShowBreakReminder(false)
+    // 推迟提醒 5 分钟，重置连续计时从 0 开始
+    setTotalContinuousFocus(0)
+    lastReminderTime.current = Date.now()
+  }
 
   // 格式化时间为 mm:ss
   const formatTime = (seconds: number): string => {
@@ -435,6 +498,27 @@ const FocusMode: React.FC<FocusModeProps> = ({ theme }) => {
                   <span>6</span>
                 </div>
               </div>
+              <div>
+                <label className={`block text-sm font-medium mb-2 ${textColor} ${secondaryOpacity}`}>
+                  连续专注提醒: {reminderThreshold} 分钟
+                </label>
+                <input
+                  type="range"
+                  min="20"
+                  max="90"
+                  step="5"
+                  value={reminderThreshold}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value)
+                    setReminderThreshold(val)
+                  }}
+                  className="w-full accent-[var(--color-accent)]"
+                />
+                <div className={`flex justify-between text-xs ${textColor} ${secondaryOpacity}`}>
+                  <span>20m</span>
+                  <span>90m</span>
+                </div>
+              </div>
               <p className={`text-xs ${textColor} ${secondaryOpacity}`}>
                 💡 配置会保存在本地，刷新后生效
               </p>
@@ -464,6 +548,36 @@ const FocusMode: React.FC<FocusModeProps> = ({ theme }) => {
           <p>深度专注: 一次只做一件事，保持节奏比长时间更重要。</p>
           <p className="mt-1">完成多个番茄钟后，延长休息帮助精力恢复。</p>
         </div>
+
+        {/* 连续专注休息提醒弹窗 */}
+        {showBreakReminder && (
+          <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+            <div className={`${isDark ? 'bg-aether-dark-200' : 'bg-white'} rounded-2xl p-8 w-full max-w-lg border ${isDark ? 'border-[var(--color-border-subtle)]' : 'border-[var(--color-border-subtle)]'}`}>
+              <h2 className={`text-3xl font-bold ${isDark ? 'text-aether-text-dark-primary' : 'text-aether-text-primary'} mb-4`}>
+                Ready to take a break?
+              </h2>
+              <p className={`text-xl ${isDark ? 'text-aether-text-dark-secondary' : 'text-aether-text-secondary'} mb-8`}>
+                More than {reminderThreshold} minutes passed since you started working.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <button
+                  onClick={handleStartBreak}
+                  className="flex-1 px-6 py-4 bg-indigo-600 text-white rounded-full text-xl font-semibold hover:opacity-90 transition-colors"
+                >
+                  Start Break ({breakMinutes} min)
+                </button>
+                <button
+                  onClick={handleSnooze}
+                  className={`flex-1 px-6 py-4 rounded-full text-xl font-semibold ${
+                    isDark ? 'bg-aether-dark-300 text-aether-text-dark-primary' : 'bg-aether-200 text-aether-text-primary'
+                  } hover:opacity-90 transition-colors`}
+                >
+                  Snooze (5 min)
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

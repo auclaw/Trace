@@ -24,6 +24,13 @@ logger = setup_logger()
 app = Flask(__name__)
 CORS(app)
 
+# Initialize SQLAlchemy for ORM
+from config.settings import DATABASE_PATH
+app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{DATABASE_PATH}'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+from utils.database import db
+db.init_app(app)
+
 
 # ========== JWT工具函数 ==========
 def generate_token(user_id: int) -> str:
@@ -2141,6 +2148,334 @@ def browser_get_monthly_stats():
         'code': 200,
         'data': result
     })
+
+
+# ========== Tasks API ==========
+
+@app.route('/api/tasks', methods=['GET'])
+@require_subscription
+def list_tasks():
+    """Get all tasks for current user"""
+    user_id = request.user_id
+    status = request.args.get('status')
+    from services.task_service import TaskService
+    tasks = TaskService.list_tasks(user_id, status)
+    return jsonify({'code': 200, 'data': tasks})
+
+
+@app.route('/api/tasks/<int:task_id>', methods=['GET'])
+@require_subscription
+def get_task(task_id):
+    """Get a specific task"""
+    user_id = request.user_id
+    from services.task_service import TaskService
+    task = TaskService.get_task(task_id, user_id)
+    if not task:
+        return jsonify({'code': 404, 'msg': '任务不存在'})
+    return jsonify({'code': 200, 'data': task})
+
+
+@app.route('/api/tasks/create', methods=['POST'])
+@require_subscription
+def create_task():
+    """Create a new task"""
+    user_id = request.user_id
+    data = request.get_json()
+    from services.task_service import TaskService
+    task = TaskService.create_task(user_id, data)
+    return jsonify({'code': 200, 'data': {'id': task.id}})
+
+
+@app.route('/api/tasks/<int:task_id>/update', methods=['POST'])
+@require_subscription
+def update_task(task_id):
+    """Update an existing task"""
+    user_id = request.user_id
+    data = request.get_json()
+    from services.task_service import TaskService
+    task = TaskService.update_task(task_id, user_id, data)
+    if not task:
+        return jsonify({'code': 404, 'msg': '任务不存在'})
+    return jsonify({'code': 200, 'msg': '更新成功'})
+
+
+@app.route('/api/tasks/<int:task_id>/delete', methods=['POST'])
+@require_subscription
+def delete_task(task_id):
+    """Delete a task"""
+    user_id = request.user_id
+    from services.task_service import TaskService
+    success = TaskService.delete_task(task_id, user_id)
+    if not success:
+        return jsonify({'code': 404, 'msg': '任务不存在'})
+    return jsonify({'code': 200, 'msg': '删除成功'})
+
+
+@app.route('/api/tasks/<int:task_id>/toggle', methods=['POST'])
+@require_subscription
+def toggle_task(task_id):
+    """Toggle task completed status"""
+    user_id = request.user_id
+    from services.task_service import TaskService
+    task = TaskService.toggle_completed(task_id, user_id)
+    if not task:
+        return jsonify({'code': 404, 'msg': '任务不存在'})
+    return jsonify({'code': 200, 'data': {'status': task.status}})
+
+
+# ========== Timeblocks API ==========
+
+@app.route('/api/timeblocks', methods=['GET'])
+@require_subscription
+def get_timeblocks():
+    """Get timeblocks for a specific date"""
+    user_id = request.user_id
+    date = request.args.get('date')
+    from services.timeblock_service import TimeBlockService
+    blocks = TimeBlockService.get_timeblocks_by_date(user_id, date)
+    return jsonify({'code': 200, 'data': blocks})
+
+
+@app.route('/api/timeblocks/create', methods=['POST'])
+@require_subscription
+def create_timeblock():
+    """Create a new timeblock"""
+    user_id = request.user_id
+    data = request.get_json()
+    from services.timeblock_service import TimeBlockService
+    block = TimeBlockService.create_timeblock(user_id, data)
+    if not block:
+        return jsonify({'code': 400, 'msg': '创建失败'})
+    return jsonify({'code': 200, 'data': {'id': block.id}})
+
+
+@app.route('/api/timeblocks/<int:block_id>/update', methods=['POST'])
+@require_subscription
+def update_timeblock(block_id):
+    """Update an existing timeblock"""
+    user_id = request.user_id
+    data = request.get_json()
+    from services.timeblock_service import TimeBlockService
+    block = TimeBlockService.update_timeblock(block_id, user_id, data)
+    if not block:
+        return jsonify({'code': 404, 'msg': '时间块不存在'})
+    return jsonify({'code': 200, 'msg': '更新成功'})
+
+
+@app.route('/api/timeblocks/<int:block_id>/delete', methods=['POST'])
+@require_subscription
+def delete_timeblock(block_id):
+    """Delete a timeblock"""
+    user_id = request.user_id
+    from services.timeblock_service import TimeBlockService
+    success = TimeBlockService.delete_timeblock(block_id, user_id)
+    if not success:
+        return jsonify({'code': 404, 'msg': '时间块不存在'})
+    return jsonify({'code': 200, 'msg': '删除成功'})
+
+
+@app.route('/api/timeblocks/<int:block_id>/toggle', methods=['POST'])
+@require_subscription
+def toggle_timeblock(block_id):
+    """Toggle timeblock completed status"""
+    user_id = request.user_id
+    from services.timeblock_service import TimeBlockService
+    block = TimeBlockService.toggle_completed(block_id, user_id)
+    if not block:
+        return jsonify({'code': 404, 'msg': '时间块不存在'})
+    return jsonify({'code': 200, 'data': {'is_completed': block.is_completed}})
+
+
+@app.route('/api/ai/suggest-schedule', methods=['POST'])
+@require_subscription
+def suggest_schedule():
+    """AI suggests timeblock schedule based on tasks"""
+    user_id = request.user_id
+    data = request.get_json()
+    tasks = data.get('tasks', [])
+    total_hours = data.get('total_hours_available', 8.0)
+    from ai.analysis import suggest_timeblock_schedule
+    suggestions = suggest_timeblock_schedule(tasks, total_hours)
+    return jsonify({'code': 200, 'data': suggestions})
+
+
+# ========== Virtual Pet API ==========
+
+@app.route('/api/pet', methods=['GET'])
+@require_subscription
+def get_pet():
+    """Get user's pet info"""
+    user_id = request.user_id
+    from services.pet_service import PetService
+    pet = PetService.get_or_create(user_id)
+    return jsonify({'code': 200, 'data': PetService.to_dict(pet)})
+
+
+@app.route('/api/pet/feed', methods=['POST'])
+@require_subscription
+def feed_pet():
+    """Feed the pet"""
+    user_id = request.user_id
+    data = request.get_json()
+    food_type = data.get('food_type', 'normal')
+    from services.pet_service import PetService
+    pet = PetService.get_or_create(user_id)
+    result = PetService.feed(pet.id, user_id, food_type)
+    if not result:
+        return jsonify({'code': 400, 'msg': '喂食失败'})
+    return jsonify({'code': 200, 'data': result})
+
+
+@app.route('/api/pet/interact', methods=['POST'])
+@require_subscription
+def interact_pet():
+    """Interact with the pet"""
+    user_id = request.user_id
+    data = request.get_json()
+    pet_id = data.get('pet_id')
+    from services.pet_service import PetService
+    result = PetService.interact(pet_id, user_id)
+    if not result:
+        return jsonify({'code': 404, 'msg': '宠物不存在'})
+    return jsonify({'code': 200, 'data': result})
+
+
+@app.route('/api/pet/rename', methods=['POST'])
+@require_subscription
+def rename_pet():
+    """Rename the pet"""
+    user_id = request.user_id
+    data = request.get_json()
+    name = data.get('name', '')
+    pet_type = data.get('pet_type')
+    from services.pet_service import PetService
+    pet = PetService.get_or_create(user_id)
+    if name:
+        pet.name = name
+    if pet_type:
+        pet.pet_type = pet_type
+    from utils.database import db
+    db.session.commit()
+    return jsonify({'code': 200, 'data': PetService.to_dict(pet)})
+
+
+@app.route('/api/pet/add-focus', methods=['POST'])
+@require_subscription
+def add_focus_to_pet():
+    """Add experience based on focus minutes"""
+    user_id = request.user_id
+    data = request.get_json()
+    minutes = data.get('minutes', 0)
+    from services.pet_service import PetService
+    result = PetService.add_experience(user_id, minutes)
+    return jsonify({'code': 200, 'data': result})
+
+
+@app.route('/api/pet/penalize-distraction', methods=['POST'])
+@require_subscription
+def penalize_distraction(user_id):
+    """Penalize pet mood for distraction"""
+    user_id = request.user_id
+    data = request.get_json()
+    minutes = data.get('minutes', 0)
+    from services.pet_service import PetService
+    pet = PetService.get_or_create(user_id)
+    PetService.penalize_mood(pet, minutes)
+    from utils.database import db
+    db.session.commit()
+    return jsonify({'code': 200, 'data': PetService.to_dict(pet)})
+
+
+# ========== AI Analysis API ==========
+
+@app.route('/api/ai/weekly-report', methods=['POST'])
+@require_subscription
+def generate_weekly_report():
+    """Generate weekly efficiency report"""
+    user_id = request.user_id
+    data = request.get_json()
+    from ai.analysis import generate_weekly_report
+    report = generate_weekly_report(data)
+    return jsonify({'code': 200, 'data': {'report': report}})
+
+
+@app.route('/api/ai/personal-analysis', methods=['POST'])
+@require_subscription
+def personal_efficiency_analysis():
+    """Generate personal efficiency profile analysis"""
+    user_id = request.user_id
+    data = request.get_json()
+    from ai.analysis import analyze_personal_efficiency
+    analysis = analyze_personal_efficiency(data)
+    return jsonify({'code': 200, 'data': {'analysis': analysis}})
+
+
+# ========== HR Gamification API ==========
+
+@app.route('/api/team/ranking', methods=['GET'])
+@require_subscription
+def get_weekly_ranking():
+    """Get weekly team ranking"""
+    user_id = request.user_id
+    team_id = request.args.get('team_id', type=int)
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    from services.hr_service import HRService
+    ranking = HRService.get_weekly_ranking(team_id, start_date, end_date)
+    return jsonify({'code': 200, 'data': ranking})
+
+
+@app.route('/api/team/member-stat', methods=['GET'])
+@require_subscription
+def get_member_stat():
+    """Get member stats"""
+    user_id = request.user_id
+    team_id = request.args.get('team_id', type=int)
+    from services.hr_service import HRService
+    stat = HRService.get_or_create_member_stat(team_id, user_id)
+    return jsonify({'code': 200, 'data': HRService.to_dict(stat)})
+
+
+@app.route('/api/team/add-experience', methods=['POST'])
+@require_subscription
+def add_team_experience():
+    """Add experience/points to member from logged hours"""
+    user_id = request.user_id
+    data = request.get_json()
+    team_id = data.get('team_id')
+    hours = data.get('hours', 0)
+    from services.hr_service import HRService
+    result = HRService.add_experience(team_id, user_id, hours)
+    return jsonify({'code': 200, 'data': result})
+
+
+# ========== AI Classification (new - Volcano Engine) ==========
+
+@app.route('/api/ai/classify-activity', methods=['POST'])
+@require_subscription
+def classify_activity():
+    """Classify activity using AI"""
+    user_id = request.user_id
+    data = request.get_json()
+    app_name = data.get('app_name', '')
+    window_title = data.get('window_title', '')
+    existing_categories = data.get('existing_categories', [])
+    from ai.classification import classify_activity
+    category = classify_activity(app_name, window_title, existing_categories)
+    return jsonify({'code': 200, 'data': {'category': category}})
+
+
+@app.route('/api/ai/suggest-category', methods=['POST'])
+@require_subscription
+def suggest_category():
+    """Suggest category for a task"""
+    user_id = request.user_id
+    data = request.get_json()
+    title = data.get('title', '')
+    description = data.get('description', '')
+    from ai.classification import suggest_category
+    category = suggest_category(title, description)
+    return jsonify({'code': 200, 'data': {'category': category}})
 
 
 if __name__ == '__main__':

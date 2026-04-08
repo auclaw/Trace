@@ -14,7 +14,18 @@ QWEN_API_KEY = os.environ.get('QWEN_API_KEY', '')
 DEEPSEEK_API_KEY = os.environ.get('DEEPSEEK_API_KEY', '')
 MINIMAX_API_KEY = os.environ.get('MINIMAX_API_KEY', '')
 KIMI_API_KEY = os.environ.get('KIMI_API_KEY', '')
-VOLCENGINE_API_KEY = os.environ.get('VOLCENGINE_API_KEY', '')
+
+# Volcano Engine AI configuration
+VOLC_API_KEY = os.environ.get('VOLC_API_KEY', '')
+VOLC_API_SECRET = os.environ.get('VOLC_API_SECRET', '')
+VOLC_ENDPOINT = os.environ.get('VOLC_ENDPOINT', 'https://aquasearch.volcengineapi.com')
+
+# Model configuration for different tasks
+MODEL_CONFIG = {
+    'classification': os.environ.get('VOLC_MODEL_CLASSIFICATION', 'doubao-1.5-lite-32k'),
+    'analysis': os.environ.get('VOLC_MODEL_ANALYSIS', 'doubao-1.5-pro-32k'),
+    'complex': os.environ.get('VOLC_MODEL_COMPLEX', 'doubao-1.5-pro-128k'),
+}
 
 # Ollama local model - for local inference without API tokens
 # OLLAMA_API_KEY can be empty for local use

@@ -16,6 +16,7 @@ import FlowBlocks from './pages/FlowBlocks'
 import TeamFocus from './pages/TeamFocus'
 import AiSummary from './pages/AiSummary'
 import DeepWorkStats from './pages/DeepWorkStats'
+import VirtualPet from './pages/VirtualPet'
 import Sidebar from './components/Sidebar'
 import OnboardingTour, { getDefaultTourSteps } from './components/OnboardingTour'
 import { checkTrackingStatus, toggleTracking } from './utils/tracking'
@@ -279,6 +280,7 @@ function AppContent() {
           <Route path="/team-focus" element={<TeamFocus theme={theme} />} />
           <Route path="/ai-summary" element={<AiSummary theme={theme} />} />
           <Route path="/deep-work-stats" element={<DeepWorkStats theme={theme} />} />
+          <Route path="/pet" element={<VirtualPet theme={theme} />} />
           <Route path="/settings" element={<Settings theme={theme} toggleTheme={toggleTheme} colorTheme={colorTheme} onColorThemeChange={setColorTheme} backgroundSkin={backgroundSkin} onBackgroundSkinChange={setBackgroundSkin} isTracking={isTracking} onTrackingChange={setIsTracking} />} />
           <Route path="/style-preview" element={<StylePreview />} />
         </Routes>
