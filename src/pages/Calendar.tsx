@@ -1,695 +1,540 @@
-// 日历视图 - 模仿 Rize 原版设计
-// 按月浏览，点击日期查看当天统计 + 时间块规划
+import { useState, useEffect, useMemo, useCallback } from 'react'
+import { Card, Modal, Button, Badge, EmptyState, Input } from '../components/ui'
+import { useAppStore } from '../store/useAppStore'
+import useTheme from '../hooks/useTheme'
+import { CATEGORY_COLORS } from '../config/themes'
+import dataService from '../services/dataService'
+import type { ActivityCategory, TimeBlock } from '../services/dataService'
 
-import React, { useState, useEffect } from 'react'
-import { getActivitiesByDate, getStatsByDate, getMonthlyStats, Activity, DailyStats, deleteActivity, updateActivityCategory, createActivity, updateActivity } from '../utils/tracking'
-import Timeline from '../components/Timeline'
-import StatsCard from '../components/StatsCard'
-import TimeBlockPlanner from '../components/TimeBlockPlanner'
-import type { Theme } from '../App'
+// ── Helpers ──
 
-interface CalendarProps {
-  theme: Theme
+function todayStr(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-// 简单日历组件，显示当月日期，点击日期查看那天数据
-// 后续可以扩展显示当月时间统计热力图
+function pad2(n: number): string {
+  return String(n).padStart(2, '0')
+}
 
-const Calendar: React.FC<CalendarProps> = ({ theme }) => {
-  const isDark = theme === 'dark'
-  const titleColor = isDark ? 'text-aether-text-dark-primary' : 'text-aether-text-primary'
-  const textColor = isDark ? 'text-aether-text-dark-secondary' : 'text-aether-text-secondary'
-  const cardBg = isDark ? 'bg-aether-dark-200' : 'bg-aether-200'
-  const borderColor = isDark ? 'border-[var(--color-border-subtle)]' : 'border-[var(--color-border-subtle)]'
-  const borderLight = isDark ? 'border-[var(--color-border-subtle)]' : 'border-[var(--color-border-subtle)]'
-  const bodyText = isDark ? 'text-aether-text-dark-secondary' : 'text-aether-text-secondary'
-  const hoverBg = isDark ? 'hover:bg-aether-dark-300' : 'hover:bg-aether-300'
-  const inputBg = isDark ? 'bg-aether-dark-300 border-[var(--color-border-subtle)] text-aether-text-dark-primary' : 'bg-aether-200 border-[var(--color-border-subtle)] text-aether-text-primary'
+function dateStr(y: number, m: number, d: number): string {
+  return `${y}-${pad2(m)}-${pad2(d)}`
+}
+
+function formatMinutes(mins: number): string {
+  const h = Math.floor(mins / 60)
+  const m = Math.round(mins % 60)
+  if (h > 0 && m > 0) return `${h}小时${m}分`
+  if (h > 0) return `${h}小时`
+  return `${m}分钟`
+}
+
+function extractTime(isoStr: string): string {
+  // "2026-04-08T09:00:00" -> "09:00"
+  const t = isoStr.split('T')[1]
+  return t ? t.slice(0, 5) : ''
+}
+
+const WEEKDAY_LABELS = ['一', '二', '三', '四', '五', '六', '日']
+const CATEGORIES = Object.keys(CATEGORY_COLORS) as ActivityCategory[]
+
+// ── Heatmap intensity ──
+
+function getHeatmapStyle(minutes: number): React.CSSProperties {
+  if (minutes <= 0) return { backgroundColor: 'var(--color-bg-surface-2)' }
+  // Map minutes to opacity: 1-60 -> 0.2, 60-180 -> 0.4, 180-360 -> 0.65, 360+ -> 0.9
+  let opacity = 0.15
+  if (minutes > 0 && minutes < 60) opacity = 0.2
+  else if (minutes < 180) opacity = 0.4
+  else if (minutes < 360) opacity = 0.65
+  else opacity = 0.9
+  return {
+    backgroundColor: `color-mix(in srgb, var(--color-accent) ${Math.round(opacity * 100)}%, var(--color-bg-surface-2))`,
+  }
+}
+
+// ── Main Component ──
+
+export default function Calendar() {
+  const { accentColor: _ } = useTheme()
+  void _
+
+  const activities = useAppStore((s) => s.activities)
+  const loadActivities = useAppStore((s) => s.loadActivities)
+  const addActivity = useAppStore((s) => s.addActivity)
+
   const today = new Date()
-  const [currentMonth, setCurrentMonth] = useState(today.getMonth())
-  const [currentYear, setCurrentYear] = useState(today.getFullYear())
-  const [selectedDate, setSelectedDate] = useState<Date | null>(today)
-  const [activities, setActivities] = useState<Activity[]>([])
-  const [stats, setStats] = useState<DailyStats | null>(null)
-  const [monthlyStats, setMonthlyStats] = useState<Map<number, number>>(new Map())
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [showModal, setShowModal] = useState(false)
-  const [editingActivity, setEditingActivity] = useState<Activity | null>(null)
-  // 表单状态
+  const [year, setYear] = useState(today.getFullYear())
+  const [month, setMonth] = useState(today.getMonth() + 1) // 1-indexed
+  const [selectedDate, setSelectedDate] = useState(todayStr())
+  const [heatmap, setHeatmap] = useState<Record<string, number>>({})
+  const [dayTimeBlocks, setDayTimeBlocks] = useState<TimeBlock[]>([])
+
+  // Add activity modal
+  const [showAddModal, setShowAddModal] = useState(false)
   const [formName, setFormName] = useState('')
-  const [formWindowTitle, setFormWindowTitle] = useState('')
-  const [formCategory, setFormCategory] = useState('')
-  const [formStartHours, setFormStartHours] = useState('9')
-  const [formStartMinutes, setFormStartMinutes] = useState('0')
-  const [formDurationHours, setFormDurationHours] = useState('0')
-  const [formDurationMinutes, setFormDurationMinutes] = useState('30')
+  const [formCategory, setFormCategory] = useState<ActivityCategory>('工作')
+  const [formStartTime, setFormStartTime] = useState('09:00')
+  const [formEndTime, setFormEndTime] = useState('10:00')
 
-  // 格式化日期为 YYYY-MM-DD
-  const formatDateYMD = (date: Date): string => {
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
-    return `${year}-${month}-${day}`
-  }
-
-  // 加载选中日期的数据
-  const loadSelectedDateData = async (date: Date) => {
-    try {
-      setLoading(true)
-      setError(null)
-      const dateStr = formatDateYMD(date)
-      const [activitiesData, statsData] = await Promise.all([
-        getActivitiesByDate(dateStr),
-        getStatsByDate(dateStr)
-      ])
-      setActivities(activitiesData)
-      setStats(statsData)
-    } catch (err: any) {
-      console.error('加载日期数据失败', err)
-      setError(err.toString() || '加载数据失败')
-      setActivities([])
-      setStats(null)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // 重新加载数据
-  const retryLoad = () => {
-    if (selectedDate) {
-      loadSelectedDateData(selectedDate)
-    }
-  }
-
-  // 生成当月日期
-  const generateCalendarDays = () => {
-    const firstDay = new Date(currentYear, currentMonth, 1)
-    const lastDay = new Date(currentYear, currentMonth + 1, 0)
-    const startingDay = firstDay.getDay() // 0 = Sunday
-    const daysInMonth = lastDay.getDate()
-
-    const days: (number | null)[] = Array(startingDay).fill(null)
-    for (let i = 1; i <= daysInMonth; i++) {
-      days.push(i)
-    }
-
-    return days
-  }
-
-  const prevMonth = () => {
-    if (currentMonth === 0) {
-      setCurrentMonth(11)
-      setCurrentYear(currentYear - 1)
-    } else {
-      setCurrentMonth(currentMonth - 1)
-    }
-  }
-
-  const nextMonth = () => {
-    if (currentMonth === 11) {
-      setCurrentMonth(0)
-      setCurrentYear(currentYear + 1)
-    } else {
-      setCurrentMonth(currentMonth + 1)
-    }
-  }
-
-  const isToday = (day: number) => {
-    return (
-      today.getDate() === day &&
-      today.getMonth() === currentMonth &&
-      today.getFullYear() === currentYear
-    )
-  }
-
-  const isSelected = (day: number) => {
-    if (!selectedDate) return false
-    return (
-      selectedDate.getDate() === day &&
-      selectedDate.getMonth() === currentMonth &&
-      selectedDate.getFullYear() === currentYear
-    )
-  }
-
-  // 获取热力图背景色根据专注时长 - 使用橙色系适配整体设计
-  const getHeatmapColor = (day: number): string => {
-    const minutes = monthlyStats.get(day) || 0
-    if (minutes === 0) {
-      return isDark ? 'bg-[var(--color-border-subtle)]/20' : 'bg-[var(--color-border-light)]'
-    }
-    // 根据时长分等级: 0, 1-30min, 30-120min, 120-240min, 240+ - orange scale
-    if (isDark) {
-      if (minutes < 30) return 'bg-[rgba(255,79,0,0.2)]'
-      if (minutes < 120) return 'bg-[rgba(255,79,0,0.35)]'
-      if (minutes < 240) return 'bg-[rgba(255,79,0,0.55)]'
-      return 'bg-[rgba(255,79,0,0.8)]'
-    } else {
-      if (minutes < 30) return 'bg-[rgba(255,79,0,0.1)]'
-      if (minutes < 120) return 'bg-[rgba(255,79,0,0.2)]'
-      if (minutes < 240) return 'bg-[rgba(255,79,0,0.35)]'
-      return 'bg-[rgba(255,79,0,0.5)]'
-    }
-  }
-
-  const monthNames = [
-    '一月', '二月', '三月', '四月', '五月', '六月',
-    '七月', '八月', '九月', '十月', '十一月', '十二月'
-  ]
-
-  const weekDays = ['日', '一', '二', '三', '四', '五', '六']
-
-  // 加载月度热力图统计
+  // Load heatmap when month changes
   useEffect(() => {
-    const loadMonthlyStats = async () => {
-      try {
-        const data = await getMonthlyStats(currentYear, currentMonth + 1);
-        const statsMap = new Map<number, number>();
-        data.forEach(item => {
-          statsMap.set(item.day, item.total_minutes);
-        });
-        setMonthlyStats(statsMap);
-      } catch (err) {
-        console.error('加载月度统计失败', err);
-      }
-    };
-    loadMonthlyStats();
-  }, [currentYear, currentMonth]);
+    const data = dataService.getMonthlyHeatmap(year, month)
+    setHeatmap(data)
+  }, [year, month])
 
-  // 当选中日期变化时，加载数据
+  // Load activities + time blocks when selected date changes
   useEffect(() => {
-    if (selectedDate) {
-      loadSelectedDateData(selectedDate)
+    loadActivities(selectedDate)
+    setDayTimeBlocks(dataService.getTimeBlocks(selectedDate))
+  }, [selectedDate, loadActivities])
+
+  // Calendar grid data
+  const calendarDays = useMemo(() => {
+    const firstDay = new Date(year, month - 1, 1)
+    const daysInMonth = new Date(year, month, 0).getDate()
+    // JS getDay: 0=Sun, we want Mon=0
+    let startWeekday = firstDay.getDay() - 1
+    if (startWeekday < 0) startWeekday = 6
+
+    const cells: (number | null)[] = []
+    for (let i = 0; i < startWeekday; i++) cells.push(null)
+    for (let d = 1; d <= daysInMonth; d++) cells.push(d)
+    return cells
+  }, [year, month])
+
+  const todayDate = todayStr()
+
+  // Navigation
+  const prevMonth = useCallback(() => {
+    if (month === 1) {
+      setMonth(12)
+      setYear((y) => y - 1)
     } else {
-      setActivities([])
-      setStats(null)
+      setMonth((m) => m - 1)
     }
-  }, [selectedDate])
+  }, [month])
 
-  const formatDurationMinutes = (minutes: number) => {
-    const hours = Math.floor(minutes / 60)
-    const mins = Math.round(minutes % 60)
-    if (hours > 0) {
-      return `${hours}小时${mins > 0 ? ` ${mins}分` : ''}`
+  const nextMonth = useCallback(() => {
+    if (month === 12) {
+      setMonth(1)
+      setYear((y) => y + 1)
+    } else {
+      setMonth((m) => m + 1)
     }
-    return `${Math.round(minutes)}分钟`
+  }, [month])
+
+  const goToday = useCallback(() => {
+    const t = new Date()
+    setYear(t.getFullYear())
+    setMonth(t.getMonth() + 1)
+    setSelectedDate(todayStr())
+  }, [])
+
+  // Computed duration for add modal
+  const computedDuration = useMemo(() => {
+    const [sh, sm] = formStartTime.split(':').map(Number)
+    const [eh, em] = formEndTime.split(':').map(Number)
+    const startMins = (sh || 0) * 60 + (sm || 0)
+    const endMins = (eh || 0) * 60 + (em || 0)
+    return Math.max(0, endMins - startMins)
+  }, [formStartTime, formEndTime])
+
+  // Save activity
+  const handleSaveActivity = () => {
+    const name = formName.trim()
+    if (!name || computedDuration <= 0) return
+
+    const startTime = `${selectedDate}T${formStartTime}:00`
+    const endTime = `${selectedDate}T${formEndTime}:00`
+
+    addActivity({
+      name,
+      category: formCategory,
+      startTime,
+      endTime,
+      duration: computedDuration,
+      isManual: true,
+    })
+
+    // Refresh heatmap
+    setHeatmap(dataService.getMonthlyHeatmap(year, month))
+    setShowAddModal(false)
   }
 
-  const handleChangeCategory = async (id: string, currentCategory: string | null) => {
-    const newCategory = prompt('请输入新分类', currentCategory || '')
-    if (newCategory !== null && selectedDate) {
-      await updateActivityCategory(id, newCategory)
-      await loadSelectedDateData(selectedDate)
-    }
-  }
-
-  const handleDelete = async (id: string) => {
-    if (confirm('确定要删除这条记录吗？') && selectedDate) {
-      await deleteActivity(id)
-      await loadSelectedDateData(selectedDate)
-    }
-  }
-
-  // 计算分类统计
-  const getCategoryStats = () => {
-    const categoryMap: {[key: string]: number} = {}
-    for (const act of activities) {
-      const cat = act.category || '未分类'
-      categoryMap[cat] = (categoryMap[cat] || 0) + act.durationMinutes
-    }
-    const catStats = Object.entries(categoryMap).map(([category, duration]) => ({
-      category, duration
-    })).sort((a, b) => b.duration - a.duration)
-    return catStats
-  }
-
-  const categoryStats = getCategoryStats()
-  const totalMinutes = categoryStats.reduce((sum, item) => sum + item.duration, 0)
-
-  // 打开添加活动模态框
   const openAddModal = () => {
-    if (!selectedDate) return
-    // 默认设置当前时间
-    const now = new Date()
-    setFormStartHours(now.getHours().toString())
-    setFormStartMinutes(now.getMinutes().toString())
-    setEditingActivity(null)
     setFormName('')
-    setFormWindowTitle('')
-    setFormCategory('')
-    setFormDurationHours('0')
-    setFormDurationMinutes('30')
-    setShowModal(true)
+    setFormCategory('工作')
+    const now = new Date()
+    const h = pad2(now.getHours())
+    const m = pad2(Math.floor(now.getMinutes() / 15) * 15)
+    setFormStartTime(`${h}:${m}`)
+    const endH = pad2(Math.min(23, now.getHours() + 1))
+    setFormEndTime(`${endH}:${m}`)
+    setShowAddModal(true)
   }
 
-  // 打开编辑活动模态框
-  const openEditModal = (activity: Activity) => {
-    if (!selectedDate) return
-    setEditingActivity(activity)
-    setFormName(activity.name)
-    setFormWindowTitle(activity.windowTitle)
-    setFormCategory(activity.category || '')
-    // 计算开始时间小时分钟
-    const date = new Date(activity.startTimeMs)
-    setFormStartHours(date.getHours().toString())
-    setFormStartMinutes(date.getMinutes().toString())
-    // 计算持续时长
-    const duration = activity.durationMinutes
-    const hours = Math.floor(duration / 60)
-    const mins = Math.round(duration % 60)
-    setFormDurationHours(hours.toString())
-    setFormDurationMinutes(mins.toString())
-    setShowModal(true)
-  }
+  // Selected day stats
+  const dayTotalMinutes = activities.reduce((s, a) => s + a.duration, 0)
 
-  // 提交表单
-  const handleSubmit = async () => {
-    if (!selectedDate) return
+  // Sort activities by start time
+  const sortedActivities = useMemo(
+    () => [...activities].sort((a, b) => a.startTime.localeCompare(b.startTime)),
+    [activities]
+  )
 
-    try {
-      const hours = parseInt(formStartHours) || 0
-      const mins = parseInt(formStartMinutes) || 0
-
-      // 计算开始时间毫秒
-      const selectedDayStart = new Date(selectedDate)
-      selectedDayStart.setHours(hours, mins, 0, 0)
-      const startTimeMs = selectedDayStart.getTime()
-
-      const durHours = parseInt(formDurationHours) || 0
-      const durMins = parseInt(formDurationMinutes) || 0
-      const durationMinutes = durHours * 60 + durMins
-
-      const category = formCategory.trim() || null
-
-      if (editingActivity) {
-        // 更新现有活动
-        await updateActivity(
-          editingActivity.id,
-          formName || undefined,
-          formWindowTitle || undefined,
-          category,
-          startTimeMs,
-          durationMinutes > 0 ? durationMinutes : undefined
-        )
-      } else {
-        // 创建新活动
-        await createActivity(
-          formName || '手动添加',
-          formWindowTitle || formName || '手动添加活动',
-          category,
-          startTimeMs,
-          durationMinutes > 0 ? durationMinutes : 1
-        )
-      }
-
-      // 关闭模态框并刷新
-      setShowModal(false)
-      await loadSelectedDateData(selectedDate)
-    } catch (err) {
-      console.error('保存活动失败', err)
-      alert('保存失败: ' + err)
-    }
-  }
-
-  const closeModal = () => {
-    setShowModal(false)
-    setEditingActivity(null)
-  }
+  // Parse selected date for display
+  const selectedDateObj = new Date(selectedDate + 'T00:00:00')
+  const selectedDateLabel = selectedDateObj.toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'long',
+  })
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h2 className={`text-2xl font-bold ${titleColor} mb-2`}>日历视图</h2>
-        <p className={textColor}>
-          按日期浏览历史活动，点击日期查看当天统计
-        </p>
+    <div className="p-6 lg:p-8 max-w-5xl mx-auto">
+      {/* Month Navigation */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={prevMonth}
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-surface-2)] transition-colors cursor-pointer"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M10 4l-4 4 4 4" />
+            </svg>
+          </button>
+          <h1 className="text-xl font-bold text-[var(--color-text-primary)] tabular-nums min-w-[8rem] text-center">
+            {year}年{month}月
+          </h1>
+          <button
+            onClick={nextMonth}
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-surface-2)] transition-colors cursor-pointer"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M6 4l4 4-4 4" />
+            </svg>
+          </button>
+        </div>
+        <Button variant="secondary" size="sm" onClick={goToday}>
+          今天
+        </Button>
       </div>
 
-      <div className={`${cardBg} rounded-xl p-6 border ${borderColor}`}>
-        {/* 日历头部 */}
-        <div className="flex flex-wrap items-center justify-between mb-6 gap-4">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={prevMonth}
-              className={`p-2 ${hoverBg} rounded-lg transition-colors ${textColor}`}
-            >
-              ←
-            </button>
-            <h3 className={`text-xl font-semibold ${titleColor}`}>
-              {currentYear} 年 {monthNames[currentMonth]}
-            </h3>
-            <button
-              onClick={nextMonth}
-              className={`p-2 ${hoverBg} rounded-lg transition-colors ${textColor}`}
-            >
-              →
-            </button>
-          </div>
-          {/* 热力图图例 - 移动到更显眼位置 */}
-          <div className="flex items-center gap-2">
-            <span className={`text-xs ${textColor}`}>活动强度: </span>
-            <div className="flex gap-1">
-              <div className={`w-4 h-4 rounded ${isDark ? 'bg-[var(--color-border-subtle)]/20' : 'bg-[var(--color-border-light)]'}`}></div>
-              <div className={`w-4 h-4 rounded ${isDark ? 'bg-[rgba(255,79,0,0.2)]' : 'bg-[rgba(255,79,0,0.1)]'}`}></div>
-              <div className={`w-4 h-4 rounded ${isDark ? 'bg-[rgba(255,79,0,0.35)]' : 'bg-[rgba(255,79,0,0.2)]'}`}></div>
-              <div className={`w-4 h-4 rounded ${isDark ? 'bg-[rgba(255,79,0,0.55)]' : 'bg-[rgba(255,79,0,0.35)]'}`}></div>
-              <div className={`w-4 h-4 rounded ${isDark ? 'bg-[rgba(255,79,0,0.8)]' : 'bg-[rgba(255,79,0,0.5)]'}`}></div>
-            </div>
-            <span className={`text-xs ${textColor}`}>少 → 多</span>
-          </div>
-        </div>
-
-        {/* 星期头部 */}
+      {/* Calendar Grid */}
+      <Card padding="md" className="mb-6">
+        {/* Weekday headers */}
         <div className="grid grid-cols-7 gap-1 mb-2">
-          {weekDays.map(day => (
+          {WEEKDAY_LABELS.map((label) => (
             <div
-              key={day}
-              className={`text-center text-sm font-medium ${textColor} py-2`}
+              key={label}
+              className="text-center text-xs font-medium text-[var(--color-text-muted)] py-1.5"
             >
-              {day}
+              {label}
             </div>
           ))}
         </div>
 
-        {/* 日期网格 - 限制最大宽度420px在桌面 */}
-        <div className="grid grid-cols-7 gap-1 max-w-[420px] mx-auto">
-          {generateCalendarDays().map((day, index) => {
+        {/* Day cells */}
+        <div className="grid grid-cols-7 gap-1">
+          {calendarDays.map((day, idx) => {
             if (day === null) {
-              return <div key={index} className="aspect-square"></div>
+              return <div key={`empty-${idx}`} className="aspect-square" />
             }
 
+            const ds = dateStr(year, month, day)
+            const mins = heatmap[ds] || 0
+            const isToday = ds === todayDate
+            const isSelected = ds === selectedDate
+            const hasDot = mins > 0
+
             return (
-              <div
-                key={index}
-                className={`
-                  aspect-square flex items-center justify-center rounded-lg cursor-pointer text-sm transition-colors
-                  ${getHeatmapColor(day)}
-                  ${isToday(day) ? (isDark ? 'ring-2 ring-[var(--color-accent)] text-[var(--color-accent)]' : 'ring-2 ring-[var(--color-accent)] bg-[rgba(255,79,0,0.1)] font-semibold') : ''}
-                  ${isSelected(day) ? 'bg-[var(--color-accent)] text-[#fffefb] font-semibold ring-2 ring-[rgba(255,79,0,0.3)]' : ''}
-                  ${!isSelected(day) && !isToday(day) ? hoverBg : ''}
-                  ${!isSelected(day) && !isToday(day) && (monthlyStats.get(day) || 0) === 0 && isDark ? 'text-aether-text-dark-muted' : ''}
-                  ${!isSelected(day) && !isToday(day) && (monthlyStats.get(day) || 0) === 0 && !isDark ? 'text-aether-text-muted' : ''}
-                  ${!isSelected(day) && !isToday(day) && (monthlyStats.get(day) || 0) > 0 && isDark ? 'text-aether-text-dark-primary' : ''}
-                  ${!isSelected(day) && !isToday(day) && (monthlyStats.get(day) || 0) > 0 && !isDark ? 'text-aether-text-primary' : ''}
-                `}
-                onClick={() => {
-                  const date = new Date(currentYear, currentMonth, day)
-                  setSelectedDate(date)
-                }}
-                title={monthlyStats.get(day) ? `${Math.round(monthlyStats.get(day)! / 60 * 10) / 10} 小时` : '无活动'}
+              <button
+                key={ds}
+                type="button"
+                onClick={() => setSelectedDate(ds)}
+                title={mins > 0 ? formatMinutes(mins) : '无活动'}
+                className={[
+                  'aspect-square rounded-lg flex flex-col items-center justify-center relative',
+                  'text-sm transition-all duration-150 cursor-pointer',
+                  isSelected
+                    ? 'ring-2 ring-[var(--color-accent)] font-semibold'
+                    : 'hover:ring-1 hover:ring-[var(--color-border-subtle)]',
+                  isToday && !isSelected ? 'font-bold' : '',
+                ].join(' ')}
+                style={isSelected ? { ...getHeatmapStyle(mins), boxShadow: '0 0 0 2px var(--color-accent)' } : getHeatmapStyle(mins)}
               >
-                {day}
-              </div>
+                <span
+                  className={[
+                    isSelected
+                      ? 'text-[var(--color-text-primary)]'
+                      : isToday
+                        ? 'text-[var(--color-accent)]'
+                        : mins > 0
+                          ? 'text-[var(--color-text-primary)]'
+                          : 'text-[var(--color-text-muted)]',
+                  ].join(' ')}
+                >
+                  {day}
+                </span>
+                {hasDot && !isSelected && (
+                  <span
+                    className="absolute bottom-1 w-1 h-1 rounded-full"
+                    style={{ backgroundColor: 'var(--color-accent)' }}
+                  />
+                )}
+                {isToday && (
+                  <span
+                    className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full"
+                    style={{ backgroundColor: 'var(--color-accent)' }}
+                  />
+                )}
+              </button>
             )
           })}
         </div>
 
-        {/* 选中日期统计 */}
-        {selectedDate && (
-          <div className={`mt-6 pt-6 border-t ${borderLight}`}>
-            <h4 className={`font-semibold ${titleColor} mb-2`}>
-              {selectedDate.toLocaleDateString('zh-CN', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                weekday: 'long'
-              })}
-            </h4>
+        {/* Legend */}
+        <div className="flex items-center justify-end gap-2 mt-3 pt-3 border-t border-[var(--color-border-subtle)]/30">
+          <span className="text-[10px] text-[var(--color-text-muted)]">少</span>
+          <div className="flex gap-0.5">
+            {[0, 30, 120, 300, 480].map((m) => (
+              <div key={m} className="w-3 h-3 rounded-sm" style={getHeatmapStyle(m)} />
+            ))}
+          </div>
+          <span className="text-[10px] text-[var(--color-text-muted)]">多</span>
+        </div>
+      </Card>
 
-            {/* 错误状态 */}
-            {error && (
-              <div className={`${isDark ? 'bg-red-900/20 border-red-800' : 'bg-red-50 border border-red-200'} rounded-lg p-4 mb-4`}>
-                <p className={`text-sm ${isDark ? 'text-red-400' : 'text-red-700'} mb-2`}>加载数据失败: {error}</p>
-                <button
-                  onClick={retryLoad}
-                  className="px-3 py-1 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors"
-                >
-                  重试
-                </button>
-              </div>
-            )}
+      {/* Selected Day Detail Panel */}
+      <Card padding="md">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-base font-semibold text-[var(--color-text-primary)]">
+              {selectedDateLabel}
+            </h2>
+            <span className="text-xs text-[var(--color-text-muted)]">
+              共 {formatMinutes(dayTotalMinutes)}
+            </span>
+          </div>
+          <Button size="sm" onClick={openAddModal}>
+            添加活动
+          </Button>
+        </div>
 
-            {/* 加载中 */}
-            {loading && (
-              <div className={`text-center py-8 ${textColor}`}>
-                加载中...
-              </div>
-            )}
-
-            {/* 数据展示 */}
-            {!loading && !error && (
-              <>
-                {/* 时间线 */}
-                {activities.length > 0 && (
-                  <div className="mb-6">
-                    <Timeline
-                      activities={activities}
-                      onEditCategory={handleChangeCategory}
-                      onDelete={handleDelete}
-                      isDark={isDark}
-                    />
-                  </div>
-                )}
-
-                {/* 统计卡片 */}
-                <StatsCard
-                  theme={theme}
-                  totalMinutes={totalMinutes}
-                  activitiesCount={activities.length}
-                  totalCategories={stats?.totalCategories || 0}
-                  formatDurationMinutes={formatDurationMinutes}
-                />
-
-                {/* 添加活动按钮 */}
-                {selectedDate && (
-                  <div className="mb-4">
-                    <button
-                      onClick={openAddModal}
-                      className="px-4 py-2 bg-[var(--color-accent)] text-[#fffefb] text-sm rounded-lg hover:opacity-90 transition-colors"
-                    >
-                      + 手动添加活动
-                    </button>
-                  </div>
-                )}
-
-                {/* 时间线 */}
-                {activities.length > 0 && (
-                  <div className="mb-6">
-                    <Timeline
-                      activities={activities}
-                      onEditCategory={handleChangeCategory}
-                      onDelete={handleDelete}
-                      isDark={isDark}
-                    />
-                  </div>
-                )}
-
-                {/* 分类统计 */}
-                {categoryStats.length > 0 && (
-                  <div className={`${cardBg} rounded-xl p-4 border ${borderColor} mb-6`}>
-                    <h5 className={`text-lg font-semibold ${titleColor} mb-3`}>分类统计</h5>
-                    <div className="space-y-2">
-                      {categoryStats
-                        .map(stat => (
-                          <div key={stat.category} className="flex items-center justify-between">
-                            <div className="flex items-center">
-                              <span className={`text-base font-medium ${titleColor}`}>{stat.category}</span>
-                            </div>
-                            <span className={bodyText}>{formatDurationMinutes(stat.duration)}</span>
+        {/* Activity Timeline */}
+        {sortedActivities.length === 0 && dayTimeBlocks.length === 0 ? (
+          <EmptyState
+            icon="📅"
+            title="当日无活动"
+            description="点击上方按钮添加活动记录"
+            action={<Button size="sm" onClick={openAddModal}>添加活动</Button>}
+          />
+        ) : (
+          <div className="space-y-5">
+            {/* Activities */}
+            {sortedActivities.length > 0 && (
+              <div>
+                <h3 className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">
+                  活动记录
+                </h3>
+                <div className="space-y-1.5">
+                  {sortedActivities.map((act) => {
+                    const color = CATEGORY_COLORS[act.category] || CATEGORY_COLORS['其他']
+                    return (
+                      <div
+                        key={act.id}
+                        className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-[var(--color-bg-surface-2)]/50 transition-colors"
+                      >
+                        <div
+                          className="w-1 h-8 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: color }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-[var(--color-text-primary)] truncate">
+                              {act.name}
+                            </span>
+                            <span
+                              className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium leading-none flex-shrink-0"
+                              style={{ backgroundColor: `${color}20`, color }}
+                            >
+                              {act.category}
+                            </span>
                           </div>
-                        ))
-                      }
-                    </div>
-                  </div>
-                )}
-
-                {/* 活动列表（可编辑） */}
-                {activities.length > 0 && (
-                  <div className={`${cardBg} rounded-xl p-4 border ${borderColor}`}>
-                    <h5 className={`text-lg font-semibold ${titleColor} mb-3`}>活动列表</h5>
-                    <div className="space-y-2 max-h-80 overflow-y-auto">
-                      {activities.slice().sort((a, b) => a.startTimeMs - b.startTimeMs).map(act => {
-                        const start = new Date(act.startTimeMs)
-                        const startTimeStr = `${start.getHours().toString().padStart(2, '0')}:${start.getMinutes().toString().padStart(2, '0')}`
-                        return (
-                          <div key={act.id} className={`flex items-center justify-between p-2 border ${borderLight} rounded ${hoverBg} transition-colors`}>
-                            <div className="flex-1 min-w-0">
-                              <div className={`text-sm font-medium ${titleColor} truncate`}>
-                                {startTimeStr} • {act.windowTitle}
-                              </div>
-                              <div className={textColor}>
-                                {act.name} • {act.category || '未分类'} • {formatDurationMinutes(act.durationMinutes)}
-                              </div>
-                            </div>
-                            <div className="flex space-x-1 ml-2">
-                              <button
-                                onClick={() => openEditModal(act)}
-                                className={`px-2 py-1 text-xs ${isDark ? 'bg-[rgba(255,79,0,0.2)] text-[var(--color-accent)] hover:bg-[rgba(255,79,0,0.3)]' : 'bg-[rgba(255,79,0,0.1)] text-[var(--color-accent)]'} rounded hover:bg-[rgba(255,79,0,0.2)] transition-colors`}
-                              >
-                                编辑
-                              </button>
-                              <button
-                                onClick={() => handleDelete(act.id)}
-                                className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 transition-colors"
-                              >
-                                删除
-                              </button>
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* 无数据 */}
-                {activities.length === 0 && (
-                  <div className={`text-center py-8 ${textColor}`}>
-                    该日期暂无活动记录
-                    {selectedDate && (
-                      <div className="mt-4">
-                        <button
-                          onClick={openAddModal}
-                          className="px-4 py-2 bg-[var(--color-accent)] text-[#fffefb] text-sm rounded-lg hover:opacity-90 transition-colors"
-                        >
-                          添加第一条活动
-                        </button>
+                          <span className="text-xs text-[var(--color-text-muted)] tabular-nums">
+                            {extractTime(act.startTime)} - {extractTime(act.endTime)} ({formatMinutes(act.duration)})
+                          </span>
+                        </div>
                       </div>
-                    )}
-                  </div>
-                )}
-              </>
+                    )
+                  })}
+                </div>
+              </div>
             )}
 
-            {/* 时间块规划 */}
-            {selectedDate && (
-              <TimeBlockPlanner selectedDate={selectedDate} theme={theme} />
+            {/* Time Blocks */}
+            {dayTimeBlocks.length > 0 && (
+              <div>
+                <h3 className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">
+                  时间块计划
+                </h3>
+                <div className="space-y-1.5">
+                  {dayTimeBlocks.map((block) => {
+                    const color = CATEGORY_COLORS[block.category] || CATEGORY_COLORS['其他']
+                    return (
+                      <div
+                        key={block.id}
+                        className={[
+                          'flex items-center gap-3 py-2 px-3 rounded-lg',
+                          block.completed ? 'opacity-60' : '',
+                        ].join(' ')}
+                      >
+                        <div
+                          className="w-1 h-8 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: color }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={[
+                                'text-sm font-medium truncate',
+                                block.completed
+                                  ? 'line-through text-[var(--color-text-muted)]'
+                                  : 'text-[var(--color-text-primary)]',
+                              ].join(' ')}
+                            >
+                              {block.title}
+                            </span>
+                            {block.completed && (
+                              <Badge variant="success" size="sm">已完成</Badge>
+                            )}
+                          </div>
+                          <span className="text-xs text-[var(--color-text-muted)] tabular-nums">
+                            {extractTime(block.startTime)} - {extractTime(block.endTime)}
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
             )}
           </div>
         )}
+      </Card>
 
-        {/* 添加/编辑活动模态框 */}
-        {showModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className={`${cardBg} rounded-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto border ${borderColor}`}>
-              <h3 className={`text-xl font-semibold ${titleColor} mb-4`}>
-                {editingActivity ? '编辑活动' : '添加手动活动'}
-              </h3>
+      {/* Add Activity Modal */}
+      <Modal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        title="添加活动"
+        size="sm"
+        footer={
+          <>
+            <Button variant="secondary" size="sm" onClick={() => setShowAddModal(false)}>
+              取消
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleSaveActivity}
+              disabled={!formName.trim() || computedDuration <= 0}
+            >
+              保存
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-5">
+          {/* Name */}
+          <Input
+            label="活动名称"
+            value={formName}
+            onChange={setFormName}
+            placeholder="例如：前端开发"
+          />
 
-              <div className="space-y-4">
-                <div>
-                  <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1`}>应用名称</label>
-                  <input
-                    type="text"
-                    value={formName}
-                    onChange={(e) => setFormName(e.target.value)}
-                    placeholder="例如: Google Chrome"
-                    className={`w-full px-3 py-2 border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] ${inputBg}`}
-                  />
-                </div>
-
-                <div>
-                  <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1`}>窗口标题</label>
-                  <input
-                    type="text"
-                    value={formWindowTitle}
-                    onChange={(e) => setFormWindowTitle(e.target.value)}
-                    placeholder="例如: GitHub - 代码仓库"
-                    className={`w-full px-3 py-2 border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] ${inputBg}`}
-                  />
-                </div>
-
-                <div>
-                  <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1`}>分类</label>
-                  <input
-                    type="text"
-                    value={formCategory}
-                    onChange={(e) => setFormCategory(e.target.value)}
-                    placeholder="例如: 开发、工作、学习"
-                    className={`w-full px-3 py-2 border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] ${inputBg}`}
-                  />
-                </div>
-
-                <div>
-                  <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1`}>开始时间</label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <input
-                        type="number"
-                        min="0"
-                        max="23"
-                        value={formStartHours}
-                        onChange={(e) => setFormStartHours(e.target.value)}
-                        placeholder="时"
-                        className={`w-full px-3 py-2 border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] ${inputBg}`}
-                      />
-                      <span className={`text-xs ${textColor}`}>小时 (0-23)</span>
-                    </div>
-                    <div>
-                      <input
-                        type="number"
-                        min="0"
-                        max="59"
-                        value={formStartMinutes}
-                        onChange={(e) => setFormStartMinutes(e.target.value)}
-                        placeholder="分"
-                        className={`w-full px-3 py-2 border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] ${inputBg}`}
-                      />
-                      <span className={`text-xs ${textColor}`}>分钟 (0-59)</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1`}>持续时长</label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <input
-                        type="number"
-                        min="0"
-                        value={formDurationHours}
-                        onChange={(e) => setFormDurationHours(e.target.value)}
-                        placeholder="时"
-                        className={`w-full px-3 py-2 border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] ${inputBg}`}
-                      />
-                      <span className={`text-xs ${textColor}`}>小时</span>
-                    </div>
-                    <div>
-                      <input
-                        type="number"
-                        min="0"
-                        max="59"
-                        value={formDurationMinutes}
-                        onChange={(e) => setFormDurationMinutes(e.target.value)}
-                        placeholder="分"
-                        className={`w-full px-3 py-2 border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] ${inputBg}`}
-                      />
-                      <span className={`text-xs ${textColor}`}>分钟</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex gap-3 mt-6 justify-end">
-                <button
-                  onClick={closeModal}
-                  className={`px-4 py-2 ${isDark ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'text-gray-700 bg-gray-100'} rounded-lg hover:bg-gray-200 transition-colors`}
-                >
-                  取消
-                </button>
-                <button
-                  onClick={handleSubmit}
-                  className="px-4 py-2 bg-[var(--color-accent)] text-[#fffefb] rounded-lg hover:opacity-90 transition-colors"
-                >
-                  {editingActivity ? '保存修改' : '添加活动'}
-                </button>
-              </div>
+          {/* Category */}
+          <div>
+            <label className="block text-[10px] font-medium text-[var(--color-text-muted)] mb-2">
+              分类
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {CATEGORIES.map((cat) => {
+                const color = CATEGORY_COLORS[cat]
+                const isActive = formCategory === cat
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setFormCategory(cat)}
+                    className={[
+                      'px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-150 cursor-pointer',
+                      isActive
+                        ? 'ring-1 ring-offset-1 ring-offset-[var(--color-bg-surface-1)]'
+                        : 'opacity-70 hover:opacity-100',
+                    ].join(' ')}
+                    style={{
+                      backgroundColor: `${color}${isActive ? '30' : '15'}`,
+                      color,
+                      ...(isActive ? { boxShadow: `0 0 0 1px ${color}` } : {}),
+                    }}
+                  >
+                    {cat}
+                  </button>
+                )
+              })}
             </div>
           </div>
-        )}
-      </div>
+
+          {/* Time inputs */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[10px] font-medium text-[var(--color-text-muted)] mb-1.5">
+                开始时间
+              </label>
+              <input
+                type="time"
+                value={formStartTime}
+                onChange={(e) => setFormStartTime(e.target.value)}
+                className={[
+                  'w-full px-3 py-2 rounded-lg text-sm',
+                  'bg-[var(--color-bg-surface-2)] text-[var(--color-text-primary)]',
+                  'border border-[var(--color-border-subtle)]/50',
+                  'focus:outline-none focus:border-[var(--color-accent)]',
+                  'transition-colors',
+                ].join(' ')}
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-medium text-[var(--color-text-muted)] mb-1.5">
+                结束时间
+              </label>
+              <input
+                type="time"
+                value={formEndTime}
+                onChange={(e) => setFormEndTime(e.target.value)}
+                className={[
+                  'w-full px-3 py-2 rounded-lg text-sm',
+                  'bg-[var(--color-bg-surface-2)] text-[var(--color-text-primary)]',
+                  'border border-[var(--color-border-subtle)]/50',
+                  'focus:outline-none focus:border-[var(--color-accent)]',
+                  'transition-colors',
+                ].join(' ')}
+              />
+            </div>
+          </div>
+
+          {/* Duration display */}
+          <div className="text-sm text-[var(--color-text-secondary)]">
+            时长：
+            <span className="font-semibold text-[var(--color-text-primary)]">
+              {computedDuration > 0 ? formatMinutes(computedDuration) : '---'}
+            </span>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }
-
-export default Calendar

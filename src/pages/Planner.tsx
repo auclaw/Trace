@@ -1,697 +1,608 @@
-// 今日计划 - 滴答清单风格增强
-// 支持项目分类、子任务、重复任务
+import { useState, useEffect, useCallback } from 'react'
+import { Card, Modal, Button, Progress, Badge, EmptyState, Input } from '../components/ui'
+import { useAppStore } from '../store/useAppStore'
+import type { Task, Subtask, TaskStatus, RepeatType } from '../services/dataService'
+import useTheme from '../hooks/useTheme'
+import { PRIORITY_COLORS } from '../config/themes'
 
-import React, { useState, useEffect, useCallback } from 'react'
-import {
-  getTodayPlannedTasks,
-  addPlannedTask,
-  updatePlannedTask,
-  deletePlannedTask,
-  aiRescheduleTasks,
-  getTaskActualTime,
-  PlannedTask,
-  SubTask,
-  RepeatType
-} from '../utils/planner'
-import type { Theme } from '../App'
+// --- helpers ---
 
-import { v4 as uuidv4 } from 'uuid'
+type FilterTab = 'all' | 'pending' | 'in_progress' | 'completed'
 
-interface PlannerProps {
-  theme: Theme
+const FILTER_LABELS: Record<FilterTab, string> = {
+  all: '全部',
+  pending: '待办',
+  in_progress: '进行中',
+  completed: '已完成',
 }
 
-const Planner: React.FC<PlannerProps> = ({ theme }) => {
-  const isDark = theme === 'dark'
-  const titleColor = isDark ? 'text-aether-text-dark-primary' : 'text-aether-text-primary'
-  const textColor = isDark ? 'text-aether-text-dark-secondary' : 'text-aether-text-secondary'
-  const cardBg = isDark ? 'bg-aether-dark-200' : 'bg-aether-200'
-  const borderColor = isDark ? 'border-[var(--color-border-subtle)]' : 'border-[var(--color-border-subtle)]'
-  const labelText = isDark ? 'text-aether-text-dark-secondary' : 'text-aether-text-secondary'
-  const inputBg = isDark ? 'bg-aether-dark-300 border-[var(--color-border-subtle)] text-aether-text-dark-primary' : 'bg-aether-200 border-[var(--color-border-subtle)] text-aether-text-primary'
-  const [tasks, setTasks] = useState<PlannedTask[]>([])
-  const [loading, setLoading] = useState(true)
-  const [showAddForm, setShowAddForm] = useState(false)
-  const [newTitle, setNewTitle] = useState('')
-  const [newPriority, setNewPriority] = useState(3)
-  const [newEstimated, setNewEstimated] = useState(60)
-  const [newProject, setNewProject] = useState('')
-  const [newRepeatType, setNewRepeatType] = useState<RepeatType>('none')
-  const [rescheduling, setRescheduling] = useState(false)
+// used in the filter-tab counts area if needed in future
+// const PRIORITY_LABELS: Record<number, string> = { 1: '最低', 2: '低', 3: '中', 4: '高', 5: '最高' }
+
+const REPEAT_LABELS: Record<RepeatType, string> = {
+  none: '不重复',
+  daily: '每日',
+  weekly: '每周',
+  monthly: '每月',
+}
+
+function todayStr(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function todayDisplay(): string {
+  return new Date().toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'long',
+  })
+}
+
+function fmtDuration(mins: number): string {
+  if (mins <= 0) return '0m'
+  const h = Math.floor(mins / 60)
+  const m = Math.round(mins % 60)
+  if (h > 0) return `${h}h${m > 0 ? ` ${m}m` : ''}`
+  return `${m}m`
+}
+
+// --- blank task form state ---
+interface TaskForm {
+  title: string
+  priority: 1 | 2 | 3 | 4 | 5
+  project: string
+  estimatedMinutes: number
+  dueDate: string
+  repeatType: RepeatType
+  subtasks: Subtask[]
+}
+
+const EMPTY_FORM: TaskForm = {
+  title: '',
+  priority: 3,
+  project: '',
+  estimatedMinutes: 60,
+  dueDate: todayStr(),
+  repeatType: 'none',
+  subtasks: [],
+}
+
+// ============================================================
+// Component
+// ============================================================
+
+export default function Planner() {
+  const { accentColor } = useTheme()
+
+  const tasks = useAppStore((s) => s.tasks)
+  const loadTasks = useAppStore((s) => s.loadTasks)
+  const addTask = useAppStore((s) => s.addTask)
+  const updateTask = useAppStore((s) => s.updateTask)
+  const deleteTask = useAppStore((s) => s.deleteTask)
+
+  const [filter, setFilter] = useState<FilterTab>('all')
+  const [modalOpen, setModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set())
-
-  // 编辑状态
-  const [editingTitle, setEditingTitle] = useState('')
-  const [editingPriority, setEditingPriority] = useState(3)
-  const [editingEstimated, setEditingEstimated] = useState(60)
-  const [editingProject, setEditingProject] = useState('')
-  const [editingRepeatType, setEditingRepeatType] = useState<RepeatType>('none')
+  const [form, setForm] = useState<TaskForm>({ ...EMPTY_FORM })
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('')
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
-  const loadTasks = useCallback(async () => {
-    try {
-      let data = await getTodayPlannedTasks()
-
-      // 为每个未完成任务更新实际用时
-      for (let i = 0; i < data.length; i++) {
-        if (!data[i].completed) {
-          try {
-            const actualTime = await getTaskActualTime(data[i].id)
-            data[i].actualMinutes = actualTime
-          } catch (e) {
-            console.error('获取实际时间失败', e)
-          }
-        }
-      }
-
-      // 按优先级排序（1 最高，排前面）
-      data.sort((a, b) => a.priority - b.priority)
-      setTasks(data)
-    } catch (error) {
-      console.error('加载任务失败', error)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
+  // --- load tasks on mount ---
   useEffect(() => {
     loadTasks()
-    // 每分钟刷新一次实际用时
-    const interval = setInterval(() => {
-      loadTasks()
-    }, 60000)
-    return () => clearInterval(interval)
   }, [loadTasks])
 
-  const handleAddTask = async () => {
-    if (!newTitle.trim()) return
-    try {
-      await addPlannedTask(
-        newTitle.trim(),
-        newPriority,
-        newEstimated,
-        newProject.trim() || undefined,
-        newRepeatType === 'none' ? undefined : newRepeatType
-      )
-      await loadTasks()
-      setNewTitle('')
-      setNewProject('')
-      setNewRepeatType('none')
-      setShowAddForm(false)
-    } catch (error) {
-      console.error('添加任务失败', error)
-    }
-  }
+  // --- filtered tasks ---
+  const filtered = tasks.filter((t) => {
+    if (filter === 'all') return true
+    return t.status === filter
+  })
 
-  const handleEditTask = async (task: PlannedTask) => {
-    try {
-      await updatePlannedTask(task.id, {
-        title: editingTitle,
-        priority: editingPriority,
-        estimated_minutes: editingEstimated,
-        project: editingProject.trim() || null,
-        repeat_type: editingRepeatType === 'none' ? null : editingRepeatType
-      })
-      await loadTasks()
-      setEditingId(null)
-    } catch (error) {
-      console.error('更新任务失败', error)
-    }
-  }
-
-  const handleToggleCompleted = async (task: PlannedTask) => {
-    try {
-      await updatePlannedTask(task.id, { completed: !task.completed })
-      await loadTasks()
-    } catch (error) {
-      console.error('更新任务失败', error)
-    }
-  }
-
-  const handleDeleteTask = async (id: string) => {
-    if (confirm('确定删除这个任务吗？')) {
-      try {
-        await deletePlannedTask(id)
-        await loadTasks()
-      } catch (error) {
-        console.error('删除任务失败', error)
-      }
-    }
-  }
-
-  const handleAiReschedule = async () => {
-    try {
-      setRescheduling(true)
-      const reordered = await aiRescheduleTasks(tasks, new Date())
-      // 更新顺序到后端
-      for (let i = 0; i < reordered.length; i++) {
-        await updatePlannedTask(reordered[i].id, {
-          priority: i + 1
-        })
-      }
-      await loadTasks()
-      alert('AI 已重新排序完成！')
-    } catch (error) {
-      console.error('AI 重排失败', error)
-      alert('重排失败: ' + (error as Error).message)
-    } finally {
-      setRescheduling(false)
-    }
-  }
-
-  const startEdit = (task: PlannedTask) => {
-    setEditingId(task.id)
-    setEditingTitle(task.title)
-    setEditingPriority(task.priority)
-    setEditingEstimated(task.estimatedMinutes)
-    setEditingProject(task.project || '')
-    setEditingRepeatType(task.repeat_type || 'none')
-  }
-
-  const cancelEdit = () => {
+  // --- open add modal ---
+  const openAdd = useCallback(() => {
     setEditingId(null)
-  }
+    setForm({ ...EMPTY_FORM, dueDate: todayStr() })
+    setNewSubtaskTitle('')
+    setModalOpen(true)
+  }, [])
 
-  // 切换展开/收起子任务
-  const toggleExpand = (taskId: string) => {
-    const newExpanded = new Set(expandedTasks)
-    if (newExpanded.has(taskId)) {
-      newExpanded.delete(taskId)
+  // --- open edit modal ---
+  const openEdit = useCallback((task: Task) => {
+    setEditingId(task.id)
+    setForm({
+      title: task.title,
+      priority: task.priority,
+      project: task.project,
+      estimatedMinutes: task.estimatedMinutes,
+      dueDate: task.dueDate,
+      repeatType: task.repeatType,
+      subtasks: task.subtasks.map((s) => ({ ...s })),
+    })
+    setNewSubtaskTitle('')
+    setModalOpen(true)
+  }, [])
+
+  // --- save (add or update) ---
+  const handleSave = useCallback(() => {
+    if (!form.title.trim()) return
+    if (editingId) {
+      updateTask(editingId, {
+        title: form.title.trim(),
+        priority: form.priority,
+        project: form.project.trim(),
+        estimatedMinutes: form.estimatedMinutes,
+        dueDate: form.dueDate,
+        repeatType: form.repeatType,
+        subtasks: form.subtasks,
+      })
     } else {
-      newExpanded.add(taskId)
+      addTask({
+        title: form.title.trim(),
+        priority: form.priority,
+        status: 'pending' as TaskStatus,
+        estimatedMinutes: form.estimatedMinutes,
+        actualMinutes: 0,
+        project: form.project.trim(),
+        subtasks: form.subtasks,
+        dueDate: form.dueDate,
+        repeatType: form.repeatType,
+        createdAt: new Date().toISOString(),
+      })
     }
-    setExpandedTasks(newExpanded)
-  }
+    setModalOpen(false)
+  }, [editingId, form, addTask, updateTask])
 
-  // 添加子任务
-  const addSubtask = async (task: PlannedTask) => {
+  // --- toggle task status ---
+  const toggleStatus = useCallback(
+    (task: Task) => {
+      const next: TaskStatus = task.status === 'completed' ? 'pending' : 'completed'
+      updateTask(task.id, { status: next })
+    },
+    [updateTask]
+  )
+
+  // --- delete with confirmation ---
+  const handleDelete = useCallback(
+    (id: string) => {
+      deleteTask(id)
+      setConfirmDeleteId(null)
+    },
+    [deleteTask]
+  )
+
+  // --- toggle expand ---
+  const toggleExpand = useCallback((id: string) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }, [])
+
+  // --- subtask helpers inside form ---
+  const addFormSubtask = useCallback(() => {
     if (!newSubtaskTitle.trim()) return
-    const currentSubtasks = task.subtasks || []
-    const newSubtasks: SubTask[] = [
-      ...currentSubtasks,
-      { id: uuidv4(), title: newSubtaskTitle.trim(), completed: false }
-    ]
-    try {
-      await updatePlannedTask(task.id, { subtasks: newSubtasks })
-      await loadTasks()
-      setNewSubtaskTitle('')
-    } catch (error) {
-      console.error('添加子任务失败', error)
-    }
-  }
+    setForm((f) => ({
+      ...f,
+      subtasks: [
+        ...f.subtasks,
+        { id: crypto.randomUUID(), title: newSubtaskTitle.trim(), completed: false },
+      ],
+    }))
+    setNewSubtaskTitle('')
+  }, [newSubtaskTitle])
 
-  // 切换子任务完成状态
-  const toggleSubtask = async (task: PlannedTask, subtaskId: string) => {
-    if (!task.subtasks) return
-    const newSubtasks = task.subtasks.map(st =>
-      st.id === subtaskId ? { ...st, completed: !st.completed } : st
-    )
-    try {
-      await updatePlannedTask(task.id, { subtasks: newSubtasks })
-      await loadTasks()
-    } catch (error) {
-      console.error('更新子任务失败', error)
-    }
-  }
+  const toggleFormSubtask = useCallback((sid: string) => {
+    setForm((f) => ({
+      ...f,
+      subtasks: f.subtasks.map((s) => (s.id === sid ? { ...s, completed: !s.completed } : s)),
+    }))
+  }, [])
 
-  // 删除子任务
-  const deleteSubtask = async (task: PlannedTask, subtaskId: string) => {
-    if (!task.subtasks) return
-    const newSubtasks = task.subtasks.filter(st => st.id !== subtaskId)
-    try {
-      await updatePlannedTask(task.id, { subtasks: newSubtasks })
-      await loadTasks()
-    } catch (error) {
-      console.error('删除子任务失败', error)
-    }
-  }
-
-  const formatDuration = (minutes: number) => {
-    if (minutes === 0) return '0m'
-    const hours = Math.floor(minutes / 60)
-    const mins = Math.round(minutes % 60)
-    if (hours > 0) {
-      return `${hours}h${mins > 0 ? ` ${mins}m` : ''}`
-    }
-    return `${mins}m`
-  }
-
-  const getPriorityColor = (priority: number) => {
-    switch (priority) {
-      case 1: return 'bg-red-100 text-red-700'
-      case 2: return 'bg-orange-100 text-orange-700'
-      case 3: return 'bg-yellow-100 text-yellow-700'
-      case 4: return 'bg-[rgba(255,79,0,0.15)] text-[var(--color-accent)]'
-      case 5: return 'bg-[var(--color-border-light)] text-[var(--color-text-secondary)]'
-      default: return 'bg-[var(--color-border-light)] text-[var(--color-text-secondary)]'
-    }
-  }
-
-  const getPriorityLabel = (priority: number) => {
-    switch (priority) {
-      case 1: return '最高'
-      case 2: return '高'
-      case 3: return '中'
-      case 4: return '低'
-      case 5: return '最低'
-      default: return '中'
-    }
-  }
-
-  const getRepeatLabel = (type?: RepeatType) => {
-    if (!type || type === 'none') return '不重复'
-    const map: Record<string, string> = {
-      daily: '每日',
-      weekly: '每周',
-      monthly: '每月'
-    }
-    return map[type]
-  }
-
-  const totalEstimated = tasks.reduce((sum, t) => sum + t.estimatedMinutes, 0)
-  const totalActual = tasks.reduce((sum, t) => sum + t.actualMinutes, 0)
-  const completedCount = tasks.filter(t => t.completed).length
-  const totalCount = tasks.length
+  const removeFormSubtask = useCallback((sid: string) => {
+    setForm((f) => ({
+      ...f,
+      subtasks: f.subtasks.filter((s) => s.id !== sid),
+    }))
+  }, [])
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-2">
-          <h2 className={`text-2xl font-bold ${titleColor}`}>今日计划</h2>
+    <div className="p-6 md:p-8 max-w-4xl mx-auto">
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between mb-2">
+        <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">今日计划</h1>
+        <Button onClick={openAdd}>添加任务</Button>
+      </div>
+      <p className="text-sm text-[var(--color-text-muted)] mb-6">{todayDisplay()}</p>
+
+      {/* ── Filter Tabs ── */}
+      <div className="flex gap-2 mb-6 overflow-x-auto">
+        {(Object.keys(FILTER_LABELS) as FilterTab[]).map((key) => (
           <button
-            onClick={() => setShowAddForm(!showAddForm)}
-            className="px-4 py-2 bg-primary text-white rounded-xl hover:bg-primary/90 transition-all duration-200 transform hover:scale-[1.02]"
+            key={key}
+            onClick={() => setFilter(key)}
+            className={[
+              'px-4 py-1.5 rounded-full text-sm font-medium transition-all cursor-pointer whitespace-nowrap',
+              filter === key
+                ? 'bg-[var(--color-accent)] text-white'
+                : 'bg-[var(--color-bg-surface-2)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]',
+            ].join(' ')}
           >
-            + 添加任务
+            {FILTER_LABELS[key]}
           </button>
-        </div>
-        <p className={textColor}>
-          {new Date().toLocaleDateString('zh-CN', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            weekday: 'long'
-          })}
-        </p>
+        ))}
       </div>
 
-      {/* 统计卡片 */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className={`${cardBg} rounded-xl p-6 border ${borderColor} transition-all duration-200`}>
-          <div className={`text-sm font-medium ${textColor} mb-1`}>总任务</div>
-          <div className={`text-3xl font-bold ${titleColor}`}>
-            {completedCount} / {totalCount}
-          </div>
-        </div>
-        <div className={`${cardBg} rounded-xl p-6 border ${borderColor} transition-all duration-200`}>
-          <div className={`text-sm font-medium ${textColor} mb-1`}>预估总时间</div>
-          <div className={`text-3xl font-bold ${titleColor}`}>
-            {formatDuration(totalEstimated)}
-          </div>
-        </div>
-        <div className={`${cardBg} rounded-xl p-6 border ${borderColor} transition-all duration-200`}>
-          <div className={`text-sm font-medium ${textColor} mb-1`}>实际已用</div>
-          <div className="text-3xl font-bold text-primary">
-            {formatDuration(totalActual)}
-          </div>
-        </div>
-        <div className="bg-gradient-to-br from-primary to-success rounded-xl p-6 text-white transition-all duration-200">
-          <div className="text-sm font-medium text-orange-100 mb-1">进度</div>
-          <div className="text-3xl font-bold">
-            {totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0}%
-          </div>
-        </div>
-      </div>
-
-      {/* 添加任务表单 */}
-      {showAddForm && (
-        <div className={`${cardBg} rounded-xl p-6 border ${borderColor} mb-6 animate-in fade-in slide-in-from-top-2 duration-300`}>
-          <h3 className={`text-lg font-semibold mb-4 ${titleColor}`}>添加新任务</h3>
-          <div className="space-y-4">
-            <div>
-              <label className={`block text-sm font-medium ${labelText} mb-1`}>任务标题</label>
-              <input
-                type="text"
-                value={newTitle}
-                onChange={(e) => setNewTitle(e.target.value)}
-                placeholder="输入任务描述..."
-                className={`w-full px-3 py-2 border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent ${inputBg}`}
-                autoFocus
-              />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className={`block text-sm font-medium ${labelText} mb-1`}>
-                  优先级: {newPriority} ({getPriorityLabel(newPriority)})
-                </label>
-                <input
-                  type="range"
-                  min="1"
-                  max="5"
-                  value={newPriority}
-                  onChange={(e) => setNewPriority(parseInt(e.target.value))}
-                  className="w-full"
-                />
-                <div className={`flex justify-between text-xs ${textColor}`}>
-                  <span>1 - 最高</span>
-                  <span>5 - 最低</span>
-                </div>
-              </div>
-              <div>
-                <label className={`block text-sm font-medium ${labelText} mb-1`}>预估时间 (分钟)</label>
-                <input
-                  type="number"
-                  min="5"
-                  max="480"
-                  value={newEstimated}
-                  onChange={(e) => setNewEstimated(parseFloat(e.target.value) || 60)}
-                  className={`w-full px-3 py-2 border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent ${inputBg}`}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className={`block text-sm font-medium ${labelText} mb-1`}>项目分类 (可选)</label>
-                <input
-                  type="text"
-                  value={newProject}
-                  onChange={(e) => setNewProject(e.target.value)}
-                  placeholder="例如: 工作、学习、项目X"
-                  className={`w-full px-3 py-2 border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent ${inputBg}`}
-                />
-              </div>
-              <div>
-                <label className={`block text-sm font-medium ${labelText} mb-1`}>重复</label>
-                <select
-                  value={newRepeatType}
-                  onChange={(e) => setNewRepeatType(e.target.value as RepeatType)}
-                  className={`w-full px-3 py-2 border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent ${inputBg}`}
-                >
-                  <option value="none">不重复</option>
-                  <option value="daily">每日重复</option>
-                  <option value="weekly">每周重复</option>
-                  <option value="monthly">每月重复</option>
-                </select>
-              </div>
-            </div>
-            <div className="flex space-x-3">
-              <button
-                onClick={handleAddTask}
-                disabled={!newTitle.trim()}
-                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
-              >
-                添加
-              </button>
-              <button
-                onClick={() => setShowAddForm(false)}
-                className={`px-4 py-2 ${isDark ? 'bg-aether-dark-300 text-aether-text-dark-secondary hover:bg-aether-dark-300/80' : 'bg-aether-300 text-aether-text-secondary hover:bg-aether-300/80'} rounded-lg transition-colors`}
-              >
-                取消
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* AI 重排按钮 */}
-      {tasks.length > 1 && (
-        <div className="mb-6">
-          <button
-            onClick={handleAiReschedule}
-            disabled={rescheduling}
-            className="w-full px-4 py-3 bg-[var(--color-accent)] text-[#fffefb] rounded-lg hover:opacity-90 disabled:opacity-50 transition-all duration-200 transform hover:scale-[1.01]"
-          >
-            {rescheduling ? 'AI 重排中...' : '🤖 AI 自动重排延误任务'}
-          </button>
-          <p className={`text-xs ${textColor} mt-2 text-center`}>
-            如果当前任务延误，AI 会根据优先级自动重排剩余任务，建议低优先级任务推迟到明天
-          </p>
-        </div>
-      )}
-
-      {/* 任务列表 */}
-      {loading ? (
-        <div className={`text-center py-8 ${textColor}`}>加载中...</div>
-      ) : tasks.length === 0 ? (
-        <div className={`text-center py-12 ${textColor}`}>
-          <p className="text-lg">今天还没有添加任务</p>
-          <p className="text-sm mt-2">点击"添加任务"开始规划你的一天吧</p>
-        </div>
+      {/* ── Task List ── */}
+      {filtered.length === 0 ? (
+        <EmptyState
+          icon="📋"
+          title="暂无任务"
+          description="点击「添加任务」来规划你的一天"
+          action={<Button onClick={openAdd}>添加任务</Button>}
+        />
       ) : (
         <div className="space-y-3">
-          {tasks.map(task => (
-            <div
+          {filtered.map((task) => (
+            <TaskCard
               key={task.id}
-              className={`${cardBg} rounded-lg p-4 border transition-all duration-200 ${
-                task.completed
-                  ? (isDark ? 'border-[var(--color-border-subtle)] opacity-60' : 'border-[var(--color-border-subtle)] opacity-60')
-                  : (isDark ? 'border-[var(--color-border-subtle)] hover:border-[var(--color-accent)]/50' : 'border-[var(--color-border-subtle)] hover:border-[var(--color-accent)]/50')
-              } ${editingId === task.id ? 'ring-2 ring-primary/20' : ''}`}
-            >
-              {editingId === task.id ? (
-                // 编辑模式
-                <div className="space-y-3">
-                  <input
-                    type="text"
-                    value={editingTitle}
-                    onChange={(e) => setEditingTitle(e.target.value)}
-                    className={`w-full px-3 py-2 border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-primary ${inputBg}`}
-                    autoFocus
-                  />
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className={`block text-sm font-medium ${labelText} mb-1`}>
-                        优先级: {editingPriority} ({getPriorityLabel(editingPriority)})
-                      </label>
-                      <input
-                        type="range"
-                        min="1"
-                        max="5"
-                        value={editingPriority}
-                        onChange={(e) => setEditingPriority(parseInt(e.target.value))}
-                        className="w-full"
-                      />
-                    </div>
-                    <div>
-                      <label className={`block text-sm font-medium ${labelText} mb-1`}>预估时间 (分钟)</label>
-                      <input
-                        type="number"
-                        min="5"
-                        max="480"
-                        value={editingEstimated}
-                        onChange={(e) => setEditingEstimated(parseFloat(e.target.value) || 60)}
-                        className={`w-full px-3 py-2 border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-primary ${inputBg}`}
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className={`block text-sm font-medium ${labelText} mb-1`}>项目分类</label>
-                      <input
-                        type="text"
-                        value={editingProject}
-                        onChange={(e) => setEditingProject(e.target.value)}
-                        className={`w-full px-3 py-2 border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-primary ${inputBg}`}
-                        placeholder="留空表示无项目"
-                      />
-                    </div>
-                    <div>
-                      <label className={`block text-sm font-medium ${labelText} mb-1`}>重复</label>
-                      <select
-                        value={editingRepeatType}
-                        onChange={(e) => setEditingRepeatType(e.target.value as RepeatType)}
-                        className={`w-full px-3 py-2 border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-primary ${inputBg}`}
-                      >
-                        <option value="none">不重复</option>
-                        <option value="daily">每日重复</option>
-                        <option value="weekly">每周重复</option>
-                        <option value="monthly">每月重复</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="flex justify-end space-x-2">
-                    <button
-                      onClick={cancelEdit}
-                      className={`px-3 py-1 text-sm ${isDark ? 'bg-aether-dark-300 text-aether-text-dark-secondary hover:bg-aether-dark-300/80' : 'bg-aether-300 text-aether-text-secondary hover:bg-aether-300/80'} rounded hover:opacity-90 transition-colors`}
-                    >
-                      取消
-                    </button>
-                    <button
-                      onClick={() => handleEditTask(task)}
-                      className="px-3 py-1 text-sm bg-primary text-white rounded hover:bg-primary/90 transition-colors"
-                    >
-                      保存
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                // 查看模式
-                <>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3 flex-1">
-                      <input
-                        type="checkbox"
-                        checked={task.completed}
-                        onChange={() => handleToggleCompleted(task)}
-                        className="w-5 h-5 text-primary rounded focus:ring-primary transition-all"
-                      />
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <h4 className={`text-lg font-medium ${
-                            task.completed
-                              ? `line-through ${textColor}`
-                              : titleColor
-                          }`}>
-                            {task.title}
-                          </h4>
-                          {task.project && (
-                            <span className={`text-xs ${isDark ? 'bg-aether-dark-300 text-aether-text-dark-secondary' : 'bg-aether-300 text-aether-text-secondary'} px-2 py-0.5 rounded-full`}>
-                              {task.project}
-                            </span>
-                          )}
-                          {task.repeat_type && task.repeat_type !== 'none' && (
-                            <span className={`text-xs ${isDark ? 'bg-[rgba(255,79,0,0.2)] text-[var(--color-accent)]' : 'bg-[rgba(255,79,0,0.1)] text-[var(--color-accent)]'} px-2 py-0.5 rounded-full`}>
-                              {getRepeatLabel(task.repeat_type)}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center space-x-2 mt-1 flex-wrap">
-                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${getPriorityColor(task.priority)}`}>
-                            {getPriorityLabel(task.priority)}
-                          </span>
-                          <span className={`text-xs ${textColor}`}>
-                            预估: {formatDuration(task.estimatedMinutes)}
-                          </span>
-                          <span className={`text-xs ${
-                            task.actualMinutes > task.estimatedMinutes
-                              ? 'text-red-500'
-                              : 'text-green-600'
-                          }`}>
-                            实际: {formatDuration(task.actualMinutes)}
-                          </span>
-                          {task.actualMinutes > 0 && (
-                            <span className={`text-xs ${textColor}`}>
-                              ({Math.round((task.actualMinutes / task.estimatedMinutes) * 100)}%)
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex space-x-1 ml-2">
-                      {(task.subtasks?.length || 0) > 0 && (
-                        <button
-                          onClick={() => toggleExpand(task.id)}
-                          className={`px-2 py-1 text-xs ${isDark ? 'bg-aether-dark-300 text-aether-text-dark-secondary hover:bg-aether-dark-300/80' : 'bg-aether-300 text-aether-text-secondary hover:bg-aether-300/80'} rounded hover:opacity-90 transition-colors`}
-                        >
-                          {expandedTasks.has(task.id) ? '收起' : `子任务(${task.subtasks?.length || 0})`}
-                        </button>
-                      )}
-                      <button
-                        onClick={() => startEdit(task)}
-                        className={`px-2 py-1 text-xs ${isDark ? 'bg-[rgba(255,79,0,0.2)] text-[var(--color-accent)] hover:bg-[rgba(255,79,0,0.3)]' : 'bg-[rgba(255,79,0,0.1)] text-[var(--color-accent)]'} rounded hover:bg-[rgba(255,79,0,0.2)] transition-colors`}
-                      >
-                        编辑
-                      </button>
-                      <button
-                        onClick={() => handleDeleteTask(task.id)}
-                        className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 transition-colors"
-                      >
-                        删除
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* 进度条 */}
-                  {task.estimatedMinutes > 0 && (
-                    <div className={`mt-3 ${isDark ? 'bg-gray-700' : 'bg-gray-200'} rounded-full h-2`}>
-                      <div
-                        className={`h-2 rounded-full transition-all duration-500 ${
-                          task.completed ? 'bg-green-500' :
-                          task.actualMinutes > task.estimatedMinutes ? 'bg-orange-500' : 'bg-primary'
-                        }`}
-                        style={{
-                          width: `${Math.min(100, (task.actualMinutes / task.estimatedMinutes) * 100)}%`
-                        }}
-                      />
-                    </div>
-                  )}
-
-                  {/* 子任务列表 */}
-                  {expandedTasks.has(task.id) && task.subtasks && task.subtasks.length > 0 && (
-                    <div className={`mt-4 pl-8 border-l-2 ${isDark ? 'border-gray-700' : 'border-gray-200'} space-y-2`}>
-                      {task.subtasks.map(subtask => (
-                        <div key={subtask.id} className="flex items-center justify-between">
-                          <div className="flex items-center space-x-2">
-                            <input
-                              type="checkbox"
-                              checked={subtask.completed}
-                              onChange={() => toggleSubtask(task, subtask.id)}
-                              className="w-4 h-4 text-primary"
-                            />
-                            <span className={`text-sm ${subtask.completed ? `line-through ${textColor}` : titleColor}`}>
-                              {subtask.title}
-                            </span>
-                          </div>
-                          <button
-                            onClick={() => deleteSubtask(task, subtask.id)}
-                            className={`text-xs ${isDark ? 'text-red-400 hover:text-red-300' : 'text-red-500 hover:text-red-700'}`}
-                          >
-                            删除
-                          </button>
-                        </div>
-                      ))}
-                      {/* 添加新子任务 */}
-                      <div className="flex space-x-2 pt-2">
-                        <input
-                          type="text"
-                          value={newSubtaskTitle}
-                          onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                          placeholder="添加子任务..."
-                          className={`flex-1 px-2 py-1 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-primary ${inputBg}`}
-                          onKeyDown={(e) => e.key === 'Enter' && addSubtask(task)}
-                        />
-                        <button
-                          onClick={() => addSubtask(task)}
-                          disabled={!newSubtaskTitle.trim()}
-                          className="px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
-                        >
-                          添加
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 如果展开且没有子任务，显示添加框 */}
-                  {expandedTasks.has(task.id) && (!task.subtasks || task.subtasks.length === 0) && (
-                    <div className={`mt-4 pl-8 border-l-2 ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-                      <div className="flex space-x-2 pt-2">
-                        <input
-                          type="text"
-                          value={newSubtaskTitle}
-                          onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                          placeholder="添加子任务..."
-                          className={`flex-1 px-2 py-1 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-primary ${inputBg}`}
-                          onKeyDown={(e) => e.key === 'Enter' && addSubtask(task)}
-                        />
-                        <button
-                          onClick={() => addSubtask(task)}
-                          disabled={!newSubtaskTitle.trim()}
-                          className="px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
-                        >
-                          添加
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
+              task={task}
+              expanded={expandedIds.has(task.id)}
+              confirmDelete={confirmDeleteId === task.id}
+              onToggleStatus={() => toggleStatus(task)}
+              onEdit={() => openEdit(task)}
+              onDelete={() => setConfirmDeleteId(task.id)}
+              onConfirmDelete={() => handleDelete(task.id)}
+              onCancelDelete={() => setConfirmDeleteId(null)}
+              onToggleExpand={() => toggleExpand(task.id)}
+              onToggleSubtask={(sid) => {
+                const st = task.subtasks.map((s) =>
+                  s.id === sid ? { ...s, completed: !s.completed } : s
+                )
+                updateTask(task.id, { subtasks: st })
+              }}
+              accentColor={accentColor}
+            />
           ))}
         </div>
       )}
+
+      {/* ── Add / Edit Modal ── */}
+      <Modal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title={editingId ? '编辑任务' : '添加任务'}
+        size="lg"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setModalOpen(false)}>
+              取消
+            </Button>
+            <Button onClick={handleSave} disabled={!form.title.trim()}>
+              保存
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-5">
+          {/* title */}
+          <Input
+            label="任务标题"
+            value={form.title}
+            onChange={(v) => setForm((f) => ({ ...f, title: v }))}
+            placeholder="输入任务名称..."
+          />
+
+          {/* priority */}
+          <div>
+            <span className="block text-[10px] font-medium text-[var(--color-text-muted)] mb-2">
+              优先级
+            </span>
+            <div className="flex gap-2">
+              {([1, 2, 3, 4, 5] as const).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setForm((f) => ({ ...f, priority: p }))}
+                  className={[
+                    'w-9 h-9 rounded-full text-xs font-bold transition-all cursor-pointer',
+                    form.priority === p
+                      ? 'ring-2 ring-offset-2 ring-[var(--color-accent)] scale-110'
+                      : 'opacity-60 hover:opacity-100',
+                  ].join(' ')}
+                  style={{ backgroundColor: PRIORITY_COLORS[p], color: '#fff' }}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* project + estimated time row */}
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="项目"
+              value={form.project}
+              onChange={(v) => setForm((f) => ({ ...f, project: v }))}
+              placeholder="例如: 工作"
+            />
+            <Input
+              label="预估时间 (分钟)"
+              type="number"
+              value={String(form.estimatedMinutes)}
+              onChange={(v) =>
+                setForm((f) => ({ ...f, estimatedMinutes: Math.max(1, Number(v) || 0) }))
+              }
+            />
+          </div>
+
+          {/* due date + repeat row */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <span className="block text-[10px] font-medium text-[var(--color-text-muted)] mb-1">
+                截止日期
+              </span>
+              <input
+                type="date"
+                value={form.dueDate}
+                onChange={(e) => setForm((f) => ({ ...f, dueDate: e.target.value }))}
+                className="w-full text-sm py-2 bg-transparent border-b-2 border-[var(--color-border-subtle)]/50 focus:border-[var(--color-accent)] outline-none text-[var(--color-text-primary)] transition-colors"
+              />
+            </div>
+            <div>
+              <span className="block text-[10px] font-medium text-[var(--color-text-muted)] mb-1">
+                重复
+              </span>
+              <select
+                value={form.repeatType}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, repeatType: e.target.value as RepeatType }))
+                }
+                className="w-full text-sm py-2 bg-transparent border-b-2 border-[var(--color-border-subtle)]/50 focus:border-[var(--color-accent)] outline-none text-[var(--color-text-primary)] transition-colors cursor-pointer"
+              >
+                {(Object.keys(REPEAT_LABELS) as RepeatType[]).map((r) => (
+                  <option key={r} value={r}>
+                    {REPEAT_LABELS[r]}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* subtasks */}
+          <div>
+            <span className="block text-[10px] font-medium text-[var(--color-text-muted)] mb-2">
+              子任务
+            </span>
+            {form.subtasks.length > 0 && (
+              <ul className="space-y-1.5 mb-3">
+                {form.subtasks.map((st) => (
+                  <li key={st.id} className="flex items-center gap-2 group">
+                    <input
+                      type="checkbox"
+                      checked={st.completed}
+                      onChange={() => toggleFormSubtask(st.id)}
+                      className="w-4 h-4 accent-[var(--color-accent)] cursor-pointer"
+                    />
+                    <span
+                      className={[
+                        'flex-1 text-sm',
+                        st.completed
+                          ? 'line-through text-[var(--color-text-muted)]'
+                          : 'text-[var(--color-text-primary)]',
+                      ].join(' ')}
+                    >
+                      {st.title}
+                    </span>
+                    <button
+                      onClick={() => removeFormSubtask(st.id)}
+                      className="opacity-0 group-hover:opacity-100 text-red-500 text-xs transition-opacity cursor-pointer"
+                    >
+                      删除
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newSubtaskTitle}
+                onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && addFormSubtask()}
+                placeholder="添加子任务..."
+                className="flex-1 text-sm py-1.5 bg-transparent border-b border-[var(--color-border-subtle)]/40 focus:border-[var(--color-accent)] outline-none text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)]/60 transition-colors"
+              />
+              <Button size="sm" variant="ghost" onClick={addFormSubtask} disabled={!newSubtaskTitle.trim()}>
+                添加
+              </Button>
+            </div>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }
 
-export default Planner
+// ============================================================
+// TaskCard sub-component
+// ============================================================
+
+interface TaskCardProps {
+  task: Task
+  expanded: boolean
+  confirmDelete: boolean
+  onToggleStatus: () => void
+  onEdit: () => void
+  onDelete: () => void
+  onConfirmDelete: () => void
+  onCancelDelete: () => void
+  onToggleExpand: () => void
+  onToggleSubtask: (sid: string) => void
+  accentColor: string
+}
+
+function TaskCard({
+  task,
+  expanded,
+  confirmDelete,
+  onToggleStatus,
+  onEdit,
+  onDelete,
+  onConfirmDelete,
+  onCancelDelete,
+  onToggleExpand,
+  onToggleSubtask,
+}: TaskCardProps) {
+  const isDone = task.status === 'completed'
+  const completedSubs = task.subtasks.filter((s) => s.completed).length
+  const totalSubs = task.subtasks.length
+  const subProgress = totalSubs > 0 ? (completedSubs / totalSubs) * 100 : 0
+
+  return (
+    <Card padding="sm" className={isDone ? 'opacity-60' : ''} hover>
+      <div className="flex items-start gap-3">
+        {/* checkbox */}
+        <input
+          type="checkbox"
+          checked={isDone}
+          onChange={onToggleStatus}
+          className="mt-1 w-5 h-5 accent-[var(--color-accent)] cursor-pointer flex-shrink-0"
+        />
+
+        {/* content */}
+        <div className="flex-1 min-w-0">
+          {/* title row */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span
+              className={[
+                'font-semibold text-[var(--color-text-primary)]',
+                isDone ? 'line-through text-[var(--color-text-muted)]' : '',
+              ].join(' ')}
+            >
+              {task.title}
+            </span>
+            {task.project && <Badge variant="accent">{task.project}</Badge>}
+            {task.repeatType !== 'none' && (
+              <Badge variant="warning">{REPEAT_LABELS[task.repeatType]}</Badge>
+            )}
+          </div>
+
+          {/* meta row */}
+          <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+            {/* priority dot */}
+            <span className="flex items-center gap-1 text-xs text-[var(--color-text-muted)]">
+              <span
+                className="inline-block w-2.5 h-2.5 rounded-full"
+                style={{ backgroundColor: PRIORITY_COLORS[task.priority] }}
+              />
+              P{task.priority}
+            </span>
+
+            {/* subtask progress */}
+            {totalSubs > 0 && (
+              <span className="flex items-center gap-1.5 text-xs text-[var(--color-text-muted)]">
+                <Progress value={subProgress} size="sm" className="w-16" />
+                {completedSubs}/{totalSubs}
+              </span>
+            )}
+
+            {/* time */}
+            <span className="text-xs text-[var(--color-text-muted)]">
+              {fmtDuration(task.actualMinutes)} / {fmtDuration(task.estimatedMinutes)}
+            </span>
+
+            {/* due date */}
+            {task.dueDate && (
+              <span className="text-xs text-[var(--color-text-muted)]">{task.dueDate}</span>
+            )}
+          </div>
+        </div>
+
+        {/* actions */}
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {totalSubs > 0 && (
+            <button
+              onClick={onToggleExpand}
+              className="p-1.5 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-surface-2)] transition-colors cursor-pointer"
+              title="展开子任务"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                className={`transition-transform ${expanded ? 'rotate-90' : ''}`}
+              >
+                <path d="M6 4l4 4-4 4" />
+              </svg>
+            </button>
+          )}
+          {/* edit */}
+          <button
+            onClick={onEdit}
+            className="p-1.5 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-accent)] hover:bg-[var(--color-accent-soft)] transition-colors cursor-pointer"
+            title="编辑"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M11.5 2.5l2 2L5 13H3v-2l8.5-8.5z" />
+            </svg>
+          </button>
+          {/* delete */}
+          {confirmDelete ? (
+            <span className="flex items-center gap-1">
+              <Button size="sm" variant="danger" onClick={onConfirmDelete}>
+                确认
+              </Button>
+              <Button size="sm" variant="ghost" onClick={onCancelDelete}>
+                取消
+              </Button>
+            </span>
+          ) : (
+            <button
+              onClick={onDelete}
+              className="p-1.5 rounded-lg text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/10 transition-colors cursor-pointer"
+              title="删除"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 4h10M6 4V3a1 1 0 011-1h2a1 1 0 011 1v1m2 0v9a1 1 0 01-1 1H5a1 1 0 01-1-1V4h8z" />
+              </svg>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* expanded subtasks */}
+      {expanded && totalSubs > 0 && (
+        <div className="mt-3 ml-8 pl-3 border-l-2 border-[var(--color-border-subtle)]/40 space-y-1.5">
+          {task.subtasks.map((st) => (
+            <label key={st.id} className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={st.completed}
+                onChange={() => onToggleSubtask(st.id)}
+                className="w-4 h-4 accent-[var(--color-accent)]"
+              />
+              <span
+                className={[
+                  'text-sm',
+                  st.completed
+                    ? 'line-through text-[var(--color-text-muted)]'
+                    : 'text-[var(--color-text-primary)]',
+                ].join(' ')}
+              >
+                {st.title}
+              </span>
+            </label>
+          ))}
+        </div>
+      )}
+    </Card>
+  )
+}

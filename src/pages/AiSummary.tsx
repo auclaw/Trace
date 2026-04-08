@@ -1,263 +1,279 @@
-import { useState, useEffect, useCallback } from 'react'
-import type { Theme } from '../App'
-import { apiRequest } from '../utils/api'
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts'
+import { useEffect, useMemo } from 'react'
+import { useAppStore } from '../store/useAppStore'
+import useTheme from '../hooks/useTheme'
+import dataService from '../services/dataService'
+import { Card, Badge, EmptyState } from '../components/ui'
+import { CATEGORY_COLORS } from '../config/themes'
 
-interface DailySummary {
-  date: string
-  total_minutes: number
-  focused_minutes: number
-  interruption_count: number
-  productivity_score: number
+/* ── helpers ── */
+function fmtHours(mins: number): string {
+  const h = mins / 60
+  return h >= 1 ? `${h.toFixed(1)} 小时` : `${Math.round(mins)} 分钟`
 }
 
-interface AiInsight {
-  type: 'positive' | 'warning' | 'suggestion'
-  content: string
+function dayLabel(dateStr: string): string {
+  const d = new Date(dateStr)
+  const days = ['日', '一', '二', '三', '四', '五', '六']
+  return `周${days[d.getDay()]}`
 }
 
-interface SummaryData {
-  period: 'day' | 'week'
-  total_focus_minutes: number
-  total_break_minutes: number
-  interruption_count: number
-  avg_daily_focus: number
-  productivity_score: number
-  daily_data: DailySummary[]
-  insights: AiInsight[]
+function toDateStr(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
 }
 
-interface AiSummaryProps {
-  theme: Theme
-}
-
-const AiSummary: React.FC<AiSummaryProps> = ({ theme }) => {
-  const isDark = theme === 'dark'
-  const [loading, setLoading] = useState(true)
-  const [period, setPeriod] = useState<'day' | 'week'>('day')
-  const [summary, setSummary] = useState<SummaryData | null>(null)
-  const [regenerating, setRegenerating] = useState(false)
-
-  const loadSummary = useCallback(async () => {
-    setLoading(true)
-    try {
-      const response = await apiRequest(`/api/ai-summary?period=${period}`, 'GET')
-      if (response.code === 200) {
-        setSummary(response.data)
-      }
-    } catch (error) {
-      console.error('加载AI总结失败', error)
-    } finally {
-      setLoading(false)
-    }
-  }, [period])
-
-  const regenerateSummary = async () => {
-    setRegenerating(true)
-    try {
-      const response = await apiRequest('/api/ai-summary/regenerate', 'POST', { period })
-      if (response.code === 200) {
-        setSummary(response.data)
-      }
-    } catch (error) {
-      console.error('重新生成失败', error)
-      alert('重新生成失败，请稍后重试')
-    } finally {
-      setRegenerating(false)
-    }
-  }
-
-  const formatDuration = (minutes: number) => {
-    const hours = Math.floor(minutes / 60)
-    const mins = Math.round(minutes % 60)
-    if (hours > 0) {
-      return `${hours}小时${mins > 0 ? ` ${mins}分` : ''}`
-    }
-    return `${Math.round(minutes)}分钟`
-  }
-
-  const formatDate = (dateStr: string) => {
-    if (period === 'day') {
-      return new Date(dateStr).toLocaleTimeString('zh-CN', { hour: '2-digit' })
-    }
-    return new Date(dateStr).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })
-  }
-
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-green-600'
-    if (score >= 60) return 'text-yellow-600'
-    return 'text-red-600'
-  }
-
-  useEffect(() => {
-    loadSummary()
-  }, [period, loadSummary])
-
-  const bgClass = isDark ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'
-  const cardBgClass = isDark ? 'bg-gray-800' : 'bg-gray-50'
-  const borderClass = isDark ? 'border-gray-700' : 'border-gray-200'
-  const textColor = isDark ? 'text-gray-300' : 'text-gray-600'
-  const buttonActiveClass = isDark
-    ? 'bg-blue-600 text-white'
-    : 'bg-blue-100 text-blue-700'
-  const buttonInactiveClass = isDark
-    ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-  const buttonPrimaryClass = 'bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded'
-
-  if (loading) {
-    return (
-      <div className={`${bgClass} min-h-screen p-4`}>
-        <div className="animate-pulse">加载中...</div>
-      </div>
-    )
-  }
-
+/* ── simple bar component ── */
+function Bar({ value, max, color }: { value: number; max: number; color: string }) {
+  const pct = max > 0 ? Math.min(100, (value / max) * 100) : 0
   return (
-    <div className={`${bgClass} min-h-screen p-4`}>
-      <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-2xl font-bold">AI 效率总结</h1>
-            <p className={`text-sm ${textColor}`}>
-              基于你的时间数据，AI 自动生成效率洞察和改进建议
-            </p>
-          </div>
-          <div className="flex items-center space-x-3">
-            <div className="flex space-x-2">
-              <button
-                className={`px-4 py-2 rounded transition-colors ${period === 'day' ? buttonActiveClass : buttonInactiveClass}`}
-                onClick={() => setPeriod('day')}
-              >
-                今日
-              </button>
-              <button
-                className={`px-4 py-2 rounded transition-colors ${period === 'week' ? buttonActiveClass : buttonInactiveClass}`}
-                onClick={() => setPeriod('week')}
-              >
-                本周
-              </button>
-            </div>
-            <button
-              className={buttonPrimaryClass}
-              onClick={regenerateSummary}
-              disabled={regenerating}
-            >
-              {regenerating ? '生成中...' : '重新生成'}
-            </button>
-          </div>
-        </div>
-
-        {!summary ? (
-          <div className={`p-8 text-center border ${borderClass} rounded ${cardBgClass}`}>
-            <p className={textColor}>暂无数据，继续使用一段时间后即可生成AI总结</p>
-          </div>
-        ) : (
-          <>
-            {/* Key Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-              <div className={`${cardBgClass} border ${borderClass} rounded p-4`}>
-                <p className={`text-sm ${textColor} mb-1`}>总专注时长</p>
-                <p className="text-2xl font-bold text-green-600">
-                  {formatDuration(summary.total_focus_minutes)}
-                </p>
-              </div>
-              <div className={`${cardBgClass} border ${borderClass} rounded p-4`}>
-                <p className={`text-sm ${textColor} mb-1`}>打断次数</p>
-                <p className="text-2xl font-bold">
-                  {summary.interruption_count}
-                </p>
-              </div>
-              <div className={`${cardBgClass} border ${borderClass} rounded p-4`}>
-                <p className={`text-sm ${textColor} mb-1`}>平均每日专注</p>
-                <p className="text-2xl font-bold">
-                  {formatDuration(summary.avg_daily_focus)}
-                </p>
-              </div>
-              <div className={`${cardBgClass} border ${borderClass} rounded p-4`}>
-                <p className={`text-sm ${textColor} mb-1`}>生产力得分</p>
-                <p className={`text-2xl font-bold ${getScoreColor(summary.productivity_score)}`}>
-                  {summary.productivity_score.toFixed(1)}
-                </p>
-              </div>
-            </div>
-
-            {/* Focus Trend Chart */}
-            {summary.daily_data.length > 0 && (
-              <div className={`mb-6 ${cardBgClass} border ${borderClass} rounded p-4`}>
-                <h2 className="text-xl font-semibold mb-4">专注趋势</h2>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={summary.daily_data}>
-                      <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#374151' : '#e5e7eb'} />
-                      <XAxis
-                        dataKey="date"
-                        tickFormatter={formatDate}
-                        tick={{ fill: isDark ? '#9ca3af' : '#6b7280' }}
-                      />
-                      <YAxis
-                        tick={{ fill: isDark ? '#9ca3af' : '#6b7280' }}
-                        unit="m"
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: isDark ? '#1f2937' : '#ffffff',
-                          border: `1px solid ${isDark ? '#374151' : '#e5e7eb'}`,
-                          color: isDark ? '#f9fafb' : '#111827',
-                        }}
-                        formatter={(value: number) => [formatDuration(value), '专注时长']}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="focused_minutes"
-                        stroke="#3b82f6"
-                        strokeWidth={2}
-                        dot={{ r: 4 }}
-                        activeDot={{ r: 6 }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            )}
-
-            {/* AI Insights */}
-            <div className={`${cardBgClass} border ${borderClass} rounded p-4 mb-6`}>
-              <h2 className="text-xl font-semibold mb-4">💡 AI 洞察</h2>
-              {summary.insights.length === 0 ? (
-                <p className={`${textColor} italic`}>数据还在积累中，下次生成会有更多洞察...</p>
-              ) : (
-                <ul className="space-y-3">
-                  {summary.insights.map((insight, index) => {
-                    const icon = insight.type === 'positive' ? '✅' : insight.type === 'warning' ? '⚠️' : '💡'
-                    const textColorClass = insight.type === 'positive'
-                      ? (isDark ? 'text-green-400' : 'text-green-700')
-                      : insight.type === 'warning'
-                      ? (isDark ? 'text-yellow-400' : 'text-yellow-700')
-                      : (isDark ? 'text-blue-400' : 'text-blue-700')
-                    return (
-                      <li key={index} className={`flex items-start space-x-2 ${textColorClass}`}>
-                        <span className="text-lg">{icon}</span>
-                        <span>{insight.content}</span>
-                      </li>
-                    )
-                  })}
-                </ul>
-              )}
-            </div>
-          </>
-        )}
-      </div>
+    <div className="h-3 flex-1 rounded-full overflow-hidden bg-[var(--color-border-subtle)]/25">
+      <div
+        className="h-full rounded-full transition-[width] duration-500"
+        style={{ width: `${pct}%`, backgroundColor: color }}
+      />
     </div>
   )
 }
 
-export default AiSummary
+/* ══════════════════════════════════════════════════
+   AI Summary Page
+   ══════════════════════════════════════════════════ */
+export default function AiSummary() {
+  useTheme() // hook must be called for theme reactivity
+  const loadActivities = useAppStore((s) => s.loadActivities)
+
+  useEffect(() => {
+    loadActivities()
+  }, [loadActivities])
+
+  /* ── Compute insights from data ── */
+  const analysis = useMemo(() => {
+    const weekStats = dataService.getWeeklyStats()
+    const { daily, categories } = weekStats
+
+    if (daily.every((d) => d.totalMinutes === 0)) return null
+
+    const totalMins = daily.reduce((s, d) => s + d.totalMinutes, 0)
+    const avgDaily = totalMins / 7
+
+    // Best / worst days
+    const nonZeroDays = daily.filter((d) => d.totalMinutes > 0)
+    const bestDay = nonZeroDays.reduce((a, b) => (a.totalMinutes >= b.totalMinutes ? a : b), nonZeroDays[0])
+    const worstDay = nonZeroDays.reduce((a, b) => (a.totalMinutes <= b.totalMinutes ? a : b), nonZeroDays[0])
+
+    // Top / least category
+    const catEntries = Object.entries(categories).sort((a, b) => b[1] - a[1])
+    const topCat = catEntries[0]
+    const leastCat = catEntries.length > 1 ? catEntries[catEntries.length - 1] : null
+
+    // Hourly productivity pattern (from last 7 days of raw activities)
+    const now = new Date()
+    const startDate = toDateStr(new Date(now.getTime() - 6 * 86400000))
+    const endDate = toDateStr(now)
+    const allActivities = dataService.getActivitiesRange(startDate, endDate)
+    const hourlyMinutes: number[] = new Array(24).fill(0)
+    for (const a of allActivities) {
+      const hour = parseInt(a.startTime.slice(11, 13), 10)
+      if (!isNaN(hour)) hourlyMinutes[hour] += a.duration
+    }
+
+    // Build insights
+    const insights: string[] = []
+    if (topCat) {
+      insights.push(
+        `本周你在「${topCat[0]}」上投入最多时间（${fmtHours(topCat[1])}）`,
+      )
+    }
+    insights.push(
+      `你的平均每日专注时间为 ${fmtHours(avgDaily)}，建议目标为 ${fmtHours(Math.max(avgDaily * 1.1, 480))}`,
+    )
+    if (bestDay) {
+      insights.push(`${dayLabel(bestDay.date)}是你最高效的一天（${fmtHours(bestDay.totalMinutes)}）`)
+    }
+    if (leastCat) {
+      insights.push(`建议：增加「${leastCat[0]}」的时间投入`)
+    }
+
+    return {
+      totalMins,
+      avgDaily,
+      bestDay,
+      worstDay,
+      categories,
+      catEntries,
+      insights,
+      hourlyMinutes,
+      daily,
+    }
+  }, [])
+
+  if (!analysis) {
+    return (
+      <div className="p-6 md:p-8 max-w-4xl mx-auto">
+        <h2 className="text-2xl font-bold text-[var(--color-text-primary)] mb-6">
+          AI 智能总结
+        </h2>
+        <EmptyState
+          icon="🤖"
+          title="暂无数据"
+          description="继续使用一段时间后，AI 将根据你的活动数据生成个性化洞察。"
+        />
+      </div>
+    )
+  }
+
+  const maxHourly = Math.max(...analysis.hourlyMinutes, 1)
+  const maxDaily = Math.max(...analysis.daily.map((d) => d.totalMinutes), 1)
+
+  return (
+    <div className="p-6 md:p-8 max-w-4xl mx-auto space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold text-[var(--color-text-primary)] mb-1">
+          AI 智能总结
+        </h2>
+        <p className="text-sm text-[var(--color-text-muted)]">
+          基于本周活动数据自动生成效率洞察
+        </p>
+      </div>
+
+      {/* ─── Weekly Overview ─── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card padding="sm">
+          <p className="text-xs text-[var(--color-text-muted)] mb-0.5">总时长</p>
+          <p className="text-xl font-bold text-[var(--color-text-primary)]">
+            {fmtHours(analysis.totalMins)}
+          </p>
+        </Card>
+        <Card padding="sm">
+          <p className="text-xs text-[var(--color-text-muted)] mb-0.5">日均</p>
+          <p className="text-xl font-bold text-[var(--color-text-primary)]">
+            {fmtHours(analysis.avgDaily)}
+          </p>
+        </Card>
+        <Card padding="sm">
+          <p className="text-xs text-[var(--color-text-muted)] mb-0.5">最高效日</p>
+          <p className="text-xl font-bold text-[var(--color-accent)]">
+            {analysis.bestDay ? dayLabel(analysis.bestDay.date) : '—'}
+          </p>
+        </Card>
+        <Card padding="sm">
+          <p className="text-xs text-[var(--color-text-muted)] mb-0.5">最低效日</p>
+          <p className="text-xl font-bold text-[var(--color-text-secondary)]">
+            {analysis.worstDay ? dayLabel(analysis.worstDay.date) : '—'}
+          </p>
+        </Card>
+      </div>
+
+      {/* ─── Insights ─── */}
+      <Card padding="md">
+        <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-3">
+          洞察与建议
+        </h3>
+        <ul className="space-y-2">
+          {analysis.insights.map((text, i) => (
+            <li key={i} className="flex items-start gap-2 text-sm text-[var(--color-text-secondary)]">
+              <Badge variant="accent" size="sm" className="mt-0.5 shrink-0">
+                {i + 1}
+              </Badge>
+              {text}
+            </li>
+          ))}
+        </ul>
+      </Card>
+
+      {/* ─── Category Breakdown ─── */}
+      <Card padding="md">
+        <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-3">
+          分类时间分布
+        </h3>
+        <div className="space-y-2">
+          {analysis.catEntries.map(([cat, mins]) => (
+            <div key={cat} className="flex items-center gap-3">
+              <span className="text-xs text-[var(--color-text-secondary)] w-12 shrink-0 text-right">
+                {cat}
+              </span>
+              <Bar
+                value={mins}
+                max={analysis.catEntries[0][1]}
+                color={CATEGORY_COLORS[cat] || '#94a3b8'}
+              />
+              <span className="text-xs tabular-nums text-[var(--color-text-muted)] w-16 shrink-0">
+                {fmtHours(mins)}
+              </span>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      {/* ─── Daily Trend ─── */}
+      <Card padding="md">
+        <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-3">
+          每日趋势
+        </h3>
+        <div className="flex items-end gap-2 h-32">
+          {analysis.daily.map((d) => {
+            const pct = maxDaily > 0 ? (d.totalMinutes / maxDaily) * 100 : 0
+            return (
+              <div key={d.date} className="flex-1 flex flex-col items-center gap-1">
+                <span className="text-[10px] tabular-nums text-[var(--color-text-muted)]">
+                  {d.totalMinutes > 0 ? `${Math.round(d.totalMinutes / 60)}h` : ''}
+                </span>
+                <div className="w-full flex items-end" style={{ height: '80px' }}>
+                  <div
+                    className="w-full rounded-t-md transition-[height] duration-500"
+                    style={{
+                      height: `${Math.max(pct, 2)}%`,
+                      backgroundColor: 'var(--color-accent)',
+                      opacity: pct > 0 ? 0.8 : 0.15,
+                    }}
+                  />
+                </div>
+                <span className="text-[10px] text-[var(--color-text-muted)]">
+                  {dayLabel(d.date).slice(1)}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      </Card>
+
+      {/* ─── Hourly Focus Pattern ─── */}
+      <Card padding="md">
+        <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-3">
+          时段专注分布
+        </h3>
+        <p className="text-xs text-[var(--color-text-muted)] mb-3">
+          过去 7 天各时段累计专注时间
+        </p>
+        <div className="grid grid-cols-12 gap-1">
+          {analysis.hourlyMinutes.slice(6, 23).map((mins, i) => {
+            const hour = i + 6
+            const intensity = maxHourly > 0 ? mins / maxHourly : 0
+            return (
+              <div key={hour} className="flex flex-col items-center gap-1">
+                <div
+                  className="w-full aspect-square rounded-md transition-colors"
+                  style={{
+                    backgroundColor: `var(--color-accent)`,
+                    opacity: Math.max(0.08, intensity * 0.9),
+                  }}
+                  title={`${hour}:00 — ${Math.round(mins)} 分钟`}
+                />
+                {hour % 3 === 0 && (
+                  <span className="text-[9px] text-[var(--color-text-muted)]">
+                    {hour}
+                  </span>
+                )}
+              </div>
+            )
+          })}
+        </div>
+        <p className="text-xs text-[var(--color-text-muted)] mt-2">
+          颜色越深代表该时段专注越多（6:00 - 22:00）
+        </p>
+      </Card>
+    </div>
+  )
+}
