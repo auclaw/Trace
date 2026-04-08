@@ -25,17 +25,83 @@ const MODULE_LABELS: Record<string, string> = {
   settings: '设置',
 }
 
-/* ── Section wrapper ── */
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+/* ── Fade-in animation keyframes (injected once) ── */
+const STYLE_ID = 'settings-animations'
+if (typeof document !== 'undefined' && !document.getElementById(STYLE_ID)) {
+  const style = document.createElement('style')
+  style.id = STYLE_ID
+  style.textContent = `
+    @keyframes settingsFadeInUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .settings-section-fade {
+      animation: settingsFadeInUp 0.45s ease-out both;
+    }
+    @keyframes settingsCheckPop {
+      0%   { transform: scale(0); }
+      60%  { transform: scale(1.2); }
+      100% { transform: scale(1); }
+    }
+    .settings-check-pop {
+      animation: settingsCheckPop 0.25s ease-out both;
+    }
+  `
+  document.head.appendChild(style)
+}
+
+/* ── Section wrapper — warm gradient card ── */
+function Section({
+  title,
+  children,
+  index = 0,
+}: {
+  title: string
+  children: React.ReactNode
+  index?: number
+}) {
   return (
-    <Card padding="md" className="space-y-4">
-      <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">{title}</h3>
-      {children}
-    </Card>
+    <div
+      className="settings-section-fade"
+      style={{ animationDelay: `${index * 80}ms` }}
+    >
+      <Card padding="md" className="!p-0 overflow-hidden">
+        <div
+          className="p-6 space-y-5"
+          style={{
+            background:
+              'linear-gradient(135deg, var(--color-bg-surface-1) 0%, var(--color-bg-surface-2) 100%)',
+            border: '1px solid var(--color-border-subtle)',
+            borderRadius: 'var(--radius-xl)',
+            boxShadow: 'var(--shadow-card), 0 2px 8px rgba(44,24,16,0.04)',
+          }}
+        >
+          {/* Section title with accent left border */}
+          <div className="flex items-center gap-3">
+            <div
+              style={{
+                width: 4,
+                height: 22,
+                borderRadius: 4,
+                backgroundColor: 'var(--color-accent)',
+                flexShrink: 0,
+              }}
+            />
+            <h3
+              className="text-base font-bold"
+              style={{ color: 'var(--color-text-primary)' }}
+            >
+              {title}
+            </h3>
+          </div>
+          {children}
+        </div>
+      </Card>
+    </div>
   )
 }
 
-/* ── Toggle switch ── */
+/* ── Toggle switch — pill-shaped with smooth transitions ── */
 function Toggle({
   checked,
   onChange,
@@ -48,23 +114,44 @@ function Toggle({
       role="switch"
       aria-checked={checked}
       onClick={() => onChange(!checked)}
-      className={[
-        'relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors duration-200 cursor-pointer',
-        checked ? 'bg-[var(--color-accent)]' : 'bg-[var(--color-border-subtle)]',
-      ].join(' ')}
+      style={{
+        position: 'relative',
+        display: 'inline-flex',
+        alignItems: 'center',
+        width: 48,
+        height: 26,
+        borderRadius: 9999,
+        cursor: 'pointer',
+        border: 'none',
+        padding: 0,
+        backgroundColor: checked
+          ? 'var(--color-accent)'
+          : 'var(--color-border-subtle)',
+        transition: 'background-color 0.3s ease, box-shadow 0.3s ease',
+        boxShadow: checked
+          ? '0 0 0 2px rgba(44,24,16,0.04), inset 0 1px 2px rgba(44,24,16,0.08)'
+          : 'inset 0 1px 3px rgba(44,24,16,0.1)',
+        flexShrink: 0,
+      }}
     >
       <span
-        className={[
-          'pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200',
-          'translate-y-0.5',
-          checked ? 'translate-x-[22px]' : 'translate-x-0.5',
-        ].join(' ')}
+        style={{
+          position: 'absolute',
+          top: 3,
+          left: checked ? 24 : 3,
+          width: 20,
+          height: 20,
+          borderRadius: '50%',
+          backgroundColor: '#fff',
+          boxShadow: '0 1px 4px rgba(44,24,16,0.15)',
+          transition: 'left 0.3s cubic-bezier(0.34,1.56,0.64,1)',
+        }}
       />
     </button>
   )
 }
 
-/* ── Number input helper ── */
+/* ── Number input helper — clean with accent focus ring ── */
 function NumberField({
   label,
   value,
@@ -82,7 +169,12 @@ function NumberField({
 }) {
   return (
     <div className="flex items-center justify-between">
-      <span className="text-sm text-[var(--color-text-secondary)]">{label}</span>
+      <span
+        className="text-sm"
+        style={{ color: 'var(--color-text-secondary)' }}
+      >
+        {label}
+      </span>
       <div className="flex items-center gap-2">
         <input
           type="number"
@@ -93,15 +185,35 @@ function NumberField({
             const n = parseInt(e.target.value, 10)
             if (!isNaN(n) && n >= min && n <= max) onChange(n)
           }}
-          className={[
-            'w-20 px-2 py-1.5 text-sm text-center rounded-lg',
-            'bg-[var(--color-bg-surface-2)] text-[var(--color-text-primary)]',
-            'border border-[var(--color-border-subtle)]/50',
-            'outline-none focus:border-[var(--color-accent)]',
-          ].join(' ')}
+          style={{
+            width: 72,
+            padding: '6px 10px',
+            fontSize: 14,
+            textAlign: 'center' as const,
+            borderRadius: 'var(--radius-md)',
+            backgroundColor: 'var(--color-bg-surface-2)',
+            color: 'var(--color-text-primary)',
+            border: '1.5px solid var(--color-border-subtle)',
+            outline: 'none',
+            transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+          }}
+          onFocus={(e) => {
+            e.currentTarget.style.borderColor = 'var(--color-accent)'
+            e.currentTarget.style.boxShadow =
+              '0 0 0 3px var(--color-accent-soft)'
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.borderColor = 'var(--color-border-subtle)'
+            e.currentTarget.style.boxShadow = 'none'
+          }}
         />
         {suffix && (
-          <span className="text-xs text-[var(--color-text-muted)]">{suffix}</span>
+          <span
+            className="text-xs"
+            style={{ color: 'var(--color-text-muted)' }}
+          >
+            {suffix}
+          </span>
         )}
       </div>
     </div>
@@ -223,25 +335,61 @@ export default function Settings() {
   }, [addToast])
 
   return (
-    <div className="p-6 md:p-8 max-w-2xl mx-auto space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-[var(--color-text-primary)] mb-1">设置</h2>
-        <p className="text-sm text-[var(--color-text-muted)]">
+    <div className="p-6 md:p-10 max-w-2xl mx-auto space-y-8">
+      {/* ─── Page Header ─── */}
+      <div className="settings-section-fade" style={{ animationDelay: '0ms' }}>
+        <div className="flex items-center gap-4 mb-1">
+          <div
+            style={{
+              width: 6,
+              height: 36,
+              borderRadius: 6,
+              background: 'linear-gradient(180deg, var(--color-accent) 0%, var(--color-accent-soft) 100%)',
+              flexShrink: 0,
+            }}
+          />
+          <h2
+            className="text-3xl font-extrabold tracking-tight"
+            style={{ color: 'var(--color-text-primary)' }}
+          >
+            设置
+          </h2>
+        </div>
+        <p
+          className="text-sm ml-[22px]"
+          style={{ color: 'var(--color-text-muted)' }}
+        >
           配置外观、功能模块与数据管理
         </p>
       </div>
 
       {/* ─── 1. Appearance ─── */}
-      <Section title="外观设置">
+      <Section title="外观设置" index={1}>
         {/* Theme toggle */}
-        <div className="flex items-center justify-between">
+        <div
+          className="flex items-center justify-between"
+          style={{
+            padding: '12px 16px',
+            borderRadius: 'var(--radius-lg)',
+            backgroundColor: 'var(--color-bg-surface-2)',
+            border: '1px solid var(--color-border-subtle)',
+          }}
+        >
           <div className="flex items-center gap-3">
             <span className="text-xl">{isDark ? '🌙' : '☀️'}</span>
             <div>
-              <p className="text-sm font-medium text-[var(--color-text-primary)]">
+              <p
+                className="text-sm font-semibold"
+                style={{ color: 'var(--color-text-primary)' }}
+              >
                 {isDark ? '深色模式' : '浅色模式'}
               </p>
-              <p className="text-xs text-[var(--color-text-muted)]">切换明暗主题</p>
+              <p
+                className="text-xs"
+                style={{ color: 'var(--color-text-muted)' }}
+              >
+                切换明暗主题
+              </p>
             </div>
           </div>
           <Toggle
@@ -252,31 +400,81 @@ export default function Settings() {
 
         {/* Color theme grid */}
         <div>
-          <p className="text-xs text-[var(--color-text-muted)] mb-2">主题配色</p>
-          <div className="grid grid-cols-5 gap-3">
+          <p
+            className="text-xs mb-3 font-medium"
+            style={{ color: 'var(--color-text-muted)' }}
+          >
+            主题配色
+          </p>
+          <div className="grid grid-cols-5 gap-4">
             {(Object.entries(colorThemeConfigs) as [ColorTheme, (typeof colorThemeConfigs)[ColorTheme]][]).map(
-              ([key, cfg]) => (
-                <button
-                  key={key}
-                  onClick={() => setColorTheme(key)}
-                  className={[
-                    'aspect-square rounded-xl transition-all duration-200 hover:scale-105 cursor-pointer',
-                    colorTheme === key ? 'ring-2 ring-offset-2 ring-[var(--color-accent)]' : '',
-                  ].join(' ')}
-                  style={{ backgroundColor: cfg.accent }}
-                  title={cfg.name}
-                />
-              ),
+              ([key, cfg]) => {
+                const selected = colorTheme === key
+                return (
+                  <button
+                    key={key}
+                    onClick={() => setColorTheme(key)}
+                    title={cfg.name}
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: '50%',
+                      backgroundColor: cfg.accent,
+                      border: 'none',
+                      cursor: 'pointer',
+                      transition: 'transform 0.25s ease, box-shadow 0.25s ease',
+                      transform: selected ? 'scale(1.15)' : 'scale(1)',
+                      boxShadow: selected
+                        ? '0 0 0 3px var(--color-bg-surface-1), 0 0 0 5px var(--color-accent), 0 4px 12px rgba(44,24,16,0.15)'
+                        : '0 2px 6px rgba(44,24,16,0.08)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      position: 'relative',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!selected) e.currentTarget.style.transform = 'scale(1.08) translateY(-2px)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = selected ? 'scale(1.15)' : 'scale(1)'
+                    }}
+                  >
+                    {selected && (
+                      <svg
+                        className="settings-check-pop"
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="#fff"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    )}
+                  </button>
+                )
+              },
             )}
           </div>
-          <p className="text-xs text-[var(--color-text-muted)] mt-2">
+          <p
+            className="text-xs mt-3"
+            style={{ color: 'var(--color-text-muted)' }}
+          >
             当前: {colorThemeConfigs[colorTheme].name} — {colorThemeConfigs[colorTheme].description}
           </p>
         </div>
 
         {/* Background skin */}
         <div>
-          <p className="text-xs text-[var(--color-text-muted)] mb-2">背景风格</p>
+          <p
+            className="text-xs mb-3 font-medium"
+            style={{ color: 'var(--color-text-muted)' }}
+          >
+            背景风格
+          </p>
           <div className="space-y-2">
             {(Object.entries(backgroundSkinConfigs) as [BackgroundSkin, (typeof backgroundSkinConfigs)[BackgroundSkin]][]).map(
               ([key, cfg]) => {
@@ -285,31 +483,64 @@ export default function Settings() {
                   <button
                     key={key}
                     onClick={() => setBackgroundSkin(key)}
-                    className={[
-                      'w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all cursor-pointer',
-                      'border',
-                      selected
-                        ? 'border-[var(--color-accent)] bg-[var(--color-accent-soft)]'
-                        : 'border-[var(--color-border-subtle)]/50 hover:border-[var(--color-border-subtle)]',
-                    ].join(' ')}
+                    className="w-full flex items-center gap-4 text-left cursor-pointer"
+                    style={{
+                      padding: '14px 16px',
+                      borderRadius: 'var(--radius-lg)',
+                      border: selected
+                        ? '2px solid var(--color-accent)'
+                        : '1.5px solid var(--color-border-subtle)',
+                      backgroundColor: selected
+                        ? 'var(--color-accent-soft)'
+                        : 'transparent',
+                      transition: 'all 0.25s ease',
+                      boxShadow: selected
+                        ? '0 0 0 3px var(--color-accent-soft), 0 2px 8px rgba(44,24,16,0.06)'
+                        : 'none',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!selected) {
+                        e.currentTarget.style.borderColor = 'var(--color-accent)'
+                        e.currentTarget.style.backgroundColor = 'var(--color-bg-surface-2)'
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!selected) {
+                        e.currentTarget.style.borderColor = 'var(--color-border-subtle)'
+                        e.currentTarget.style.backgroundColor = 'transparent'
+                      }
+                    }}
                   >
                     {/* Preview swatch */}
                     <div
-                      className={[
-                        'w-10 h-10 rounded-lg shrink-0 border border-[var(--color-border-subtle)]/30',
-                        cfg.getBgClass(isDark),
-                      ].join(' ')}
+                      className={cfg.getBgClass(isDark)}
+                      style={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: 'var(--radius-md)',
+                        flexShrink: 0,
+                        border: selected
+                          ? '2px solid var(--color-accent)'
+                          : '1.5px solid var(--color-border-subtle)',
+                        boxShadow: '0 2px 6px rgba(44,24,16,0.06)',
+                      }}
                     />
-                    <div>
-                      <p className="text-sm font-medium text-[var(--color-text-primary)]">
+                    <div className="flex-1 min-w-0">
+                      <p
+                        className="text-sm font-semibold"
+                        style={{ color: 'var(--color-text-primary)' }}
+                      >
                         {cfg.name}
                       </p>
-                      <p className="text-xs text-[var(--color-text-muted)]">
+                      <p
+                        className="text-xs"
+                        style={{ color: 'var(--color-text-muted)' }}
+                      >
                         {cfg.description}
                       </p>
                     </div>
                     {selected && (
-                      <Badge variant="accent" size="sm" className="ml-auto">
+                      <Badge variant="accent" size="sm" className="ml-auto shrink-0">
                         当前
                       </Badge>
                     )}
@@ -322,17 +553,38 @@ export default function Settings() {
       </Section>
 
       {/* ─── 2. Feature Modules ─── */}
-      <Section title="功能模块">
-        <p className="text-xs text-[var(--color-text-muted)]">
+      <Section title="功能模块" index={2}>
+        <p
+          className="text-xs"
+          style={{ color: 'var(--color-text-muted)' }}
+        >
           选择哪些模块显示在侧边栏中
         </p>
-        <div className="space-y-2">
-          {DEFAULT_MODULES.map((mod) => (
+        <div
+          style={{
+            borderRadius: 'var(--radius-lg)',
+            border: '1px solid var(--color-border-subtle)',
+            overflow: 'hidden',
+          }}
+        >
+          {DEFAULT_MODULES.map((mod, i) => (
             <div
               key={mod}
-              className="flex items-center justify-between py-1.5"
+              className="flex items-center justify-between"
+              style={{
+                padding: '12px 16px',
+                backgroundColor: i % 2 === 0 ? 'var(--color-bg-surface-2)' : 'transparent',
+                borderBottom:
+                  i < DEFAULT_MODULES.length - 1
+                    ? '1px solid var(--color-border-subtle)'
+                    : 'none',
+                transition: 'background-color 0.15s ease',
+              }}
             >
-              <span className="text-sm text-[var(--color-text-secondary)]">
+              <span
+                className="text-sm font-medium"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
                 {MODULE_LABELS[mod] || mod}
               </span>
               <Toggle
@@ -345,8 +597,8 @@ export default function Settings() {
       </Section>
 
       {/* ─── 3. Focus Settings ─── */}
-      <Section title="专注设置">
-        <div className="space-y-3">
+      <Section title="专注设置" index={3}>
+        <div className="space-y-4">
           <NumberField
             label="工作时长"
             value={focusSettings.workMinutes}
@@ -383,7 +635,7 @@ export default function Settings() {
       </Section>
 
       {/* ─── 4. Daily Goal ─── */}
-      <Section title="每日目标">
+      <Section title="每日目标" index={4}>
         <NumberField
           label="每日专注目标"
           value={dailyGoalMinutes}
@@ -392,16 +644,24 @@ export default function Settings() {
           max={960}
           suffix="分钟"
         />
-        <p className="text-xs text-[var(--color-text-muted)]">
+        <p
+          className="text-xs"
+          style={{ color: 'var(--color-text-muted)' }}
+        >
           相当于 {(dailyGoalMinutes / 60).toFixed(1)} 小时
         </p>
       </Section>
 
       {/* ─── 5. Data Management ─── */}
-      <Section title="数据管理">
-        <p className="text-xs text-[var(--color-text-muted)]">
+      <Section title="数据管理" index={5}>
+        <p
+          className="text-xs"
+          style={{ color: 'var(--color-text-muted)' }}
+        >
           导出或重置本地数据，所有数据仅保存在浏览器中
         </p>
+
+        {/* Export buttons */}
         <div className="flex gap-3">
           <Button
             variant="secondary"
@@ -422,24 +682,42 @@ export default function Settings() {
             导出 CSV
           </Button>
         </div>
-        <Button
-          variant="danger"
-          size="sm"
-          onClick={handleReset}
-          fullWidth
+
+        {/* Danger zone */}
+        <div
+          style={{
+            marginTop: 8,
+            padding: '16px',
+            borderRadius: 'var(--radius-lg)',
+            border: '1.5px dashed rgba(220,60,60,0.35)',
+            background: 'linear-gradient(135deg, rgba(220,60,60,0.04) 0%, rgba(220,60,60,0.08) 100%)',
+          }}
         >
-          重置演示数据
-        </Button>
+          <p
+            className="text-xs font-semibold mb-3"
+            style={{ color: 'rgb(200,60,60)', letterSpacing: '0.04em' }}
+          >
+            ⚠ 危险区域
+          </p>
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={handleReset}
+            fullWidth
+          >
+            重置演示数据
+          </Button>
+        </div>
       </Section>
 
       {/* ─── 6. About ─── */}
-      <Section title="关于">
-        <div className="space-y-1 text-sm text-[var(--color-text-muted)]">
-          <p>
-            <span className="text-[var(--color-text-secondary)]">版本</span>{' '}
+      <Section title="关于" index={6}>
+        <div className="space-y-2 text-sm" style={{ color: 'var(--color-text-muted)' }}>
+          <p className="flex items-center gap-2">
+            <span style={{ color: 'var(--color-text-secondary)' }}>版本</span>
             <Badge variant="default" size="sm">v1.0.0</Badge>
           </p>
-          <p>
+          <p style={{ color: 'var(--color-text-secondary)' }}>
             Merize — 让每一分钟都有意义的效率工具
           </p>
           <p className="text-xs">

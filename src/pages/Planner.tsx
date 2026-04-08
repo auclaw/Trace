@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Card, Modal, Button, Progress, Badge, EmptyState, Input } from '../components/ui'
+import { Modal, Button, Progress, Badge, EmptyState, Input } from '../components/ui'
 import { useAppStore } from '../store/useAppStore'
 import type { Task, Subtask, TaskStatus, RepeatType } from '../services/dataService'
 import useTheme from '../hooks/useTheme'
@@ -214,23 +214,75 @@ export default function Planner() {
     <div className="p-6 md:p-8 max-w-4xl mx-auto">
       {/* ── Header ── */}
       <div className="flex items-center justify-between mb-2">
-        <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">今日计划</h1>
-        <Button onClick={openAdd}>添加任务</Button>
+        <div>
+          <h1
+            className="text-3xl font-extrabold text-[var(--color-text-primary)] tracking-tight"
+            style={{ letterSpacing: '-0.02em' }}
+          >
+            今日计划
+          </h1>
+          <div
+            className="mt-1.5 h-1 rounded-full"
+            style={{
+              width: 48,
+              background: 'linear-gradient(90deg, var(--color-accent), var(--color-accent-soft))',
+            }}
+          />
+        </div>
+        <button
+          onClick={openAdd}
+          className="cursor-pointer inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white transition-all duration-200"
+          style={{
+            background: 'linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent) 100%)',
+            borderRadius: 'var(--radius-md)',
+            boxShadow: '0 4px 14px rgba(44, 24, 16, 0.15)',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-1px)'
+            e.currentTarget.style.boxShadow = '0 6px 20px rgba(44, 24, 16, 0.22)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)'
+            e.currentTarget.style.boxShadow = '0 4px 14px rgba(44, 24, 16, 0.15)'
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <path d="M8 3v10M3 8h10" />
+          </svg>
+          添加任务
+        </button>
       </div>
-      <p className="text-sm text-[var(--color-text-muted)] mb-6">{todayDisplay()}</p>
+      <p className="text-sm text-[var(--color-text-muted)] mb-8">{todayDisplay()}</p>
 
       {/* ── Filter Tabs ── */}
-      <div className="flex gap-2 mb-6 overflow-x-auto">
+      <div className="flex gap-2 mb-8 overflow-x-auto pb-1">
         {(Object.keys(FILTER_LABELS) as FilterTab[]).map((key) => (
           <button
             key={key}
             onClick={() => setFilter(key)}
-            className={[
-              'px-4 py-1.5 rounded-full text-sm font-medium transition-all cursor-pointer whitespace-nowrap',
-              filter === key
-                ? 'bg-[var(--color-accent)] text-white'
-                : 'bg-[var(--color-bg-surface-2)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]',
-            ].join(' ')}
+            className="cursor-pointer whitespace-nowrap transition-all duration-200"
+            style={{
+              padding: '6px 18px',
+              borderRadius: 9999,
+              fontSize: 13,
+              fontWeight: 600,
+              background: filter === key ? 'var(--color-accent)' : 'var(--color-accent-soft)',
+              color: filter === key ? '#fff' : 'var(--color-text-secondary)',
+              boxShadow: filter === key ? '0 2px 8px rgba(44, 24, 16, 0.12)' : 'none',
+              transform: filter === key ? 'scale(1.04)' : 'scale(1)',
+            }}
+            onMouseEnter={(e) => {
+              if (filter !== key) {
+                e.currentTarget.style.color = 'var(--color-text-primary)'
+                e.currentTarget.style.background = 'var(--color-accent-soft)'
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (filter !== key) {
+                e.currentTarget.style.color = 'var(--color-text-secondary)'
+                e.currentTarget.style.background = 'var(--color-accent-soft)'
+              }
+            }}
           >
             {FILTER_LABELS[key]}
           </button>
@@ -239,15 +291,38 @@ export default function Planner() {
 
       {/* ── Task List ── */}
       {filtered.length === 0 ? (
-        <EmptyState
-          icon="📋"
-          title="暂无任务"
-          description="点击「添加任务」来规划你的一天"
-          action={<Button onClick={openAdd}>添加任务</Button>}
-        />
+        <div
+          style={{
+            background: 'linear-gradient(135deg, #ffffff 0%, #fef8f0 100%)',
+            borderRadius: 'var(--radius-xl)',
+            border: '1px solid var(--color-border-subtle)',
+            boxShadow: 'var(--shadow-card)',
+            padding: '48px 24px',
+            textAlign: 'center' as const,
+          }}
+        >
+          <EmptyState
+            icon="📋"
+            title="暂无任务"
+            description="点击「添加任务」来规划你的一天"
+            action={
+              <button
+                onClick={openAdd}
+                className="cursor-pointer inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white transition-all duration-200"
+                style={{
+                  background: 'linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent) 100%)',
+                  borderRadius: 'var(--radius-md)',
+                  boxShadow: '0 4px 14px rgba(44, 24, 16, 0.15)',
+                }}
+              >
+                添加任务
+              </button>
+            }
+          />
+        </div>
       ) : (
         <div className="space-y-3">
-          {filtered.map((task) => (
+          {filtered.map((task, idx) => (
             <TaskCard
               key={task.id}
               task={task}
@@ -266,6 +341,7 @@ export default function Planner() {
                 updateTask(task.id, { subtasks: st })
               }}
               accentColor={accentColor}
+              index={idx}
             />
           ))}
         </div>
@@ -381,12 +457,24 @@ export default function Planner() {
               <ul className="space-y-1.5 mb-3">
                 {form.subtasks.map((st) => (
                   <li key={st.id} className="flex items-center gap-2 group">
-                    <input
-                      type="checkbox"
-                      checked={st.completed}
-                      onChange={() => toggleFormSubtask(st.id)}
-                      className="w-4 h-4 accent-[var(--color-accent)] cursor-pointer"
-                    />
+                    <span
+                      onClick={() => toggleFormSubtask(st.id)}
+                      className="cursor-pointer flex-shrink-0 flex items-center justify-center transition-all duration-200"
+                      style={{
+                        width: 18,
+                        height: 18,
+                        borderRadius: '50%',
+                        border: st.completed ? 'none' : '2px solid var(--color-border-subtle)',
+                        background: st.completed ? 'var(--color-accent)' : 'transparent',
+                        transform: st.completed ? 'scale(1.05)' : 'scale(1)',
+                      }}
+                    >
+                      {st.completed && (
+                        <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M2 6l3 3 5-5" />
+                        </svg>
+                      )}
+                    </span>
                     <span
                       className={[
                         'flex-1 text-sm',
@@ -443,6 +531,7 @@ interface TaskCardProps {
   onToggleExpand: () => void
   onToggleSubtask: (sid: string) => void
   accentColor: string
+  index: number
 }
 
 function TaskCard({
@@ -456,6 +545,7 @@ function TaskCard({
   onCancelDelete,
   onToggleExpand,
   onToggleSubtask,
+  index,
 }: TaskCardProps) {
   const isDone = task.status === 'completed'
   const completedSubs = task.subtasks.filter((s) => s.completed).length
@@ -463,15 +553,56 @@ function TaskCard({
   const subProgress = totalSubs > 0 ? (completedSubs / totalSubs) * 100 : 0
 
   return (
-    <Card padding="sm" className={isDone ? 'opacity-60' : ''} hover>
+    <div
+      style={{
+        animationDelay: `${index * 50}ms`,
+        animationName: 'fadeInUp',
+        animationDuration: '0.35s',
+        animationTimingFunction: 'ease-out',
+        animationFillMode: 'both',
+        background: isDone
+          ? 'var(--color-bg-surface-1)'
+          : 'linear-gradient(135deg, #ffffff 0%, #fef8f0 100%)',
+        border: '1px solid var(--color-border-subtle)',
+        borderLeft: `3px solid ${PRIORITY_COLORS[task.priority]}`,
+        borderRadius: 'var(--radius-lg)',
+        boxShadow: 'var(--shadow-card)',
+        padding: '16px',
+        opacity: isDone ? 0.6 : 1,
+        transition: 'box-shadow 200ms ease, transform 200ms ease',
+      }}
+      onMouseEnter={(e) => {
+        if (!isDone) {
+          e.currentTarget.style.boxShadow = 'var(--shadow-card-hover)'
+          e.currentTarget.style.transform = 'translateY(-2px)'
+        }
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.boxShadow = 'var(--shadow-card)'
+        e.currentTarget.style.transform = 'translateY(0)'
+      }}
+    >
       <div className="flex items-start gap-3">
-        {/* checkbox */}
-        <input
-          type="checkbox"
-          checked={isDone}
-          onChange={onToggleStatus}
-          className="mt-1 w-5 h-5 accent-[var(--color-accent)] cursor-pointer flex-shrink-0"
-        />
+        {/* circular checkbox */}
+        <span
+          onClick={onToggleStatus}
+          className="cursor-pointer flex-shrink-0 flex items-center justify-center mt-0.5 transition-all duration-200"
+          style={{
+            width: 22,
+            height: 22,
+            borderRadius: '50%',
+            border: isDone ? 'none' : '2px solid var(--color-border-subtle)',
+            background: isDone ? 'var(--color-accent)' : 'transparent',
+            transform: isDone ? 'scale(1.08)' : 'scale(1)',
+            boxShadow: isDone ? '0 2px 6px rgba(44, 24, 16, 0.12)' : 'none',
+          }}
+        >
+          {isDone && (
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M2 6l3 3 5-5" />
+            </svg>
+          )}
+        </span>
 
         {/* content */}
         <div className="flex-1 min-w-0">
@@ -506,13 +637,15 @@ function TaskCard({
             {totalSubs > 0 && (
               <span className="flex items-center gap-1.5 text-xs text-[var(--color-text-muted)]">
                 <Progress value={subProgress} size="sm" className="w-16" />
-                {completedSubs}/{totalSubs}
+                <span className="metric-value">{completedSubs}/{totalSubs}</span>
               </span>
             )}
 
             {/* time */}
             <span className="text-xs text-[var(--color-text-muted)]">
-              {fmtDuration(task.actualMinutes)} / {fmtDuration(task.estimatedMinutes)}
+              <span className="metric-value">{fmtDuration(task.actualMinutes)}</span>
+              {' / '}
+              {fmtDuration(task.estimatedMinutes)}
             </span>
 
             {/* due date */}
@@ -527,7 +660,8 @@ function TaskCard({
           {totalSubs > 0 && (
             <button
               onClick={onToggleExpand}
-              className="p-1.5 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-surface-2)] transition-colors cursor-pointer"
+              className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-surface-2)] transition-all duration-200 cursor-pointer"
+              style={{ borderRadius: 'var(--radius-md)' }}
               title="展开子任务"
             >
               <svg
@@ -538,7 +672,7 @@ function TaskCard({
                 stroke="currentColor"
                 strokeWidth="2"
                 strokeLinecap="round"
-                className={`transition-transform ${expanded ? 'rotate-90' : ''}`}
+                className={`transition-transform duration-200 ${expanded ? 'rotate-90' : ''}`}
               >
                 <path d="M6 4l4 4-4 4" />
               </svg>
@@ -547,7 +681,8 @@ function TaskCard({
           {/* edit */}
           <button
             onClick={onEdit}
-            className="p-1.5 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-accent)] hover:bg-[var(--color-accent-soft)] transition-colors cursor-pointer"
+            className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-accent)] hover:bg-[var(--color-accent-soft)] transition-all duration-200 cursor-pointer"
+            style={{ borderRadius: 'var(--radius-md)' }}
             title="编辑"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -567,7 +702,8 @@ function TaskCard({
           ) : (
             <button
               onClick={onDelete}
-              className="p-1.5 rounded-lg text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/10 transition-colors cursor-pointer"
+              className="p-1.5 text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/10 transition-all duration-200 cursor-pointer"
+              style={{ borderRadius: 'var(--radius-md)' }}
               title="删除"
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -580,18 +716,45 @@ function TaskCard({
 
       {/* expanded subtasks */}
       {expanded && totalSubs > 0 && (
-        <div className="mt-3 ml-8 pl-3 border-l-2 border-[var(--color-border-subtle)]/40 space-y-1.5">
-          {task.subtasks.map((st) => (
-            <label key={st.id} className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={st.completed}
-                onChange={() => onToggleSubtask(st.id)}
-                className="w-4 h-4 accent-[var(--color-accent)]"
-              />
+        <div
+          className="mt-3 ml-8 pl-4 space-y-2"
+          style={{
+            borderLeft: '2px solid var(--color-accent-soft)',
+          }}
+        >
+          {task.subtasks.map((st, stIdx) => (
+            <label
+              key={st.id}
+              className="flex items-center gap-2.5 cursor-pointer py-0.5"
+              style={{
+                animationDelay: `${stIdx * 30}ms`,
+                animationName: 'fadeInUp',
+                animationDuration: '0.25s',
+                animationTimingFunction: 'ease-out',
+                animationFillMode: 'both',
+              }}
+            >
+              <span
+                onClick={(e) => { e.preventDefault(); onToggleSubtask(st.id) }}
+                className="flex-shrink-0 flex items-center justify-center transition-all duration-200"
+                style={{
+                  width: 16,
+                  height: 16,
+                  borderRadius: '50%',
+                  border: st.completed ? 'none' : '2px solid var(--color-border-subtle)',
+                  background: st.completed ? 'var(--color-accent)' : 'transparent',
+                  transform: st.completed ? 'scale(1.05)' : 'scale(1)',
+                }}
+              >
+                {st.completed && (
+                  <svg width="8" height="8" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M2 6l3 3 5-5" />
+                  </svg>
+                )}
+              </span>
               <span
                 className={[
-                  'text-sm',
+                  'text-sm transition-colors duration-150',
                   st.completed
                     ? 'line-through text-[var(--color-text-muted)]'
                     : 'text-[var(--color-text-primary)]',
@@ -603,6 +766,16 @@ function TaskCard({
           ))}
         </div>
       )}
-    </Card>
+
+      {/* inject keyframes style once */}
+      {index === 0 && (
+        <style>{`
+          @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+        `}</style>
+      )}
+    </div>
   )
 }

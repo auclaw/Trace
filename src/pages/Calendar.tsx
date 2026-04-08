@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { Card, Modal, Button, Badge, EmptyState, Input } from '../components/ui'
+import { Modal, Button, Badge, EmptyState, Input } from '../components/ui'
 import { useAppStore } from '../store/useAppStore'
 import useTheme from '../hooks/useTheme'
 import { CATEGORY_COLORS } from '../config/themes'
@@ -53,11 +53,35 @@ function getHeatmapStyle(minutes: number): React.CSSProperties {
   }
 }
 
+// ── Keyframe styles injected once ──
+
+const calendarKeyframes = `
+@keyframes calendarCellFadeIn {
+  from { opacity: 0; transform: translateY(6px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes calendarSlideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+`
+
+let keyframesInjected = false
+function ensureKeyframes() {
+  if (keyframesInjected) return
+  keyframesInjected = true
+  const style = document.createElement('style')
+  style.textContent = calendarKeyframes
+  document.head.appendChild(style)
+}
+
 // ── Main Component ──
 
 export default function Calendar() {
   const { accentColor: _ } = useTheme()
   void _
+
+  useEffect(() => { ensureKeyframes() }, [])
 
   const activities = useAppStore((s) => s.activities)
   const loadActivities = useAppStore((s) => s.loadActivities)
@@ -195,24 +219,26 @@ export default function Calendar() {
   return (
     <div className="p-6 lg:p-8 max-w-5xl mx-auto">
       {/* Month Navigation */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-4">
           <button
             onClick={prevMonth}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-surface-2)] transition-colors cursor-pointer"
+            className="w-10 h-10 rounded-[var(--radius-lg)] flex items-center justify-center text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-surface-2)] transition-all duration-200 cursor-pointer"
+            style={{ boxShadow: 'inset 0 0 0 1px var(--color-border-subtle)' }}
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <path d="M10 4l-4 4 4 4" />
             </svg>
           </button>
-          <h1 className="text-xl font-bold text-[var(--color-text-primary)] tabular-nums min-w-[8rem] text-center">
+          <h1 className="text-2xl font-extrabold tracking-tight text-[var(--color-text-primary)] tabular-nums min-w-[9rem] text-center select-none">
             {year}年{month}月
           </h1>
           <button
             onClick={nextMonth}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-surface-2)] transition-colors cursor-pointer"
+            className="w-10 h-10 rounded-[var(--radius-lg)] flex items-center justify-center text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-surface-2)] transition-all duration-200 cursor-pointer"
+            style={{ boxShadow: 'inset 0 0 0 1px var(--color-border-subtle)' }}
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <path d="M6 4l4 4-4 4" />
             </svg>
           </button>
@@ -221,15 +247,23 @@ export default function Calendar() {
           今天
         </Button>
       </div>
-
       {/* Calendar Grid */}
-      <Card padding="md" className="mb-6">
+      <div
+        className="mb-8 rounded-[var(--radius-xl)] overflow-hidden"
+        style={{
+          background: 'linear-gradient(135deg, var(--color-bg-surface-1), var(--color-bg-surface-2))',
+          boxShadow: 'var(--shadow-card)',
+          border: '1px solid var(--color-border-subtle)',
+          padding: '1.25rem',
+        }}
+      >
         {/* Weekday headers */}
-        <div className="grid grid-cols-7 gap-1 mb-2">
+        <div className="grid grid-cols-7 gap-1.5 mb-2">
           {WEEKDAY_LABELS.map((label) => (
             <div
               key={label}
-              className="text-center text-xs font-medium text-[var(--color-text-muted)] py-1.5"
+              className="text-center text-[10px] font-semibold uppercase tracking-widest py-2"
+              style={{ color: 'var(--color-text-muted)' }}
             >
               {label}
             </div>
@@ -237,7 +271,7 @@ export default function Calendar() {
         </div>
 
         {/* Day cells */}
-        <div className="grid grid-cols-7 gap-1">
+        <div className="grid grid-cols-7 gap-1.5">
           {calendarDays.map((day, idx) => {
             if (day === null) {
               return <div key={`empty-${idx}`} className="aspect-square" />
@@ -249,45 +283,57 @@ export default function Calendar() {
             const isSelected = ds === selectedDate
             const hasDot = mins > 0
 
+            const cellStyle: React.CSSProperties = {
+              ...getHeatmapStyle(mins),
+              animation: `calendarCellFadeIn 0.3s ease both`,
+              animationDelay: `${idx * 18}ms`,
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+            }
+
+            if (isToday && !isSelected) {
+              cellStyle.background = 'linear-gradient(135deg, var(--color-accent-soft), transparent)'
+              cellStyle.boxShadow = 'inset 0 0 0 2px var(--color-accent)'
+            }
+
+            if (isSelected) {
+              cellStyle.boxShadow = `0 0 0 2.5px var(--color-accent), 0 4px 12px rgba(44, 24, 16, 0.12)`
+              cellStyle.background = 'var(--color-accent-soft)'
+            }
+
             return (
               <button
                 key={ds}
                 type="button"
                 onClick={() => setSelectedDate(ds)}
                 title={mins > 0 ? formatMinutes(mins) : '无活动'}
-                className={[
-                  'aspect-square rounded-lg flex flex-col items-center justify-center relative',
-                  'text-sm transition-all duration-150 cursor-pointer',
-                  isSelected
-                    ? 'ring-2 ring-[var(--color-accent)] font-semibold'
-                    : 'hover:ring-1 hover:ring-[var(--color-border-subtle)]',
-                  isToday && !isSelected ? 'font-bold' : '',
-                ].join(' ')}
-                style={isSelected ? { ...getHeatmapStyle(mins), boxShadow: '0 0 0 2px var(--color-accent)' } : getHeatmapStyle(mins)}
+                className="aspect-square rounded-[var(--radius-md)] flex flex-col items-center justify-center relative text-sm cursor-pointer hover:scale-[1.08] hover:z-10"
+                style={cellStyle}
               >
                 <span
-                  className={[
-                    isSelected
-                      ? 'text-[var(--color-text-primary)]'
+                  style={{
+                    fontWeight: isSelected || isToday ? 700 : 500,
+                    color: isSelected
+                      ? 'var(--color-accent)'
                       : isToday
-                        ? 'text-[var(--color-accent)]'
+                        ? 'var(--color-accent)'
                         : mins > 0
-                          ? 'text-[var(--color-text-primary)]'
-                          : 'text-[var(--color-text-muted)]',
-                  ].join(' ')}
+                          ? 'var(--color-text-primary)'
+                          : 'var(--color-text-muted)',
+                    fontSize: isToday ? '0.9375rem' : undefined,
+                  }}
                 >
                   {day}
                 </span>
                 {hasDot && !isSelected && (
                   <span
-                    className="absolute bottom-1 w-1 h-1 rounded-full"
+                    className="absolute bottom-1.5 w-1 h-1 rounded-full"
                     style={{ backgroundColor: 'var(--color-accent)' }}
                   />
                 )}
                 {isToday && (
                   <span
                     className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full"
-                    style={{ backgroundColor: 'var(--color-accent)' }}
+                    style={{ backgroundColor: 'var(--color-accent)', boxShadow: '0 0 4px var(--color-accent)' }}
                   />
                 )}
               </button>
@@ -296,25 +342,46 @@ export default function Calendar() {
         </div>
 
         {/* Legend */}
-        <div className="flex items-center justify-end gap-2 mt-3 pt-3 border-t border-[var(--color-border-subtle)]/30">
-          <span className="text-[10px] text-[var(--color-text-muted)]">少</span>
+        <div
+          className="flex items-center justify-end gap-2 mt-4 pt-3"
+          style={{ borderTop: '1px solid var(--color-border-subtle)' }}
+        >
+          <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>少</span>
           <div className="flex gap-0.5">
             {[0, 30, 120, 300, 480].map((m) => (
-              <div key={m} className="w-3 h-3 rounded-sm" style={getHeatmapStyle(m)} />
+              <div
+                key={m}
+                className="w-3 h-3 rounded-sm"
+                style={{ ...getHeatmapStyle(m), transition: 'transform 0.15s ease' }}
+              />
             ))}
           </div>
-          <span className="text-[10px] text-[var(--color-text-muted)]">多</span>
+          <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>多</span>
         </div>
-      </Card>
-
+      </div>
       {/* Selected Day Detail Panel */}
-      <Card padding="md">
-        <div className="flex items-center justify-between mb-4">
+      <div
+        className="rounded-[var(--radius-xl)] overflow-hidden"
+        style={{
+          background: 'linear-gradient(160deg, var(--color-bg-surface-1), var(--color-bg-surface-2))',
+          boxShadow: 'var(--shadow-card)',
+          border: '1px solid var(--color-border-subtle)',
+          padding: '1.5rem',
+          animation: 'calendarSlideUp 0.35s ease both',
+        }}
+      >
+        <div className="flex items-center justify-between mb-5">
           <div>
-            <h2 className="text-base font-semibold text-[var(--color-text-primary)]">
+            <h2
+              className="text-base font-bold"
+              style={{ color: 'var(--color-text-primary)' }}
+            >
               {selectedDateLabel}
             </h2>
-            <span className="text-xs text-[var(--color-text-muted)]">
+            <span
+              className="text-xs mt-0.5 inline-block"
+              style={{ color: 'var(--color-text-muted)' }}
+            >
               共 {formatMinutes(dayTotalMinutes)}
             </span>
           </div>
@@ -332,38 +399,62 @@ export default function Calendar() {
             action={<Button size="sm" onClick={openAddModal}>添加活动</Button>}
           />
         ) : (
-          <div className="space-y-5">
+          <div className="space-y-6">
             {/* Activities */}
             {sortedActivities.length > 0 && (
               <div>
-                <h3 className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">
+                <h3
+                  className="text-[10px] font-bold uppercase tracking-[0.1em] mb-3"
+                  style={{ color: 'var(--color-text-muted)' }}
+                >
                   活动记录
                 </h3>
-                <div className="space-y-1.5">
-                  {sortedActivities.map((act) => {
+                <div className="space-y-1">
+                  {sortedActivities.map((act, i) => {
                     const color = CATEGORY_COLORS[act.category] || CATEGORY_COLORS['其他']
                     return (
                       <div
                         key={act.id}
-                        className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-[var(--color-bg-surface-2)]/50 transition-colors"
+                        className="flex items-center gap-3 py-2.5 px-3 rounded-[var(--radius-md)] transition-all duration-200 cursor-default"
+                        style={{
+                          animation: `calendarSlideUp 0.3s ease both`,
+                          animationDelay: `${i * 50}ms`,
+                          borderLeft: `3px solid ${color}`,
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = 'var(--color-bg-surface-2)'
+                          e.currentTarget.style.boxShadow = 'var(--shadow-card-hover)'
+                          e.currentTarget.style.transform = 'translateX(2px)'
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'transparent'
+                          e.currentTarget.style.boxShadow = 'none'
+                          e.currentTarget.style.transform = 'translateX(0)'
+                        }}
                       >
-                        <div
-                          className="w-1 h-8 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: color }}
-                        />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-[var(--color-text-primary)] truncate">
+                            <span
+                              className="text-sm font-medium truncate"
+                              style={{ color: 'var(--color-text-primary)' }}
+                            >
                               {act.name}
                             </span>
                             <span
-                              className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium leading-none flex-shrink-0"
-                              style={{ backgroundColor: `${color}20`, color }}
+                              className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-semibold leading-none flex-shrink-0"
+                              style={{
+                                backgroundColor: `${color}20`,
+                                color,
+                                border: `1px solid ${color}30`,
+                              }}
                             >
                               {act.category}
                             </span>
                           </div>
-                          <span className="text-xs text-[var(--color-text-muted)] tabular-nums">
+                          <span
+                            className="text-xs tabular-nums mt-0.5 inline-block"
+                            style={{ color: 'var(--color-text-muted)' }}
+                          >
                             {extractTime(act.startTime)} - {extractTime(act.endTime)} ({formatMinutes(act.duration)})
                           </span>
                         </div>
@@ -377,33 +468,38 @@ export default function Calendar() {
             {/* Time Blocks */}
             {dayTimeBlocks.length > 0 && (
               <div>
-                <h3 className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">
+                <h3
+                  className="text-[10px] font-bold uppercase tracking-[0.1em] mb-3"
+                  style={{ color: 'var(--color-text-muted)' }}
+                >
                   时间块计划
                 </h3>
-                <div className="space-y-1.5">
-                  {dayTimeBlocks.map((block) => {
+                <div className="space-y-1">
+                  {dayTimeBlocks.map((block, i) => {
                     const color = CATEGORY_COLORS[block.category] || CATEGORY_COLORS['其他']
                     return (
                       <div
                         key={block.id}
-                        className={[
-                          'flex items-center gap-3 py-2 px-3 rounded-lg',
-                          block.completed ? 'opacity-60' : '',
-                        ].join(' ')}
+                        className="flex items-center gap-3 py-2.5 px-3 rounded-[var(--radius-md)] transition-all duration-200"
+                        style={{
+                          opacity: block.completed ? 0.6 : 1,
+                          borderLeft: `3px solid ${color}`,
+                          animation: `calendarSlideUp 0.3s ease both`,
+                          animationDelay: `${i * 50}ms`,
+                        }}
                       >
-                        <div
-                          className="w-1 h-8 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: color }}
-                        />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <span
                               className={[
                                 'text-sm font-medium truncate',
-                                block.completed
-                                  ? 'line-through text-[var(--color-text-muted)]'
-                                  : 'text-[var(--color-text-primary)]',
+                                block.completed ? 'line-through' : '',
                               ].join(' ')}
+                              style={{
+                                color: block.completed
+                                  ? 'var(--color-text-muted)'
+                                  : 'var(--color-text-primary)',
+                              }}
                             >
                               {block.title}
                             </span>
@@ -411,7 +507,10 @@ export default function Calendar() {
                               <Badge variant="success" size="sm">已完成</Badge>
                             )}
                           </div>
-                          <span className="text-xs text-[var(--color-text-muted)] tabular-nums">
+                          <span
+                            className="text-xs tabular-nums mt-0.5 inline-block"
+                            style={{ color: 'var(--color-text-muted)' }}
+                          >
                             {extractTime(block.startTime)} - {extractTime(block.endTime)}
                           </span>
                         </div>
@@ -423,8 +522,7 @@ export default function Calendar() {
             )}
           </div>
         )}
-      </Card>
-
+      </div>
       {/* Add Activity Modal */}
       <Modal
         isOpen={showAddModal}
@@ -457,7 +555,10 @@ export default function Calendar() {
 
           {/* Category */}
           <div>
-            <label className="block text-[10px] font-medium text-[var(--color-text-muted)] mb-2">
+            <label
+              className="block text-[10px] font-semibold uppercase tracking-wider mb-2.5"
+              style={{ color: 'var(--color-text-muted)' }}
+            >
               分类
             </label>
             <div className="flex flex-wrap gap-2">
@@ -469,16 +570,15 @@ export default function Calendar() {
                     key={cat}
                     type="button"
                     onClick={() => setFormCategory(cat)}
-                    className={[
-                      'px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-150 cursor-pointer',
-                      isActive
-                        ? 'ring-1 ring-offset-1 ring-offset-[var(--color-bg-surface-1)]'
-                        : 'opacity-70 hover:opacity-100',
-                    ].join(' ')}
+                    className="px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 cursor-pointer"
                     style={{
-                      backgroundColor: `${color}${isActive ? '30' : '15'}`,
+                      backgroundColor: `${color}${isActive ? '30' : '12'}`,
                       color,
-                      ...(isActive ? { boxShadow: `0 0 0 1px ${color}` } : {}),
+                      boxShadow: isActive
+                        ? `0 0 0 1.5px ${color}, 0 2px 8px rgba(44, 24, 16, 0.08)`
+                        : '0 0 0 1px transparent',
+                      transform: isActive ? 'scale(1.05)' : 'scale(1)',
+                      opacity: isActive ? 1 : 0.75,
                     }}
                   >
                     {cat}
@@ -491,45 +591,76 @@ export default function Calendar() {
           {/* Time inputs */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-[10px] font-medium text-[var(--color-text-muted)] mb-1.5">
+              <label
+                className="block text-[10px] font-semibold uppercase tracking-wider mb-1.5"
+                style={{ color: 'var(--color-text-muted)' }}
+              >
                 开始时间
               </label>
               <input
                 type="time"
                 value={formStartTime}
                 onChange={(e) => setFormStartTime(e.target.value)}
-                className={[
-                  'w-full px-3 py-2 rounded-lg text-sm',
-                  'bg-[var(--color-bg-surface-2)] text-[var(--color-text-primary)]',
-                  'border border-[var(--color-border-subtle)]/50',
-                  'focus:outline-none focus:border-[var(--color-accent)]',
-                  'transition-colors',
-                ].join(' ')}
+                className="w-full px-3 py-2.5 text-sm transition-all duration-200 focus:outline-none"
+                style={{
+                  backgroundColor: 'var(--color-bg-surface-2)',
+                  color: 'var(--color-text-primary)',
+                  border: '1px solid var(--color-border-subtle)',
+                  borderRadius: 'var(--radius-md)',
+                  boxShadow: '0 1px 3px rgba(44, 24, 16, 0.04)',
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--color-accent)'
+                  e.currentTarget.style.boxShadow = '0 0 0 3px var(--color-accent-soft)'
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--color-border-subtle)'
+                  e.currentTarget.style.boxShadow = '0 1px 3px rgba(44, 24, 16, 0.04)'
+                }}
               />
             </div>
             <div>
-              <label className="block text-[10px] font-medium text-[var(--color-text-muted)] mb-1.5">
+              <label
+                className="block text-[10px] font-semibold uppercase tracking-wider mb-1.5"
+                style={{ color: 'var(--color-text-muted)' }}
+              >
                 结束时间
               </label>
               <input
                 type="time"
                 value={formEndTime}
                 onChange={(e) => setFormEndTime(e.target.value)}
-                className={[
-                  'w-full px-3 py-2 rounded-lg text-sm',
-                  'bg-[var(--color-bg-surface-2)] text-[var(--color-text-primary)]',
-                  'border border-[var(--color-border-subtle)]/50',
-                  'focus:outline-none focus:border-[var(--color-accent)]',
-                  'transition-colors',
-                ].join(' ')}
+                className="w-full px-3 py-2.5 text-sm transition-all duration-200 focus:outline-none"
+                style={{
+                  backgroundColor: 'var(--color-bg-surface-2)',
+                  color: 'var(--color-text-primary)',
+                  border: '1px solid var(--color-border-subtle)',
+                  borderRadius: 'var(--radius-md)',
+                  boxShadow: '0 1px 3px rgba(44, 24, 16, 0.04)',
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--color-accent)'
+                  e.currentTarget.style.boxShadow = '0 0 0 3px var(--color-accent-soft)'
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--color-border-subtle)'
+                  e.currentTarget.style.boxShadow = '0 1px 3px rgba(44, 24, 16, 0.04)'
+                }}
               />
             </div>
           </div>
 
           {/* Duration display */}
-          <div className="text-sm text-[var(--color-text-secondary)]">
+          <div
+            className="text-sm flex items-center gap-2 px-3 py-2.5 rounded-[var(--radius-md)]"
+            style={{
+              backgroundColor: 'var(--color-bg-surface-2)',
+              color: 'var(--color-text-secondary)',
+              border: '1px solid var(--color-border-subtle)',
+            }}
+          >
             时长：
-            <span className="font-semibold text-[var(--color-text-primary)]">
+            <span className="font-bold" style={{ color: 'var(--color-text-primary)' }}>
               {computedDuration > 0 ? formatMinutes(computedDuration) : '---'}
             </span>
           </div>

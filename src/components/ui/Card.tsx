@@ -6,6 +6,7 @@ interface CardProps {
   padding?: 'sm' | 'md' | 'lg';
   hover?: boolean;
   onClick?: () => void;
+  style?: React.CSSProperties;
 }
 
 const paddingMap: Record<string, string> = {
@@ -20,6 +21,7 @@ export default function Card({
   padding = 'md',
   hover = false,
   onClick,
+  style: styleProp,
 }: CardProps) {
   return (
     <div
@@ -40,6 +42,7 @@ export default function Card({
         borderRadius: 'var(--radius-lg)',
         boxShadow: 'var(--shadow-card)',
         transition: 'box-shadow 200ms cubic-bezier(0.4,0,0.2,1), transform 200ms cubic-bezier(0.4,0,0.2,1)',
+        ...styleProp,
       }}
       className={[
         paddingMap[padding],

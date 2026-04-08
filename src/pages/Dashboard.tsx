@@ -40,7 +40,12 @@ const CATEGORIES: ActivityCategory[] = [
   '开发', '工作', '学习', '会议', '休息', '娱乐', '运动', '阅读', '其他',
 ]
 
-// ── Circular progress ring ──
+// ── Shared inline style constants ──
+
+const CARD_GRADIENT_BG = 'linear-gradient(135deg, #ffffff 0%, #fef8f0 100%)'
+const TRANSITION_ALL = 'all 200ms cubic-bezier(0.4, 0, 0.2, 1)'
+
+// ── Circular progress ring with glow ──
 
 function ProgressRing({
   value,
@@ -70,7 +75,12 @@ function ProgressRing({
       tabIndex={onClick ? 0 : undefined}
       onKeyDown={onClick ? (e) => { if (e.key === 'Enter') onClick() } : undefined}
     >
-      <svg width={size} height={size} className="-rotate-90">
+      {/* Glow behind progress */}
+      <div
+        className="absolute inset-0 rounded-full blur-xl opacity-30"
+        style={{ background: color }}
+      />
+      <svg width={size} height={size} className="-rotate-90 relative z-10">
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -78,7 +88,7 @@ function ProgressRing({
           fill="none"
           stroke="var(--color-border-subtle)"
           strokeWidth={stroke}
-          opacity={0.2}
+          opacity={0.15}
         />
         <circle
           cx={size / 2}
@@ -91,9 +101,10 @@ function ProgressRing({
           strokeDashoffset={offset}
           strokeLinecap="round"
           className="transition-all duration-700 ease-out"
+          style={{ filter: `drop-shadow(0 0 6px ${color}40)` }}
         />
       </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
+      <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
         {children}
       </div>
     </div>
@@ -227,6 +238,8 @@ export default function Dashboard() {
   const dailyGoalMinutes = useAppStore((s) => s.dailyGoalMinutes)
 
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null)
+  const [checkedTasks, setCheckedTasks] = useState<Record<string, boolean>>({})
+  const [checkedHabits, setCheckedHabits] = useState<Record<string, boolean>>({})
 
   // Load data on mount
   useEffect(() => {
@@ -296,14 +309,22 @@ export default function Dashboard() {
 
   const handleTaskToggle = useCallback(
     (id: string, currentStatus: string) => {
-      updateTask(id, { status: currentStatus === 'completed' ? 'pending' : 'completed' })
+      setCheckedTasks((prev) => ({ ...prev, [id]: true }))
+      setTimeout(() => {
+        updateTask(id, { status: currentStatus === 'completed' ? 'pending' : 'completed' })
+        setCheckedTasks((prev) => ({ ...prev, [id]: false }))
+      }, 350)
     },
     [updateTask],
   )
 
   const handleCheckin = useCallback(
     (habitId: string) => {
-      checkinHabit(habitId, today, 1)
+      setCheckedHabits((prev) => ({ ...prev, [habitId]: true }))
+      setTimeout(() => {
+        checkinHabit(habitId, today, 1)
+        setCheckedHabits((prev) => ({ ...prev, [habitId]: false }))
+      }, 400)
     },
     [checkinHabit, today],
   )
@@ -311,7 +332,7 @@ export default function Dashboard() {
   // ── Render ──
 
   return (
-    <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-6">
+    <div style={{ padding: '32px 40px' }} className="max-w-6xl mx-auto space-y-6">
       {/* Edit Modal */}
       {editingActivity && (
         <EditActivityModal
@@ -330,10 +351,10 @@ export default function Dashboard() {
 
       {/* ── Header ── */}
       <div>
-        <h1 className="text-2xl font-bold text-[var(--color-text-primary)] tracking-tight">
+        <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--color-text-primary)' }}>
           今日概览
         </h1>
-        <p className="text-sm text-[var(--color-text-muted)] mt-0.5">
+        <p className="text-sm mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
           {dateLabel} &middot; {greeting()}
         </p>
       </div>
@@ -341,43 +362,95 @@ export default function Dashboard() {
       {/* ── Stats Row ── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {/* Focus time */}
-        <Card hover onClick={() => navigate('/focus')} className="flex items-center gap-4">
+        <div
+          className="flex items-center gap-4 rounded-2xl cursor-pointer"
+          onClick={() => navigate('/focus')}
+          style={{
+            background: CARD_GRADIENT_BG,
+            border: '1px solid var(--color-border-subtle)',
+            boxShadow: 'var(--shadow-card)',
+            padding: '20px 24px',
+            transition: TRANSITION_ALL,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.boxShadow = 'var(--shadow-card-hover)'
+            e.currentTarget.style.transform = 'translateY(-2px)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.boxShadow = 'var(--shadow-card)'
+            e.currentTarget.style.transform = 'translateY(0)'
+          }}
+        >
           <ProgressRing value={goalPct} color={accentColor} onClick={() => navigate('/focus')}>
-            <span className="text-lg font-bold tabular-nums text-[var(--color-text-primary)]">
+            <span className="metric-value" style={{ fontSize: '1.25rem' }}>
               {totalHours}:{String(totalMins).padStart(2, '0')}
             </span>
           </ProgressRing>
           <div className="min-w-0">
-            <p className="text-xs text-[var(--color-text-muted)]">专注时长</p>
-            <p className="text-sm font-semibold text-[var(--color-text-primary)] mt-0.5">
+            <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>专注时长</p>
+            <p className="text-sm font-semibold mt-0.5" style={{ color: 'var(--color-text-primary)' }}>
               {Math.round(goalPct)}% 目标
             </p>
-            <p className="text-[10px] text-[var(--color-text-muted)]">
+            <p className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>
               目标 {fmtDuration(dailyGoalMinutes)}
             </p>
           </div>
-        </Card>
+        </div>
 
         {/* Activity count */}
-        <Card className="flex items-center gap-4">
+        <div
+          className="flex items-center gap-4 rounded-2xl"
+          style={{
+            background: CARD_GRADIENT_BG,
+            border: '1px solid var(--color-border-subtle)',
+            boxShadow: 'var(--shadow-card)',
+            padding: '20px 24px',
+            transition: TRANSITION_ALL,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.boxShadow = 'var(--shadow-card-hover)'
+            e.currentTarget.style.transform = 'translateY(-2px)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.boxShadow = 'var(--shadow-card)'
+            e.currentTarget.style.transform = 'translateY(0)'
+          }}
+        >
           <div
-            className="flex items-center justify-center w-[88px] h-[88px] rounded-2xl text-3xl font-bold"
-            style={{ background: 'var(--color-accent-soft)', color: 'var(--color-accent)' }}
+            className="flex items-center justify-center w-[88px] h-[88px] rounded-2xl"
+            style={{ background: 'var(--color-accent-soft)' }}
           >
-            {dailyStats.activityCount}
+            <span className="metric-value">{dailyStats.activityCount}</span>
           </div>
           <div className="min-w-0">
-            <p className="text-xs text-[var(--color-text-muted)]">活动数量</p>
+            <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>活动数量</p>
             {topCategory && (
               <Badge variant="accent" className="mt-1">
                 {topCategory[0]} {fmtDuration(topCategory[1])}
               </Badge>
             )}
           </div>
-        </Card>
+        </div>
 
         {/* Streak */}
-        <Card className="flex items-center gap-4">
+        <div
+          className="flex items-center gap-4 rounded-2xl"
+          style={{
+            background: CARD_GRADIENT_BG,
+            border: '1px solid var(--color-border-subtle)',
+            boxShadow: 'var(--shadow-card)',
+            padding: '20px 24px',
+            transition: TRANSITION_ALL,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.boxShadow = 'var(--shadow-card-hover)'
+            e.currentTarget.style.transform = 'translateY(-2px)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.boxShadow = 'var(--shadow-card)'
+            e.currentTarget.style.transform = 'translateY(0)'
+          }}
+        >
           <div
             className="flex items-center justify-center w-[88px] h-[88px] rounded-2xl text-3xl"
             style={{ background: streak > 0 ? 'rgba(239,68,68,0.1)' : 'var(--color-bg-surface-2)' }}
@@ -385,13 +458,14 @@ export default function Dashboard() {
             <span role="img" aria-label="fire">🔥</span>
           </div>
           <div className="min-w-0">
-            <p className="text-xs text-[var(--color-text-muted)]">连续打卡</p>
-            <p className="text-2xl font-bold text-[var(--color-text-primary)] mt-0.5 tabular-nums">
-              {streak}<span className="text-sm font-normal text-[var(--color-text-muted)] ml-1">天</span>
+            <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>连续打卡</p>
+            <p className="mt-0.5 tabular-nums">
+              <span className="metric-value" style={{ fontSize: '1.75rem' }}>{streak}</span>
+              <span className="text-sm font-normal ml-1" style={{ color: 'var(--color-text-muted)' }}>天</span>
             </p>
-            <p className="text-[10px] text-[var(--color-text-muted)]">每日 &gt; 1小时</p>
+            <p className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>每日 &gt; 1小时</p>
           </div>
-        </Card>
+        </div>
       </div>
 
       {/* ── Main Content ── */}
@@ -399,7 +473,7 @@ export default function Dashboard() {
         {/* Left: Activity Timeline */}
         <div className="lg:col-span-3">
           <Card padding="sm">
-            <h2 className="text-sm font-semibold text-[var(--color-text-primary)] px-2 pt-2 pb-3">
+            <h2 className="text-sm font-semibold px-2 pt-2 pb-3" style={{ color: 'var(--color-text-primary)' }}>
               今日时间线
             </h2>
             {sortedActivities.length === 0 ? (
@@ -410,31 +484,47 @@ export default function Dashboard() {
               />
             ) : (
               <div className="relative pl-6 pr-2 pb-2 space-y-0.5">
-                {/* Timeline line */}
+                {/* Timeline gradient line */}
                 <div
                   className="absolute left-[17px] top-0 bottom-0 w-px"
-                  style={{ background: 'var(--color-border-subtle)', opacity: 0.3 }}
+                  style={{
+                    background: 'linear-gradient(180deg, var(--color-border-subtle) 0%, transparent 100%)',
+                    opacity: 0.4,
+                  }}
                 />
                 {sortedActivities.map((act) => {
                   const catColor = CATEGORY_COLORS[act.category] || CATEGORY_COLORS['其他']
                   return (
                     <div
                       key={act.id}
-                      className="relative flex items-start gap-3 py-2.5 px-2 rounded-xl hover:bg-[var(--color-bg-surface-2)] transition-colors cursor-pointer group"
+                      className="relative flex items-start gap-3 py-2.5 px-2 rounded-xl cursor-pointer group"
+                      style={{
+                        borderLeft: `3px solid ${catColor}`,
+                        marginLeft: '-3px',
+                        transition: TRANSITION_ALL,
+                      }}
                       onClick={() => setEditingActivity(act)}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = `${catColor}0D`
+                        e.currentTarget.style.transform = 'translateX(2px)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent'
+                        e.currentTarget.style.transform = 'translateX(0)'
+                      }}
                     >
-                      {/* Dot */}
+                      {/* Dot on timeline */}
                       <div
-                        className="absolute -left-[17px] top-[18px] w-2.5 h-2.5 rounded-full ring-2 ring-[var(--color-bg-surface-1)] z-10"
+                        className="absolute -left-[20px] top-[18px] w-2.5 h-2.5 rounded-full ring-2 ring-[var(--color-bg-surface-1)] z-10"
                         style={{ background: catColor }}
                       />
                       {/* Time */}
-                      <span className="text-[11px] tabular-nums text-[var(--color-text-muted)] w-24 shrink-0 pt-0.5">
+                      <span className="text-[11px] tabular-nums w-24 shrink-0 pt-0.5" style={{ color: 'var(--color-text-muted)', opacity: 0.7 }}>
                         {fmtTime(act.startTime)} – {fmtTime(act.endTime)}
                       </span>
                       {/* Details */}
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">
+                        <p className="text-sm font-semibold truncate" style={{ color: 'var(--color-text-primary)', letterSpacing: '-0.01em' }}>
                           {act.name}
                         </p>
                         <div className="flex items-center gap-2 mt-0.5">
@@ -442,16 +532,16 @@ export default function Dashboard() {
                             className="inline-block w-1.5 h-1.5 rounded-full"
                             style={{ background: catColor }}
                           />
-                          <span className="text-[11px] text-[var(--color-text-muted)]">
+                          <span className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>
                             {act.category}
                           </span>
-                          <span className="text-[11px] text-[var(--color-text-muted)]">
+                          <span className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>
                             {fmtDuration(act.duration)}
                           </span>
                         </div>
                       </div>
                       {/* Edit hint */}
-                      <span className="text-[10px] text-[var(--color-text-muted)] opacity-0 group-hover:opacity-100 transition-opacity pt-1">
+                      <span className="text-[10px] opacity-0 group-hover:opacity-100 pt-1" style={{ color: 'var(--color-text-muted)', transition: 'opacity 200ms' }}>
                         编辑
                       </span>
                     </div>
@@ -466,42 +556,54 @@ export default function Dashboard() {
         <div className="lg:col-span-2 space-y-4">
           {/* Quick tasks */}
           <Card padding="sm">
-            <h2 className="text-sm font-semibold text-[var(--color-text-primary)] px-2 pt-2 pb-3">
+            <h2 className="text-sm font-semibold px-2 pt-2 pb-3" style={{ color: 'var(--color-text-primary)' }}>
               待办事项
             </h2>
             {pendingTasks.length === 0 ? (
-              <p className="text-xs text-[var(--color-text-muted)] px-2 pb-3">全部完成!</p>
+              <p className="text-xs px-2 pb-3" style={{ color: 'var(--color-text-muted)' }}>全部完成!</p>
             ) : (
               <ul className="space-y-0.5 pb-1">
                 {pendingTasks.map((task) => {
                   const done = task.status === 'completed'
+                  const animating = checkedTasks[task.id]
                   return (
                     <li
                       key={task.id}
-                      className="flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-[var(--color-bg-surface-2)] transition-colors cursor-pointer"
+                      className="flex items-center gap-2.5 px-2 py-2 rounded-lg cursor-pointer"
+                      style={{ transition: TRANSITION_ALL }}
                       onClick={() => handleTaskToggle(task.id, task.status)}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'var(--color-bg-surface-2)'
+                        e.currentTarget.style.transform = 'translateY(-1px)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent'
+                        e.currentTarget.style.transform = 'translateY(0)'
+                      }}
                     >
+                      {/* Circular checkbox with bounce */}
                       <span
-                        className={[
-                          'flex items-center justify-center w-[18px] h-[18px] rounded-md border-2 shrink-0 transition-colors',
-                          done
-                            ? 'border-[var(--color-accent)] bg-[var(--color-accent)]'
-                            : 'border-[var(--color-border-subtle)]',
-                        ].join(' ')}
+                        className="flex items-center justify-center w-[18px] h-[18px] rounded-full border-2 shrink-0"
+                        style={{
+                          borderColor: done || animating ? 'var(--color-accent)' : 'var(--color-border-subtle)',
+                          backgroundColor: done || animating ? 'var(--color-accent)' : 'transparent',
+                          transition: TRANSITION_ALL,
+                          transform: animating ? 'scale(1.3)' : 'scale(1)',
+                        }}
                       >
-                        {done && (
+                        {(done || animating) && (
                           <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M2 5l2.5 2.5L8 3" />
                           </svg>
                         )}
                       </span>
                       <span
-                        className={[
-                          'text-sm truncate',
-                          done
-                            ? 'line-through text-[var(--color-text-muted)]'
-                            : 'text-[var(--color-text-primary)]',
-                        ].join(' ')}
+                        className="text-sm truncate"
+                        style={{
+                          color: done ? 'var(--color-text-muted)' : 'var(--color-text-primary)',
+                          textDecoration: done ? 'line-through' : 'none',
+                          transition: TRANSITION_ALL,
+                        }}
                       >
                         {task.title}
                       </span>
@@ -514,36 +616,63 @@ export default function Dashboard() {
 
           {/* Habits */}
           <Card padding="sm">
-            <h2 className="text-sm font-semibold text-[var(--color-text-primary)] px-2 pt-2 pb-3">
+            <h2 className="text-sm font-semibold px-2 pt-2 pb-3" style={{ color: 'var(--color-text-primary)' }}>
               今日习惯
             </h2>
             {habits.length === 0 ? (
-              <p className="text-xs text-[var(--color-text-muted)] px-2 pb-3">还没有习惯</p>
+              <p className="text-xs px-2 pb-3" style={{ color: 'var(--color-text-muted)' }}>还没有习惯</p>
             ) : (
               <div className="grid grid-cols-2 gap-2 px-1 pb-2">
                 {habits.map((habit) => {
                   const done = habit.checkins[today] && habit.checkins[today] > 0
+                  const animating = checkedHabits[habit.id]
+                  const habitColor = (habit as any).color || 'var(--color-accent)'
                   return (
                     <button
                       key={habit.id}
                       onClick={() => handleCheckin(habit.id)}
-                      className={[
-                        'flex items-center gap-2 px-3 py-2 rounded-xl text-left transition-all cursor-pointer',
-                        done
-                          ? 'bg-[var(--color-accent-soft)] ring-1 ring-[var(--color-accent)]/30'
-                          : 'bg-[var(--color-bg-surface-2)] hover:bg-[var(--color-bg-surface-2)]/80',
-                      ].join(' ')}
+                      className="flex items-center gap-2 px-3 py-2 rounded-xl text-left cursor-pointer"
+                      style={{
+                        transition: TRANSITION_ALL,
+                        background: done
+                          ? `${habitColor}18`
+                          : 'var(--color-bg-surface-2)',
+                        border: done ? `1px solid ${habitColor}30` : '1px solid transparent',
+                        transform: animating ? 'scale(0.95)' : 'scale(1)',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!done) e.currentTarget.style.opacity = '0.85'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.opacity = '1'
+                      }}
                     >
                       <span className="text-base">{habit.icon}</span>
-                      <span className={[
-                        'text-xs font-medium truncate',
-                        done ? 'text-[var(--color-accent)]' : 'text-[var(--color-text-secondary)]',
-                      ].join(' ')}>
+                      <span
+                        className="text-xs font-medium truncate"
+                        style={{ color: done ? habitColor : 'var(--color-text-secondary)' }}
+                      >
                         {habit.name}
                       </span>
-                      {done && (
-                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="ml-auto shrink-0">
-                          <path d="M2.5 6l2.5 2.5L9.5 4" stroke="var(--color-accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      {(done || animating) && (
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 12 12"
+                          fill="none"
+                          className="ml-auto shrink-0"
+                          style={{
+                            transition: TRANSITION_ALL,
+                            transform: animating ? 'scale(1.4)' : 'scale(1)',
+                          }}
+                        >
+                          <path
+                            d="M2.5 6l2.5 2.5L9.5 4"
+                            stroke={habitColor}
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
                         </svg>
                       )}
                     </button>
@@ -558,28 +687,39 @@ export default function Dashboard() {
       {/* ── Category Breakdown Bar ── */}
       {categoryBar.length > 0 && (
         <Card padding="sm">
-          <h2 className="text-sm font-semibold text-[var(--color-text-primary)] px-2 pt-2 pb-3">
+          <h2 className="text-sm font-semibold px-2 pt-2 pb-3" style={{ color: 'var(--color-text-primary)' }}>
             分类分布
           </h2>
           <div className="px-2 pb-3 space-y-2">
-            {/* Stacked bar */}
-            <div className="flex h-3 rounded-full overflow-hidden">
-              {categoryBar.map(({ cat, pct }) => (
-                <div
-                  key={cat}
-                  style={{
-                    width: `${Math.max(pct, 1)}%`,
-                    background: CATEGORY_COLORS[cat] || CATEGORY_COLORS['其他'],
-                  }}
-                  className="transition-all duration-500"
-                  title={`${cat}: ${pct.toFixed(1)}%`}
-                />
-              ))}
+            {/* Stacked bar with rounded segments and gradients */}
+            <div className="flex h-7 rounded-full overflow-hidden gap-[2px]">
+              {categoryBar.map(({ cat, pct, mins }) => {
+                const baseColor = CATEGORY_COLORS[cat] || CATEGORY_COLORS['其他']
+                const isWide = pct >= 15
+                return (
+                  <div
+                    key={cat}
+                    className="relative flex items-center justify-center overflow-hidden first:rounded-l-full last:rounded-r-full"
+                    style={{
+                      width: `${Math.max(pct, 2)}%`,
+                      background: `linear-gradient(135deg, ${baseColor} 0%, ${baseColor}CC 100%)`,
+                      transition: 'all 500ms cubic-bezier(0.4, 0, 0.2, 1)',
+                    }}
+                    title={`${cat}: ${pct.toFixed(1)}%`}
+                  >
+                    {isWide && (
+                      <span className="text-[10px] font-medium text-white truncate px-1.5">
+                        {cat} {fmtDuration(mins)}
+                      </span>
+                    )}
+                  </div>
+                )
+              })}
             </div>
-            {/* Legend */}
+            {/* Legend — show labels below for narrow segments */}
             <div className="flex flex-wrap gap-x-4 gap-y-1">
               {categoryBar.map(({ cat, mins, pct }) => (
-                <div key={cat} className="flex items-center gap-1.5 text-[11px] text-[var(--color-text-muted)]">
+                <div key={cat} className="flex items-center gap-1.5 text-[11px]" style={{ color: 'var(--color-text-muted)' }}>
                   <span
                     className="w-2 h-2 rounded-sm shrink-0"
                     style={{ background: CATEGORY_COLORS[cat] || CATEGORY_COLORS['其他'] }}

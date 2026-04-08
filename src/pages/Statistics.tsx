@@ -36,14 +36,21 @@ function shortDay(dateStr: string): string {
 
 type Period = 'week' | 'month'
 
-// ── Tooltip styles ──
+// ── Warm tooltip styles ──
 
 const tooltipStyle: React.CSSProperties = {
-  background: 'var(--color-bg-surface-1)',
+  background: 'linear-gradient(135deg, #ffffff 0%, #fef8f0 100%)',
   border: '1px solid var(--color-border-subtle)',
-  borderRadius: '12px',
-  padding: '8px 12px',
-  boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+  borderRadius: 'var(--radius-md)',
+  padding: '10px 14px',
+  boxShadow: '0 8px 24px rgba(44, 24, 16, 0.12), 0 0 1px rgba(44, 24, 16, 0.08)',
+}
+
+// ── Card wrapper styles ──
+
+const warmCardStyle: React.CSSProperties = {
+  background: 'linear-gradient(135deg, #ffffff 0%, #fef8f0 100%)',
+  borderRadius: 'var(--radius-lg)',
 }
 
 // ── Export helpers ──
@@ -202,8 +209,8 @@ export default function Statistics() {
     if (!active || !payload?.length) return null
     return (
       <div style={tooltipStyle}>
-        <p className="text-xs font-medium text-[var(--color-text-primary)]">{label}</p>
-        <p className="text-xs text-[var(--color-text-muted)]">{payload[0].value} 小时</p>
+        <p className="text-xs font-semibold text-[var(--color-text-primary)] mb-0.5">{label}</p>
+        <p className="text-sm font-bold" style={{ color: accentColor }}>{payload[0].value} 小时</p>
       </div>
     )
   }
@@ -212,8 +219,8 @@ export default function Statistics() {
     if (!active || !payload?.length) return null
     return (
       <div style={tooltipStyle}>
-        <p className="text-xs font-medium text-[var(--color-text-primary)]">{payload[0].name}</p>
-        <p className="text-xs text-[var(--color-text-muted)]">{fmtDuration(payload[0].value)}</p>
+        <p className="text-xs font-semibold text-[var(--color-text-primary)] mb-0.5">{payload[0].name}</p>
+        <p className="text-sm font-bold" style={{ color: payload[0].payload?.fill || accentColor }}>{fmtDuration(payload[0].value)}</p>
       </div>
     )
   }
@@ -222,25 +229,39 @@ export default function Statistics() {
 
   const hasData = totalMinutes > 0
 
+  // ── RENDER ──
   return (
-    <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-6">
+    <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-8 animate-fade-in">
       {/* Header + period tabs */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-[var(--color-text-primary)] tracking-tight">统计分析</h1>
-          <p className="text-sm text-[var(--color-text-muted)] mt-0.5">{periodLabel}数据概览</p>
+          <p className="text-sm text-[var(--color-text-muted)] mt-1">{periodLabel}数据概览</p>
         </div>
-        <div className="flex items-center gap-1 p-1 rounded-xl bg-[var(--color-bg-surface-2)]">
+        <div
+          className="flex items-center gap-1 p-1"
+          style={{
+            borderRadius: 'var(--radius-full)',
+            background: 'var(--color-bg-surface-2)',
+            border: '1px solid var(--color-border-subtle)',
+          }}
+        >
           {(['week', 'month'] as Period[]).map((p) => (
             <button
               key={p}
               onClick={() => setPeriod(p)}
-              className={[
-                'px-4 py-1.5 text-sm font-medium rounded-lg transition-all cursor-pointer',
-                period === p
-                  ? 'bg-[var(--color-bg-surface-1)] text-[var(--color-text-primary)] shadow-sm'
-                  : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]',
-              ].join(' ')}
+              className="cursor-pointer"
+              style={{
+                padding: '6px 20px',
+                fontSize: '0.875rem',
+                fontWeight: 500,
+                borderRadius: 'var(--radius-full)',
+                border: 'none',
+                transition: `all var(--duration-normal) var(--ease-default)`,
+                background: period === p ? 'var(--color-accent-soft)' : 'transparent',
+                color: period === p ? accentColor : 'var(--color-text-muted)',
+                boxShadow: period === p ? 'var(--shadow-xs)' : 'none',
+              }}
             >
               {p === 'week' ? '本周' : '本月'}
             </button>
@@ -253,53 +274,79 @@ export default function Statistics() {
       ) : (
         <>
           {/* ── Overview Cards ── */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <Card padding="sm" className="text-center py-4">
-              <p className="text-[11px] text-[var(--color-text-muted)] mb-1">总时长</p>
-              <p className="text-xl font-bold text-[var(--color-text-primary)] tabular-nums">
-                {fmtHours(totalMinutes)}<span className="text-xs font-normal text-[var(--color-text-muted)] ml-0.5">h</span>
-              </p>
-            </Card>
-            <Card padding="sm" className="text-center py-4">
-              <p className="text-[11px] text-[var(--color-text-muted)] mb-1">日均</p>
-              <p className="text-xl font-bold text-[var(--color-text-primary)] tabular-nums">
-                {fmtHours(avgDaily)}<span className="text-xs font-normal text-[var(--color-text-muted)] ml-0.5">h</span>
-              </p>
-            </Card>
-            <Card padding="sm" className="text-center py-4">
-              <p className="text-[11px] text-[var(--color-text-muted)] mb-1">最高产日</p>
-              {mostProductiveDay ? (
-                <p className="text-sm font-semibold text-[var(--color-text-primary)]">
-                  周{shortDay(mostProductiveDay.date)}{' '}
-                  <span className="text-xs font-normal text-[var(--color-text-muted)]">
-                    {fmtDuration(mostProductiveDay.totalMinutes)}
-                  </span>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-5">
+            {/* Total hours */}
+            <Card padding="sm" className="text-center" style={warmCardStyle}>
+              <div className="py-5 px-3">
+                <div className="text-lg mb-2">⏱</div>
+                <p className="metric-label mb-2">总时长</p>
+                <p className="metric-value tabular-nums">
+                  {fmtHours(totalMinutes)}<span style={{ fontSize: '0.875rem', fontWeight: 400, opacity: 0.6 }}>h</span>
                 </p>
-              ) : (
-                <p className="text-sm text-[var(--color-text-muted)]">-</p>
-              )}
+              </div>
             </Card>
-            <Card padding="sm" className="text-center py-4">
-              <p className="text-[11px] text-[var(--color-text-muted)] mb-1">Top 分类</p>
-              {topCategory ? (
-                <Badge variant="accent" size="md">{topCategory.name}</Badge>
-              ) : (
-                <p className="text-sm text-[var(--color-text-muted)]">-</p>
-              )}
+            {/* Daily average */}
+            <Card padding="sm" className="text-center" style={warmCardStyle}>
+              <div className="py-5 px-3">
+                <div className="text-lg mb-2">📈</div>
+                <p className="metric-label mb-2">日均</p>
+                <p className="metric-value tabular-nums">
+                  {fmtHours(avgDaily)}<span style={{ fontSize: '0.875rem', fontWeight: 400, opacity: 0.6 }}>h</span>
+                </p>
+              </div>
+            </Card>
+            {/* Most productive day */}
+            <Card padding="sm" className="text-center" style={warmCardStyle}>
+              <div className="py-5 px-3">
+                <div className="text-lg mb-2">🏆</div>
+                <p className="metric-label mb-2">最高产日</p>
+                {mostProductiveDay ? (
+                  <div>
+                    <p className="text-base font-bold text-[var(--color-text-primary)]">
+                      周{shortDay(mostProductiveDay.date)}
+                    </p>
+                    <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
+                      {fmtDuration(mostProductiveDay.totalMinutes)}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-sm text-[var(--color-text-muted)]">-</p>
+                )}
+              </div>
+            </Card>
+            {/* Top category */}
+            <Card padding="sm" className="text-center" style={warmCardStyle}>
+              <div className="py-5 px-3">
+                <div className="text-lg mb-2">🎯</div>
+                <p className="metric-label mb-2">Top 分类</p>
+                {topCategory ? (
+                  <Badge variant="accent" size="md">{topCategory.name}</Badge>
+                ) : (
+                  <p className="text-sm text-[var(--color-text-muted)]">-</p>
+                )}
+              </div>
             </Card>
           </div>
 
           {/* ── Charts Row ── */}
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
             {/* Bar chart */}
-            <Card padding="sm" className="lg:col-span-3">
-              <h2 className="text-sm font-semibold text-[var(--color-text-primary)] px-2 pt-2 pb-4">
+            <Card padding="sm" className="lg:col-span-3" style={warmCardStyle}>
+              <h2
+                className="text-sm font-semibold text-[var(--color-text-primary)] px-4 pt-4 pb-5"
+                style={{ letterSpacing: '-0.01em' }}
+              >
                 每日时长
               </h2>
-              <div className="h-64 px-1">
+              <div className="h-64 px-2 pb-2">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={barData} barCategoryGap="20%">
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-subtle)" strokeOpacity={0.3} vertical={false} />
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="var(--color-border-subtle)"
+                      strokeOpacity={0.35}
+                      vertical={false}
+                    />
                     <XAxis
                       dataKey="label"
                       axisLine={false}
@@ -313,16 +360,29 @@ export default function Statistics() {
                       width={32}
                       tickFormatter={(v) => `${v}h`}
                     />
-                    <Tooltip content={<BarTooltipContent />} cursor={{ fill: 'var(--color-accent-soft)', opacity: 0.3 }} />
-                    <Bar dataKey="hours" radius={[6, 6, 0, 0]} fill={accentColor} maxBarSize={40} />
+                    <Tooltip
+                      content={<BarTooltipContent />}
+                      cursor={{ fill: 'var(--color-accent-soft)', opacity: 0.4, radius: 4 }}
+                    />
+                    <Bar
+                      dataKey="hours"
+                      radius={[8, 8, 0, 0]}
+                      fill={accentColor}
+                      maxBarSize={40}
+                      animationDuration={800}
+                      animationEasing="ease-out"
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
             </Card>
 
             {/* Pie chart */}
-            <Card padding="sm" className="lg:col-span-2">
-              <h2 className="text-sm font-semibold text-[var(--color-text-primary)] px-2 pt-2 pb-4">
+            <Card padding="sm" className="lg:col-span-2" style={warmCardStyle}>
+              <h2
+                className="text-sm font-semibold text-[var(--color-text-primary)] px-4 pt-4 pb-5"
+                style={{ letterSpacing: '-0.01em' }}
+              >
                 分类占比
               </h2>
               <div className="h-64">
@@ -337,6 +397,8 @@ export default function Statistics() {
                       paddingAngle={2}
                       dataKey="value"
                       stroke="none"
+                      animationDuration={800}
+                      animationEasing="ease-out"
                     >
                       {pieData.map((entry) => (
                         <Cell key={entry.name} fill={CATEGORY_COLORS[entry.name] || CATEGORY_COLORS['其他']} />
@@ -346,8 +408,9 @@ export default function Statistics() {
                     <Legend
                       iconType="circle"
                       iconSize={8}
+                      wrapperStyle={{ paddingTop: 8 }}
                       formatter={(value: string) => (
-                        <span className="text-[11px] text-[var(--color-text-secondary)]">{value}</span>
+                        <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginLeft: 2 }}>{value}</span>
                       )}
                     />
                   </PieChart>
@@ -357,22 +420,41 @@ export default function Statistics() {
           </div>
 
           {/* ── Category Table ── */}
-          <Card padding="sm">
-            <h2 className="text-sm font-semibold text-[var(--color-text-primary)] px-2 pt-2 pb-3">
+          <Card padding="sm" style={warmCardStyle}>
+            <h2
+              className="text-sm font-semibold text-[var(--color-text-primary)] px-4 pt-4 pb-3"
+              style={{ letterSpacing: '-0.01em' }}
+            >
               分类明细
             </h2>
-            <div className="divide-y divide-[var(--color-border-subtle)]/30">
-              {categoryTable.map(({ cat, mins, pct, color }) => (
-                <div key={cat} className="flex items-center gap-3 px-2 py-2.5">
-                  <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: color }} />
+            <div className="px-2 pb-2">
+              {categoryTable.map(({ cat, mins, pct, color }, idx) => (
+                <div
+                  key={cat}
+                  className="flex items-center gap-3 px-3 py-3"
+                  style={{
+                    borderRadius: 'var(--radius-md)',
+                    background: idx % 2 === 0 ? 'var(--color-bg-surface-2)' : 'transparent',
+                    transition: `background var(--duration-fast) var(--ease-default)`,
+                  }}
+                >
+                  <span
+                    className="w-3 h-3 shrink-0"
+                    style={{ background: color, borderRadius: 'var(--radius-sm)' }}
+                  />
                   <span className="text-sm font-medium text-[var(--color-text-primary)] w-16">{cat}</span>
                   <div className="flex-1">
                     <div
-                      className="h-2 rounded-full transition-all duration-500"
-                      style={{ width: `${Math.max(pct, 2)}%`, background: color, opacity: 0.7 }}
+                      className="h-2.5 transition-all duration-500"
+                      style={{
+                        width: `${Math.max(pct, 2)}%`,
+                        borderRadius: 'var(--radius-full)',
+                        background: `linear-gradient(135deg, ${color} 0%, ${color}99 100%)`,
+                        boxShadow: `0 2px 6px ${color}30`,
+                      }}
                     />
                   </div>
-                  <span className="text-xs tabular-nums text-[var(--color-text-muted)] w-14 text-right">
+                  <span className="text-xs tabular-nums font-medium text-[var(--color-text-secondary)] w-14 text-right">
                     {fmtDuration(mins)}
                   </span>
                   <span className="text-xs tabular-nums text-[var(--color-text-muted)] w-12 text-right">
@@ -381,8 +463,14 @@ export default function Statistics() {
                 </div>
               ))}
               {/* Total row */}
-              <div className="flex items-center gap-3 px-2 py-2.5">
-                <span className="w-2.5 h-2.5" />
+              <div
+                className="flex items-center gap-3 px-3 py-3 mt-1"
+                style={{
+                  borderRadius: 'var(--radius-md)',
+                  borderTop: '1px solid var(--color-border-subtle)',
+                }}
+              >
+                <span className="w-3 h-3" />
                 <span className="text-sm font-bold text-[var(--color-text-primary)] w-16">合计</span>
                 <div className="flex-1" />
                 <span className="text-xs font-bold tabular-nums text-[var(--color-text-primary)] w-14 text-right">
@@ -396,14 +484,16 @@ export default function Statistics() {
           </Card>
 
           {/* ── Export Buttons ── */}
-          <Card padding="sm" className="flex flex-wrap items-center gap-3 px-4 py-3">
-            <span className="text-sm font-medium text-[var(--color-text-primary)] mr-auto">导出数据</span>
-            <Button variant="secondary" size="sm" onClick={exportJSON}>
-              导出 JSON
-            </Button>
-            <Button variant="secondary" size="sm" onClick={exportCSV}>
-              导出 CSV
-            </Button>
+          <Card padding="sm" style={warmCardStyle}>
+            <div className="flex flex-wrap items-center gap-3 px-4 py-4">
+              <span className="text-sm font-semibold text-[var(--color-text-primary)] mr-auto">导出数据</span>
+              <Button variant="secondary" size="sm" onClick={exportJSON}>
+                导出 JSON
+              </Button>
+              <Button variant="secondary" size="sm" onClick={exportCSV}>
+                导出 CSV
+              </Button>
+            </div>
           </Card>
         </>
       )}

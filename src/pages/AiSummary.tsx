@@ -2,7 +2,7 @@ import { useEffect, useMemo } from 'react'
 import { useAppStore } from '../store/useAppStore'
 import useTheme from '../hooks/useTheme'
 import dataService from '../services/dataService'
-import { Card, Badge, EmptyState } from '../components/ui'
+import { EmptyState } from '../components/ui'
 import { CATEGORY_COLORS } from '../config/themes'
 
 /* ── helpers ── */
@@ -24,21 +24,39 @@ function toDateStr(d: Date): string {
   return `${y}-${m}-${day}`
 }
 
-/* ── simple bar component ── */
+/* ── animated bar with gradient fill ── */
 function Bar({ value, max, color }: { value: number; max: number; color: string }) {
   const pct = max > 0 ? Math.min(100, (value / max) * 100) : 0
   return (
-    <div className="h-3 flex-1 rounded-full overflow-hidden bg-[var(--color-border-subtle)]/25">
+    <div
+      className="h-3.5 flex-1 overflow-hidden"
+      style={{
+        borderRadius: 'var(--radius-full)',
+        background: 'var(--color-bg-surface-3)',
+      }}
+    >
       <div
-        className="h-full rounded-full transition-[width] duration-500"
-        style={{ width: `${pct}%`, backgroundColor: color }}
+        className="h-full transition-[width] duration-700"
+        style={{
+          width: `${pct}%`,
+          borderRadius: 'var(--radius-full)',
+          background: `linear-gradient(135deg, ${color} 0%, ${color}cc 100%)`,
+        }}
       />
     </div>
   )
 }
 
+/* ── stagger delay helper ── */
+function staggerStyle(index: number): React.CSSProperties {
+  return {
+    animationDelay: `${index * 80}ms`,
+    animationFillMode: 'both',
+  }
+}
+
 /* ══════════════════════════════════════════════════
-   AI Summary Page
+   AI Summary Page — Premium Warm Design
    ══════════════════════════════════════════════════ */
 export default function AiSummary() {
   useTheme() // hook must be called for theme reactivity
@@ -111,12 +129,20 @@ export default function AiSummary() {
 
   if (!analysis) {
     return (
-      <div className="p-6 md:p-8 max-w-4xl mx-auto">
-        <h2 className="text-2xl font-bold text-[var(--color-text-primary)] mb-6">
-          AI 智能总结
-        </h2>
+      <div className="p-6 md:p-10 max-w-4xl mx-auto">
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-2">
+            <span className="text-3xl">&#10024;</span>
+            <h2
+              className="text-3xl font-extrabold"
+              style={{ color: 'var(--color-text-primary)', letterSpacing: '-0.03em' }}
+            >
+              AI 智能总结
+            </h2>
+          </div>
+        </div>
         <EmptyState
-          icon="🤖"
+          icon="&#129302;"
           title="暂无数据"
           description="继续使用一段时间后，AI 将根据你的活动数据生成个性化洞察。"
         />
@@ -127,71 +153,195 @@ export default function AiSummary() {
   const maxHourly = Math.max(...analysis.hourlyMinutes, 1)
   const maxDaily = Math.max(...analysis.daily.map((d) => d.totalMinutes), 1)
 
+  const statCards = [
+    { label: '总时长', value: fmtHours(analysis.totalMins), icon: '\u23F1\uFE0F' },
+    { label: '日均', value: fmtHours(analysis.avgDaily), icon: '\uD83D\uDCC8' },
+    { label: '最高效日', value: analysis.bestDay ? dayLabel(analysis.bestDay.date) : '\u2014', icon: '\uD83C\uDF1F' },
+    { label: '最低效日', value: analysis.worstDay ? dayLabel(analysis.worstDay.date) : '\u2014', icon: '\uD83D\uDCA4' },
+  ]
+
   return (
-    <div className="p-6 md:p-8 max-w-4xl mx-auto space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-[var(--color-text-primary)] mb-1">
-          AI 智能总结
-        </h2>
-        <p className="text-sm text-[var(--color-text-muted)]">
+    <div className="p-6 md:p-10 max-w-4xl mx-auto" style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+
+      {/* ─── Page Header ─── */}
+      <div className="animate-fade-in">
+        <div className="flex items-center gap-3 mb-1">
+          <span
+            style={{
+              fontSize: '2rem',
+              filter: 'drop-shadow(0 2px 4px rgba(249,115,22,0.3))',
+              lineHeight: 1,
+            }}
+          >&#10024;</span>
+          <h2
+            style={{
+              fontSize: '1.875rem',
+              fontWeight: 800,
+              color: 'var(--color-text-primary)',
+              letterSpacing: '-0.03em',
+              lineHeight: 1.2,
+              margin: 0,
+            }}
+          >
+            AI 智能总结
+          </h2>
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '3px 10px',
+              borderRadius: 'var(--radius-full)',
+              background: 'var(--color-accent-gradient)',
+              color: '#fff',
+              fontSize: '0.6875rem',
+              fontWeight: 600,
+              letterSpacing: '0.02em',
+              boxShadow: '0 2px 8px rgba(249,115,22,0.25)',
+            }}
+          >
+            AI 生成
+          </span>
+        </div>
+        <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', margin: 0 }}>
           基于本周活动数据自动生成效率洞察
         </p>
       </div>
 
-      {/* ─── Weekly Overview ─── */}
+      {/* ─── Weekly Overview Stat Cards ─── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card padding="sm">
-          <p className="text-xs text-[var(--color-text-muted)] mb-0.5">总时长</p>
-          <p className="text-xl font-bold text-[var(--color-text-primary)]">
-            {fmtHours(analysis.totalMins)}
-          </p>
-        </Card>
-        <Card padding="sm">
-          <p className="text-xs text-[var(--color-text-muted)] mb-0.5">日均</p>
-          <p className="text-xl font-bold text-[var(--color-text-primary)]">
-            {fmtHours(analysis.avgDaily)}
-          </p>
-        </Card>
-        <Card padding="sm">
-          <p className="text-xs text-[var(--color-text-muted)] mb-0.5">最高效日</p>
-          <p className="text-xl font-bold text-[var(--color-accent)]">
-            {analysis.bestDay ? dayLabel(analysis.bestDay.date) : '—'}
-          </p>
-        </Card>
-        <Card padding="sm">
-          <p className="text-xs text-[var(--color-text-muted)] mb-0.5">最低效日</p>
-          <p className="text-xl font-bold text-[var(--color-text-secondary)]">
-            {analysis.worstDay ? dayLabel(analysis.worstDay.date) : '—'}
-          </p>
-        </Card>
+        {statCards.map((card, i) => (
+          <div
+            key={card.label}
+            className="animate-fade-in"
+            style={{
+              ...staggerStyle(i),
+              background: 'linear-gradient(135deg, #ffffff 0%, #fef8f0 100%)',
+              border: '1px solid var(--color-border-subtle)',
+              borderRadius: 'var(--radius-lg)',
+              boxShadow: 'var(--shadow-card)',
+              padding: '20px 16px',
+              transition: 'box-shadow var(--duration-normal) var(--ease-default), transform var(--duration-normal) var(--ease-default)',
+              cursor: 'default',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.boxShadow = 'var(--shadow-card-hover)'
+              e.currentTarget.style.transform = 'translateY(-3px)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.boxShadow = 'var(--shadow-card)'
+              e.currentTarget.style.transform = 'translateY(0)'
+            }}
+          >
+            <div style={{ fontSize: '1.25rem', marginBottom: '4px', lineHeight: 1 }}>{card.icon}</div>
+            <p className="metric-label" style={{ marginBottom: '6px' }}>{card.label}</p>
+            <p className="metric-value" style={{ margin: 0 }}>{card.value}</p>
+          </div>
+        ))}
       </div>
 
       {/* ─── Insights ─── */}
-      <Card padding="md">
-        <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-3">
+      <div
+        className="animate-fade-in"
+        style={{
+          ...staggerStyle(4),
+          background: 'linear-gradient(135deg, #ffffff 0%, #fef8f0 100%)',
+          border: '1px solid var(--color-border-subtle)',
+          borderRadius: 'var(--radius-lg)',
+          boxShadow: 'var(--shadow-card)',
+          padding: '24px',
+        }}
+      >
+        <h3 style={{
+          fontSize: '0.9375rem',
+          fontWeight: 700,
+          color: 'var(--color-text-primary)',
+          margin: '0 0 16px 0',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+        }}>
+          <span style={{ fontSize: '1.125rem' }}>{'\uD83D\uDCA1'}</span>
           洞察与建议
         </h3>
-        <ul className="space-y-2">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {analysis.insights.map((text, i) => (
-            <li key={i} className="flex items-start gap-2 text-sm text-[var(--color-text-secondary)]">
-              <Badge variant="accent" size="sm" className="mt-0.5 shrink-0">
+            <div
+              key={i}
+              className="animate-fade-in"
+              style={{
+                ...staggerStyle(i + 5),
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '12px',
+                padding: '12px 14px',
+                borderRadius: 'var(--radius-md)',
+                background: 'var(--color-bg-surface-2)',
+                border: '1px solid var(--color-border-subtle)',
+                fontSize: '0.875rem',
+                color: 'var(--color-text-secondary)',
+                lineHeight: 1.6,
+              }}
+            >
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  minWidth: '22px',
+                  height: '22px',
+                  borderRadius: 'var(--radius-full)',
+                  background: 'var(--color-accent-gradient)',
+                  color: '#fff',
+                  fontSize: '0.6875rem',
+                  fontWeight: 700,
+                  flexShrink: 0,
+                  marginTop: '1px',
+                }}
+              >
                 {i + 1}
-              </Badge>
+              </span>
               {text}
-            </li>
+            </div>
           ))}
-        </ul>
-      </Card>
+        </div>
+      </div>
 
       {/* ─── Category Breakdown ─── */}
-      <Card padding="md">
-        <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-3">
+      <div
+        className="animate-fade-in"
+        style={{
+          ...staggerStyle(9),
+          background: 'linear-gradient(135deg, #ffffff 0%, #fef8f0 100%)',
+          border: '1px solid var(--color-border-subtle)',
+          borderRadius: 'var(--radius-lg)',
+          boxShadow: 'var(--shadow-card)',
+          padding: '24px',
+        }}
+      >
+        <h3 style={{
+          fontSize: '0.9375rem',
+          fontWeight: 700,
+          color: 'var(--color-text-primary)',
+          margin: '0 0 16px 0',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+        }}>
+          <span style={{ fontSize: '1.125rem' }}>{'\uD83D\uDCCA'}</span>
           分类时间分布
         </h3>
-        <div className="space-y-2">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {analysis.catEntries.map(([cat, mins]) => (
             <div key={cat} className="flex items-center gap-3">
-              <span className="text-xs text-[var(--color-text-secondary)] w-12 shrink-0 text-right">
+              <span style={{
+                fontSize: '0.8125rem',
+                color: 'var(--color-text-secondary)',
+                fontWeight: 500,
+                width: '56px',
+                flexShrink: 0,
+                textAlign: 'right',
+              }}>
                 {cat}
               </span>
               <Bar
@@ -199,70 +349,138 @@ export default function AiSummary() {
                 max={analysis.catEntries[0][1]}
                 color={CATEGORY_COLORS[cat] || '#94a3b8'}
               />
-              <span className="text-xs tabular-nums text-[var(--color-text-muted)] w-16 shrink-0">
+              <span style={{
+                fontSize: '0.8125rem',
+                fontVariantNumeric: 'tabular-nums',
+                color: 'var(--color-text-muted)',
+                width: '72px',
+                flexShrink: 0,
+                fontWeight: 500,
+              }}>
                 {fmtHours(mins)}
               </span>
             </div>
           ))}
         </div>
-      </Card>
+      </div>
 
       {/* ─── Daily Trend ─── */}
-      <Card padding="md">
-        <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-3">
+      <div
+        className="animate-fade-in"
+        style={{
+          ...staggerStyle(10),
+          background: 'linear-gradient(135deg, #ffffff 0%, #fef8f0 100%)',
+          border: '1px solid var(--color-border-subtle)',
+          borderRadius: 'var(--radius-lg)',
+          boxShadow: 'var(--shadow-card)',
+          padding: '24px',
+        }}
+      >
+        <h3 style={{
+          fontSize: '0.9375rem',
+          fontWeight: 700,
+          color: 'var(--color-text-primary)',
+          margin: '0 0 16px 0',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+        }}>
+          <span style={{ fontSize: '1.125rem' }}>{'\uD83D\uDCC5'}</span>
           每日趋势
         </h3>
-        <div className="flex items-end gap-2 h-32">
+        <div className="flex items-end gap-3" style={{ height: '140px' }}>
           {analysis.daily.map((d) => {
             const pct = maxDaily > 0 ? (d.totalMinutes / maxDaily) * 100 : 0
             return (
               <div key={d.date} className="flex-1 flex flex-col items-center gap-1">
-                <span className="text-[10px] tabular-nums text-[var(--color-text-muted)]">
+                <span style={{
+                  fontSize: '0.625rem',
+                  fontVariantNumeric: 'tabular-nums',
+                  color: 'var(--color-text-muted)',
+                  fontWeight: 500,
+                }}>
                   {d.totalMinutes > 0 ? `${Math.round(d.totalMinutes / 60)}h` : ''}
                 </span>
-                <div className="w-full flex items-end" style={{ height: '80px' }}>
+                <div className="w-full flex items-end" style={{ height: '96px' }}>
                   <div
-                    className="w-full rounded-t-md transition-[height] duration-500"
+                    className="w-full transition-[height] duration-700"
                     style={{
                       height: `${Math.max(pct, 2)}%`,
-                      backgroundColor: 'var(--color-accent)',
-                      opacity: pct > 0 ? 0.8 : 0.15,
+                      borderRadius: 'var(--radius-sm) var(--radius-sm) 4px 4px',
+                      background: pct > 0
+                        ? 'var(--color-accent-gradient)'
+                        : 'var(--color-bg-surface-3)',
+                      opacity: pct > 0 ? 0.85 : 0.25,
+                      boxShadow: pct > 30 ? '0 2px 8px rgba(249,115,22,0.2)' : 'none',
                     }}
                   />
                 </div>
-                <span className="text-[10px] text-[var(--color-text-muted)]">
+                <span style={{
+                  fontSize: '0.6875rem',
+                  color: 'var(--color-text-muted)',
+                  fontWeight: 500,
+                }}>
                   {dayLabel(d.date).slice(1)}
                 </span>
               </div>
             )
           })}
         </div>
-      </Card>
+      </div>
 
       {/* ─── Hourly Focus Pattern ─── */}
-      <Card padding="md">
-        <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-3">
+      <div
+        className="animate-fade-in"
+        style={{
+          ...staggerStyle(11),
+          background: 'linear-gradient(135deg, #ffffff 0%, #fef8f0 100%)',
+          border: '1px solid var(--color-border-subtle)',
+          borderRadius: 'var(--radius-lg)',
+          boxShadow: 'var(--shadow-card)',
+          padding: '24px',
+        }}
+      >
+        <h3 style={{
+          fontSize: '0.9375rem',
+          fontWeight: 700,
+          color: 'var(--color-text-primary)',
+          margin: '0 0 4px 0',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+        }}>
+          <span style={{ fontSize: '1.125rem' }}>{'\uD83D\uDD25'}</span>
           时段专注分布
         </h3>
-        <p className="text-xs text-[var(--color-text-muted)] mb-3">
+        <p style={{
+          fontSize: '0.75rem',
+          color: 'var(--color-text-muted)',
+          margin: '0 0 16px 0',
+        }}>
           过去 7 天各时段累计专注时间
         </p>
-        <div className="grid grid-cols-12 gap-1">
+        <div className="grid grid-cols-12 gap-1.5">
           {analysis.hourlyMinutes.slice(6, 23).map((mins, i) => {
             const hour = i + 6
             const intensity = maxHourly > 0 ? mins / maxHourly : 0
             return (
-              <div key={hour} className="flex flex-col items-center gap-1">
+              <div key={hour} className="flex flex-col items-center gap-1.5">
                 <div
-                  className="w-full aspect-square rounded-md transition-colors"
+                  className="w-full aspect-square transition-colors"
                   style={{
+                    borderRadius: 'var(--radius-sm)',
                     backgroundColor: `var(--color-accent)`,
-                    opacity: Math.max(0.08, intensity * 0.9),
+                    opacity: Math.max(0.06, intensity * 0.9),
+                    boxShadow: intensity > 0.5 ? '0 1px 4px rgba(249,115,22,0.2)' : 'none',
                   }}
                   title={`${hour}:00 — ${Math.round(mins)} 分钟`}
                 />
                 {hour % 3 === 0 && (
-                  <span className="text-[9px] text-[var(--color-text-muted)]">
+                  <span style={{
+                    fontSize: '0.5625rem',
+                    color: 'var(--color-text-muted)',
+                    fontVariantNumeric: 'tabular-nums',
+                  }}>
                     {hour}
                   </span>
                 )}
@@ -270,10 +488,14 @@ export default function AiSummary() {
             )
           })}
         </div>
-        <p className="text-xs text-[var(--color-text-muted)] mt-2">
+        <p style={{
+          fontSize: '0.75rem',
+          color: 'var(--color-text-muted)',
+          margin: '12px 0 0 0',
+        }}>
           颜色越深代表该时段专注越多（6:00 - 22:00）
         </p>
-      </Card>
+      </div>
     </div>
   )
 }

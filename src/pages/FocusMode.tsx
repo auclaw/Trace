@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Card, Button, EmptyState } from '../components/ui'
+import { Button, EmptyState } from '../components/ui'
 import { useAppStore } from '../store/useAppStore'
 import useTheme from '../hooks/useTheme'
 import dataService from '../services/dataService'
@@ -32,8 +32,9 @@ const STATE_LABELS: Record<string, string> = {
   longBreak: '长休息',
 }
 
-const RING_RADIUS = 120
+const RING_RADIUS = 90
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS
+const SVG_SIZE = 220
 
 // --- component ---
 
@@ -90,93 +91,167 @@ export default function FocusMode() {
         ? 'var(--color-success, #22c55e)'
         : 'var(--color-text-muted)'
 
+  // --- session dots ---
+  const completedSessions = todaySessions.length
+  const totalDots = Math.max(focusSettings.longBreakInterval, completedSessions + (isActive && !isBreak ? 1 : 0))
+
+  // --- background state class ---
+  const bgClass =
+    focusState === 'working'
+      ? 'focus-bg-warm'
+      : isBreak
+        ? 'focus-bg-cool'
+        : 'focus-bg-idle'
+
+  const center = SVG_SIZE / 2
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] px-4 py-10 select-none">
+    <div className={`focus-page ${bgClass} flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] px-4 select-none`}>
       {/* ── Timer Display ── */}
-      <div className="relative flex items-center justify-center mb-8">
+      <div className="relative flex items-center justify-center mb-10 flex-1 min-h-0 max-h-[360px]">
+        {/* Gradient glow behind ring */}
+        <div
+          className={`absolute rounded-full ${focusState === 'working' ? 'focus-glow-breathe' : ''}`}
+          style={{
+            width: SVG_SIZE + 60,
+            height: SVG_SIZE + 60,
+            background: `radial-gradient(circle, ${ringColor} 0%, transparent 70%)`,
+            opacity: 0.15,
+            filter: 'blur(30px)',
+            transition: 'background 0.8s ease, opacity 0.8s ease',
+          }}
+        />
+
         {/* SVG ring */}
         <svg
-          width="280"
-          height="280"
-          viewBox="0 0 280 280"
-          className={focusState === 'working' ? 'animate-breathe' : ''}
+          width={SVG_SIZE}
+          height={SVG_SIZE}
+          viewBox={`0 0 ${SVG_SIZE} ${SVG_SIZE}`}
+          className="relative z-10"
         >
           {/* track */}
           <circle
-            cx="140"
-            cy="140"
+            cx={center}
+            cy={center}
             r={RING_RADIUS}
             fill="none"
             stroke="var(--color-border-subtle)"
-            strokeWidth="8"
-            opacity="0.25"
+            strokeWidth="6"
+            opacity="0.2"
           />
           {/* progress arc */}
           <circle
-            cx="140"
-            cy="140"
+            cx={center}
+            cy={center}
             r={RING_RADIUS}
             fill="none"
             stroke={ringColor}
-            strokeWidth="8"
+            strokeWidth="6"
             strokeLinecap="round"
             strokeDasharray={RING_CIRCUMFERENCE}
             strokeDashoffset={dashOffset}
-            transform="rotate(-90 140 140)"
+            transform={`rotate(-90 ${center} ${center})`}
             className="transition-[stroke-dashoffset] duration-1000 ease-linear"
           />
         </svg>
 
         {/* center text */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
           <span
-            className="text-6xl font-light tracking-widest tabular-nums text-[var(--color-text-primary)]"
+            className="tabular-nums text-[var(--color-text-primary)]"
+            style={{ fontSize: 48, fontWeight: 300, letterSpacing: '0.08em' }}
           >
             {formatMM_SS(focusTimeLeft)}
           </span>
-          <span className="mt-2 text-sm font-medium text-[var(--color-text-secondary)]">
+          <span
+            className="mt-2 text-[var(--color-text-muted)]"
+            style={{ fontSize: 11, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.18em' }}
+          >
             {STATE_LABELS[focusState]}
           </span>
-          <span className="mt-1 text-xs text-[var(--color-text-muted)]">
-            第 {focusSessions} 轮
-          </span>
+          {/* Session dots */}
+          <div className="flex items-center gap-1.5 mt-3">
+            {Array.from({ length: totalDots }).map((_, i) => (
+              <span
+                key={i}
+                className="block rounded-full transition-colors duration-300"
+                style={{
+                  width: 6,
+                  height: 6,
+                  backgroundColor:
+                    i < completedSessions
+                      ? accentColor
+                      : 'var(--color-border-subtle)',
+                }}
+              />
+            ))}
+          </div>
         </div>
       </div>
 
       {/* ── Controls ── */}
       <div className="flex items-center gap-3 mb-8">
         {!isActive && (
-          <Button size="lg" onClick={startFocus}>
+          <Button
+            size="lg"
+            onClick={startFocus}
+            className="!h-14 !px-10 !text-base !rounded-full focus-btn-start"
+          >
             开始专注
           </Button>
         )}
         {isActive && !isBreak && (
-          <Button size="lg" variant="secondary" onClick={pauseFocus}>
+          <Button
+            size="md"
+            variant="secondary"
+            onClick={pauseFocus}
+            className="active:!scale-95"
+          >
             暂停
           </Button>
         )}
         {isBreak && (
-          <Button size="lg" variant="ghost" onClick={skipBreak}>
+          <Button
+            size="md"
+            variant="ghost"
+            onClick={skipBreak}
+            className="active:!scale-95"
+          >
             跳过休息
           </Button>
         )}
-        <Button size="lg" variant="secondary" onClick={resetFocus}>
-          重置
-        </Button>
+        {isActive && (
+          <Button
+            size="md"
+            variant="secondary"
+            onClick={resetFocus}
+            className="active:!scale-95"
+          >
+            重置
+          </Button>
+        )}
       </div>
 
       {/* ── Settings toggle ── */}
       <button
         onClick={() => setShowSettings((v) => !v)}
-        className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors mb-6 cursor-pointer"
+        className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors mb-6 cursor-pointer"
+        style={{ letterSpacing: '0.08em', textTransform: 'uppercase' }}
       >
         {showSettings ? '收起设置' : '调整设置'}
       </button>
 
-      {/* ── Settings Panel ── */}
+      {/* ── Settings Panel (floating card, 2x2 grid) ── */}
       {showSettings && (
-        <Card className="w-full max-w-md mb-8">
-          <div className="space-y-5">
+        <div
+          className="w-full max-w-md mb-6 rounded-2xl p-5"
+          style={{
+            background: 'var(--color-bg-surface-1)',
+            border: '1px solid var(--color-border-subtle)',
+            boxShadow: 'var(--shadow-lg, 0 8px 30px rgba(0,0,0,0.12))',
+          }}
+        >
+          <div className="grid grid-cols-2 gap-x-5 gap-y-4">
             <SliderSetting
               label="工作时长"
               value={focusSettings.workMinutes}
@@ -214,29 +289,43 @@ export default function FocusMode() {
               onChange={(v) => updateFocusSettings({ longBreakInterval: v })}
             />
           </div>
-        </Card>
+        </div>
       )}
 
-      {/* ── Today's completed sessions ── */}
+      {/* ── Today's completed sessions (horizontal scroll) ── */}
       {todaySessions.length > 0 ? (
-        <Card className="w-full max-w-md" padding="sm">
-          <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-3">
-            今日专注记录
+        <div className="w-full max-w-md mb-4">
+          <h3
+            className="text-[var(--color-text-muted)] mb-2"
+            style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.14em' }}
+          >
+            今日记录
           </h3>
-          <ul className="space-y-1.5 max-h-40 overflow-y-auto">
+          <div className="flex gap-2 overflow-x-auto pb-2 focus-hide-scrollbar">
             {todaySessions.map((s) => (
-              <li
+              <div
                 key={s.id}
-                className="flex items-center justify-between text-xs text-[var(--color-text-secondary)]"
+                className="flex-shrink-0 rounded-xl px-3 py-2 flex flex-col items-center"
+                style={{
+                  minWidth: 80,
+                  background: s.type === 'work'
+                    ? `color-mix(in srgb, ${accentColor} 12%, transparent)`
+                    : 'color-mix(in srgb, var(--color-success, #22c55e) 12%, transparent)',
+                  border: `1px solid ${s.type === 'work'
+                    ? `color-mix(in srgb, ${accentColor} 25%, transparent)`
+                    : 'color-mix(in srgb, var(--color-success, #22c55e) 25%, transparent)'}`,
+                }}
               >
-                <span>
-                  {formatTime(s.startTime)} - {formatTime(s.endTime)}
+                <span className="text-[10px] text-[var(--color-text-muted)]">
+                  {formatTime(s.startTime)}
                 </span>
-                <span className="font-medium">{s.duration} 分钟</span>
-              </li>
+                <span className="text-xs font-semibold text-[var(--color-text-primary)] mt-0.5">
+                  {s.duration}分钟
+                </span>
+              </div>
             ))}
-          </ul>
-        </Card>
+          </div>
+        </div>
       ) : (
         !isActive && (
           <EmptyState
@@ -248,14 +337,80 @@ export default function FocusMode() {
         )
       )}
 
-      {/* breathing keyframes */}
+      {/* ── Inline styles ── */}
       <style>{`
-        @keyframes breathe {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.03); }
+        /* Background state transitions */
+        .focus-page {
+          transition: background-color 1.2s ease;
         }
-        .animate-breathe {
-          animation: breathe 4s ease-in-out infinite;
+        .focus-bg-idle {
+          background-color: var(--color-bg-primary);
+        }
+        .focus-bg-warm {
+          background-color: color-mix(in srgb, var(--color-bg-primary) 94%, #f59e0b);
+        }
+        .focus-bg-cool {
+          background-color: color-mix(in srgb, var(--color-bg-primary) 94%, #22c55e);
+        }
+
+        /* Breathing glow animation */
+        @keyframes glowBreathe {
+          0%, 100% { transform: scale(1); opacity: 0.12; }
+          50% { transform: scale(1.12); opacity: 0.22; }
+        }
+        .focus-glow-breathe {
+          animation: glowBreathe 4s ease-in-out infinite;
+        }
+
+        /* Start button gradient & shadow */
+        .focus-btn-start {
+          background: linear-gradient(135deg, var(--color-accent), color-mix(in srgb, var(--color-accent) 80%, #000)) !important;
+          box-shadow: 0 4px 20px color-mix(in srgb, var(--color-accent) 35%, transparent) !important;
+        }
+        .focus-btn-start:hover {
+          box-shadow: 0 6px 28px color-mix(in srgb, var(--color-accent) 45%, transparent) !important;
+        }
+        .focus-btn-start:active {
+          transform: scale(0.95) !important;
+        }
+
+        /* Hide scrollbar for session history */
+        .focus-hide-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .focus-hide-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+
+        /* Range input styling */
+        input[type="range"] {
+          -webkit-appearance: none;
+          appearance: none;
+          height: 4px;
+          border-radius: 2px;
+          background: var(--color-border-subtle);
+          outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 14px;
+          height: 14px;
+          border-radius: 50%;
+          background: var(--color-accent);
+          cursor: pointer;
+          border: 2px solid var(--color-bg-surface-1);
+          box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+        }
+        input[type="range"]::-moz-range-thumb {
+          width: 14px;
+          height: 14px;
+          border-radius: 50%;
+          background: var(--color-accent);
+          cursor: pointer;
+          border: 2px solid var(--color-bg-surface-1);
+          box-shadow: 0 1px 4px rgba(0,0,0,0.15);
         }
       `}</style>
     </div>
@@ -283,9 +438,9 @@ function SliderSetting({
 }) {
   return (
     <div>
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="text-sm font-medium text-[var(--color-text-primary)]">{label}</span>
-        <span className="text-sm tabular-nums text-[var(--color-text-secondary)]">
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-xs font-medium text-[var(--color-text-primary)]">{label}</span>
+        <span className="text-xs tabular-nums text-[var(--color-text-secondary)]">
           {value} {unit}
         </span>
       </div>
@@ -296,12 +451,8 @@ function SliderSetting({
         step={step}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full accent-[var(--color-accent)] cursor-pointer"
+        className="w-full accent-[var(--color-accent)] cursor-pointer h-1.5"
       />
-      <div className="flex justify-between text-[10px] text-[var(--color-text-muted)] mt-0.5">
-        <span>{min}{unit}</span>
-        <span>{max}{unit}</span>
-      </div>
     </div>
   )
 }
