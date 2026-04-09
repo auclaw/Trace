@@ -1,11 +1,15 @@
-import React, { Suspense, useEffect } from 'react'
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
+import React, { Suspense, useEffect, useState, useRef } from 'react'
+import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom'
 import { useAppStore } from './store/useAppStore'
 import { backgroundSkinConfigs } from './config/themes'
 import { ToastProvider } from './components/ui/Toast'
 import Sidebar from './components/Sidebar'
 import Onboarding from './components/Onboarding'
 import PetMiniWidget from './components/PetMiniWidget'
+import FocusStatusIndicator from './components/FocusStatusIndicator'
+import FocusStartedModal from './components/FocusStartedModal'
+import FocusCompletedModal from './components/FocusCompletedModal'
+import DailyGoalAchievedModal from './components/DailyGoalAchievedModal'
 import { trackingService } from './services/trackingService'
 
 // Re-export types & configs so existing pages importing from '../App' still work
@@ -41,6 +45,78 @@ function PetWidgetWrapper() {
   const location = useLocation()
   if (location.pathname === '/pet') return null
   return <PetMiniWidget />
+}
+
+/* ── Focus session popup orchestrator ── */
+function FocusPopupManager() {
+  const focusState = useAppStore((s) => s.focusState)
+  const focusSessions = useAppStore((s) => s.focusSessions)
+  const focusSettings = useAppStore((s) => s.focusSettings)
+  const activities = useAppStore((s) => s.activities)
+  const dailyGoalMinutes = useAppStore((s) => s.dailyGoalMinutes)
+  const navigate = useNavigate()
+
+  const [showStarted, setShowStarted] = useState(false)
+  const [showCompleted, setShowCompleted] = useState(false)
+  const [showGoalAchieved, setShowGoalAchieved] = useState(false)
+  const [completedStats, setCompletedStats] = useState({ minutes: 0, sessions: 0, xp: 0, coins: 0 })
+
+  const prevFocusState = useRef(focusState)
+  const goalAchievedShown = useRef(false)
+
+  // Show "started" modal when transitioning from idle → working
+  useEffect(() => {
+    if (prevFocusState.current === 'idle' && focusState === 'working') {
+      setShowStarted(true)
+    }
+    // Show "completed" modal when a work session ends (working → break/longBreak)
+    if (prevFocusState.current === 'working' && (focusState === 'break' || focusState === 'longBreak')) {
+      const mins = focusSettings.workMinutes
+      setCompletedStats({
+        minutes: mins,
+        sessions: focusSessions,
+        xp: mins,
+        coins: Math.floor(mins / 5),
+      })
+      setShowCompleted(true)
+    }
+    prevFocusState.current = focusState
+  }, [focusState, focusSessions, focusSettings.workMinutes])
+
+  // Check daily goal achievement
+  useEffect(() => {
+    if (goalAchievedShown.current) return
+    const todayMinutes = activities.reduce((sum, a) => sum + (a.duration || 0), 0)
+    if (todayMinutes >= dailyGoalMinutes && dailyGoalMinutes > 0) {
+      goalAchievedShown.current = true
+      // Delay slightly to not overlap with focus completed modal
+      setTimeout(() => setShowGoalAchieved(true), 1500)
+    }
+  }, [activities, dailyGoalMinutes])
+
+  return (
+    <>
+      <FocusStartedModal
+        isOpen={showStarted}
+        onClose={() => setShowStarted(false)}
+        onViewSession={() => navigate('/focus')}
+      />
+      <FocusCompletedModal
+        isOpen={showCompleted}
+        onClose={() => setShowCompleted(false)}
+        sessionMinutes={completedStats.minutes}
+        totalSessions={completedStats.sessions}
+        xpGained={completedStats.xp}
+        coinsGained={completedStats.coins}
+      />
+      <DailyGoalAchievedModal
+        isOpen={showGoalAchieved}
+        onClose={() => setShowGoalAchieved(false)}
+        totalMinutes={activities.reduce((sum, a) => sum + (a.duration || 0), 0)}
+        goalMinutes={dailyGoalMinutes}
+      />
+    </>
+  )
 }
 
 /* ── Main app content (inside Router) ── */
@@ -101,6 +177,8 @@ function AppContent() {
         </main>
       </div>
       <PetWidgetWrapper />
+      <FocusStatusIndicator />
+      <FocusPopupManager />
     </>
   )
 }
