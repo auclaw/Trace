@@ -8,12 +8,11 @@ interface LoginProps {
   onLoginSuccess: () => void
 }
 
-export default function Login({ theme, onLoginSuccess }: LoginProps) {
+export default function Login({ theme: _theme, onLoginSuccess }: LoginProps) {
   const [phone, setPhone] = useState('')
   const [code, setCode] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const isDark = theme === 'dark'
 
   const handleSendCode = async () => {
     if (!phone.match(/^1[3-9]\d{9}$/)) {
@@ -69,31 +68,27 @@ export default function Login({ theme, onLoginSuccess }: LoginProps) {
     }
   }
 
-  const bgGradient = isDark
-    ? 'from-aether-dark-100 to-[#25201e]'
-    : 'from-[#fffefb] to-[#f8f5ed]'
-  const cardBg = isDark ? 'bg-aether-dark-200' : 'bg-aether-200'
-  const titleColor = isDark ? 'text-aether-text-dark-primary' : 'text-aether-text-primary'
-  const textColor = isDark ? 'text-aether-text-dark-secondary' : 'text-aether-text-secondary'
-  const borderColor = isDark ? 'border-[var(--color-border-subtle)]' : 'border-[var(--color-border-subtle)]'
-  const inputBg = isDark ? 'bg-aether-dark-300 text-aether-text-dark-primary' : 'bg-aether-200 text-aether-text-primary'
+  const bgGradient = 'from-[var(--color-bg-base)] to-[var(--color-bg-surface-2)]'
+  const cardStyle: React.CSSProperties = { background: 'var(--color-bg-surface-2)' }
+  const borderStyle: React.CSSProperties = { borderColor: 'var(--color-border-subtle)' }
+  const inputStyle: React.CSSProperties = { background: 'var(--color-bg-surface-2)', color: 'var(--color-text-primary)' }
 
   return (
     <div className={`min-h-screen flex items-center justify-center bg-gradient-to-br ${bgGradient} px-4 transition-colors duration-200`}>
       <div className="w-full max-w-md">
-        <div className={`${cardBg} rounded-2xl border ${borderColor} p-8 transition-colors duration-200`}>
+        <div className="rounded-2xl border p-8 transition-colors duration-200" style={{ ...cardStyle, ...borderStyle }}>
           <div className="text-center mb-8">
-            <h1 className={`text-3xl font-bold ${titleColor} mb-2`}>
+            <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--color-text-primary)' }}>
               Merize
             </h1>
-            <p className={textColor}>
+            <p style={{ color: 'var(--color-text-secondary)' }}>
               AI 自动时间追踪，帮你看清时间去哪里了
             </p>
           </div>
 
           <div className="space-y-4">
             <div>
-              <label className={`block text-sm font-medium ${isDark ? 'text-aether-text-dark-secondary' : 'text-aether-text-secondary'} mb-1`}>
+              <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text-secondary)' }}>
                 手机号
               </label>
               <input
@@ -101,13 +96,14 @@ export default function Login({ theme, onLoginSuccess }: LoginProps) {
                 placeholder="请输入手机号"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className={`w-full px-4 py-2 border ${borderColor} rounded-lg focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent transition-colors ${inputBg}`}
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent transition-colors"
+                style={{ ...borderStyle, ...inputStyle }}
               />
             </div>
 
             <div className="flex gap-3">
               <div className="flex-1">
-                <label className={`block text-sm font-medium ${isDark ? 'text-aether-text-dark-secondary' : 'text-aether-text-secondary'} mb-1`}>
+                <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text-secondary)' }}>
                   验证码
                 </label>
                 <input
@@ -115,13 +111,15 @@ export default function Login({ theme, onLoginSuccess }: LoginProps) {
                   placeholder="6位验证码"
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
-                  className={`w-full px-4 py-2 border ${borderColor} rounded-lg focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent transition-colors ${inputBg}`}
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent transition-colors"
+                  style={{ ...borderStyle, ...inputStyle }}
                 />
               </div>
               <div className="flex-none pt-5">
                 <button
                   onClick={handleSendCode}
-                  className={`px-4 py-2 ${isDark ? 'bg-aether-dark-300 text-aether-text-dark-secondary hover:bg-aether-dark-300/80' : 'bg-aether-300 text-aether-text-secondary hover:bg-aether-300/80'} rounded-lg transition-colors`}
+                  className="px-4 py-2 rounded-lg transition-colors"
+                  style={{ background: 'var(--color-bg-surface-3)', color: 'var(--color-text-secondary)' }}
                 >
                   获取验证码
                 </button>
@@ -129,7 +127,7 @@ export default function Login({ theme, onLoginSuccess }: LoginProps) {
             </div>
 
             {error && (
-              <div className={`text-sm ${error.includes('已发送') ? (isDark ? 'text-green-400' : 'text-green-600') : (isDark ? 'text-red-400' : 'text-red-600')}`}>
+              <div className="text-sm" style={{ color: error.includes('已发送') ? 'var(--color-success)' : 'var(--color-danger)' }}>
                 {error}
               </div>
             )}
@@ -144,10 +142,10 @@ export default function Login({ theme, onLoginSuccess }: LoginProps) {
 
             <div className="relative my-6">
               <div className="absolute inset-0 flex items-center">
-                <div className={`w-full border-t ${borderColor}`}></div>
+                <div className="w-full border-t" style={{ borderColor: 'var(--color-border-subtle)' }}></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className={`px-2 ${cardBg} ${textColor}`}>或者</span>
+                <span className="px-2" style={{ background: 'var(--color-bg-surface-2)', color: 'var(--color-text-secondary)' }}>或者</span>
               </div>
             </div>
 
@@ -163,10 +161,10 @@ export default function Login({ theme, onLoginSuccess }: LoginProps) {
               <>
                 <div className="relative my-6">
                   <div className="absolute inset-0 flex items-center">
-                    <div className={`w-full border-t ${borderColor}`}></div>
+                    <div className="w-full border-t" style={{ borderColor: 'var(--color-border-subtle)' }}></div>
                   </div>
                   <div className="relative flex justify-center text-sm">
-                    <span className={`px-2 ${cardBg} ${textColor}`}>开发模式</span>
+                    <span className="px-2" style={{ background: 'var(--color-bg-surface-2)', color: 'var(--color-text-secondary)' }}>开发模式</span>
                   </div>
                 </div>
 
@@ -181,7 +179,7 @@ export default function Login({ theme, onLoginSuccess }: LoginProps) {
             )}
           </div>
 
-          <div className={`mt-6 text-center text-xs ${textColor}`}>
+          <div className="mt-6 text-center text-xs" style={{ color: 'var(--color-text-secondary)' }}>
             登录即表示你同意《用户协议》和《隐私政策》
           </div>
         </div>

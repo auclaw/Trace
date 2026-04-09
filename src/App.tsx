@@ -127,6 +127,7 @@ function AppContent() {
   const isFirstLaunch = useAppStore((s) => s.isFirstLaunch)
   const theme = useAppStore((s) => s.theme)
   const backgroundSkin = useAppStore((s) => s.backgroundSkin)
+  const location = useLocation()
 
   useEffect(() => {
     initialize()
@@ -164,17 +165,19 @@ function AppContent() {
         <Sidebar />
         <main className="flex-1 overflow-auto">
           <Suspense fallback={<PageLoader />}>
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/timeline" element={<Timeline />} />
-              <Route path="/planner" element={<Planner />} />
-              <Route path="/focus" element={<FocusMode />} />
-              <Route path="/statistics" element={<Statistics />} />
-              <Route path="/habits" element={<Habits />} />
-              <Route path="/pet" element={<VirtualPet />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/team" element={<Team />} />
-            </Routes>
+            <div key={location.pathname} className="page-transition">
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/timeline" element={<Timeline />} />
+                <Route path="/planner" element={<Planner />} />
+                <Route path="/focus" element={<FocusMode />} />
+                <Route path="/statistics" element={<Statistics />} />
+                <Route path="/habits" element={<Habits />} />
+                <Route path="/pet" element={<VirtualPet />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/team" element={<Team />} />
+              </Routes>
+            </div>
           </Suspense>
         </main>
       </div>

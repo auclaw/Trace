@@ -14,8 +14,7 @@ interface PrivacySettingsProps {
   theme: Theme
 }
 
-const PrivacySettings: React.FC<PrivacySettingsProps> = ({ theme }) => {
-  const isDark = theme === 'dark'
+const PrivacySettings: React.FC<PrivacySettingsProps> = ({ theme: _theme }) => {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [settings, setSettings] = useState<PrivacySettingsData>({
@@ -203,7 +202,8 @@ const PrivacySettings: React.FC<PrivacySettingsProps> = ({ theme }) => {
             <select
               value={settings.auto_delete_days}
               onChange={(e) => setSettings({ ...settings, auto_delete_days: parseInt(e.target.value) })}
-              className={`w-48 px-3 py-2 border ${borderClass} rounded ${isDark ? 'bg-gray-700' : 'bg-white'}`}
+              className={`w-48 px-3 py-2 border ${borderClass} rounded`}
+              style={{ background: 'var(--color-bg-surface-2)', color: 'var(--color-text-primary)' }}
             >
               <option value={0}>不自动删除</option>
               <option value={7}>7 天后</option>

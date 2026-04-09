@@ -119,7 +119,7 @@ interface TimelineProps {
   isDark: boolean
 }
 
-const Timeline: React.FC<TimelineProps> = ({ activities, onEditCategory, onDelete, isDark }) => {
+const Timeline: React.FC<TimelineProps> = ({ activities, onEditCategory, onDelete, isDark: _isDark }) => {
   const [hoveredActivity, setHoveredActivity] = useState<any | null>(null)
   const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 })
   const [editingActivity, setEditingActivity] = useState<any | null>(null)
@@ -197,8 +197,8 @@ const Timeline: React.FC<TimelineProps> = ({ activities, onEditCategory, onDelet
   const totalHeight = 600
 
   return (
-    <div className={`${isDark ? 'bg-aether-dark-200' : 'bg-aether-200'} rounded-card p-6 border border-[var(--color-border-subtle)]`} ref={containerRef} onMouseMove={handleMouseMove}>
-      <h3 className={`text-lg font-semibold mb-4 ${isDark ? 'text-aether-text-dark-primary' : 'text-aether-text-primary'}`}>今日时间线</h3>
+    <div className="rounded-card p-6 border" style={{ background: 'var(--color-bg-surface-2)', borderColor: 'var(--color-border-subtle)' }} ref={containerRef} onMouseMove={handleMouseMove}>
+      <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>今日时间线</h3>
       <div className="overflow-y-auto">
         <div
           className="relative ml-12"
@@ -208,10 +208,10 @@ const Timeline: React.FC<TimelineProps> = ({ activities, onEditCategory, onDelet
           {Array.from({ length: 25 }).map((_, i) => (
             <div
               key={i}
-              className={`absolute left-0 right-0 h-px ${isDark ? 'bg-aether-dark-300' : 'bg-aether-300'}`}
-              style={{ top: `${(i / 24) * 100}%` }}
+              className="absolute left-0 right-0 h-px"
+              style={{ background: 'var(--color-border-subtle)', top: `${(i / 24) * 100}%` }}
             >
-              <span className={`absolute -left-12 -top-2 text-xs ${isDark ? 'text-aether-text-dark-muted' : 'text-aether-text-muted'} w-10 text-right`}>
+              <span className="absolute -left-12 -top-2 text-xs w-10 text-right" style={{ color: 'var(--color-text-muted)' }}>
                 {i}:00
               </span>
             </div>
@@ -270,7 +270,7 @@ const Timeline: React.FC<TimelineProps> = ({ activities, onEditCategory, onDelet
         </div>
 
         {sortedActivities.length === 0 && (
-          <div className={`text-center py-12 ${isDark ? 'text-aether-text-dark-muted' : 'text-aether-text-muted'}`}>
+          <div className="text-center py-12" style={{ color: 'var(--color-text-muted)' }}>
             暂无活动记录，等待系统采集...
           </div>
         )}
@@ -299,13 +299,15 @@ const Timeline: React.FC<TimelineProps> = ({ activities, onEditCategory, onDelet
         {/* 分类选择下拉框 */}
         {editingActivity && (
           <div
-            className={`absolute ${isDark ? 'bg-aether-dark-200' : 'bg-aether-200'} rounded-card border border-[var(--color-border-subtle)] p-3 z-20 w-64`}
+            className="absolute rounded-card border p-3 z-20 w-64"
             style={{
+              background: 'var(--color-bg-surface-2)',
+              borderColor: 'var(--color-border-subtle)',
               left: `${Math.min(hoverPosition.x, (containerRef.current?.clientWidth || 800) - 260)}px`,
               top: `${hoverPosition.y + 30}px`,
             }}
           >
-            <div className={`text-sm font-medium ${isDark ? 'text-aether-text-dark-primary' : 'text-aether-text-primary'} mb-2`}>选择分类</div>
+            <div className="text-sm font-medium mb-2" style={{ color: 'var(--color-text-primary)' }}>选择分类</div>
             <div className="grid grid-cols-2 gap-1">
               {COMMON_CATEGORIES.map(cat => (
                 <button
@@ -314,9 +316,9 @@ const Timeline: React.FC<TimelineProps> = ({ activities, onEditCategory, onDelet
                   className={`px-2 py-1 text-sm rounded text-left transition-colors ${
                     editingActivity.category === cat
                       ? 'bg-primary text-white'
-                      : `${isDark ? 'hover:bg-aether-dark-300 text-aether-text-dark-secondary' : 'hover:bg-aether-300 text-aether-text-secondary'}`
+                      : ''
                   }`}
-                  style={editingActivity.category !== cat ? { backgroundColor: `${getCategoryColor(cat)}20` } : {}}
+                  style={editingActivity.category !== cat ? { backgroundColor: `${getCategoryColor(cat)}20`, color: 'var(--color-text-secondary)' } : {}}
                 >
                   {cat}
                 </button>
@@ -325,14 +327,16 @@ const Timeline: React.FC<TimelineProps> = ({ activities, onEditCategory, onDelet
             <div className="mt-2 pt-2 border-t border-[var(--color-border-subtle)]">
               <button
                 onClick={handleCustomCategory}
-                className={`w-full px-2 py-1 text-sm ${isDark ? 'text-aether-text-dark-secondary hover:bg-aether-dark-300' : 'text-aether-text-secondary hover:bg-aether-300'} rounded transition-colors`}
+                className="w-full px-2 py-1 text-sm rounded transition-colors"
+                style={{ color: 'var(--color-text-secondary)' }}
               >
                 + 自定义分类
               </button>
             </div>
             <button
               onClick={() => setEditingActivity(null)}
-              className={`absolute top-1 right-1 ${isDark ? 'text-aether-text-dark-muted hover:text-aether-text-dark-secondary' : 'text-aether-text-muted hover:text-aether-text-secondary'} w-6 h-6 flex items-center justify-center rounded-full`}
+              className="absolute top-1 right-1 w-6 h-6 flex items-center justify-center rounded-full"
+              style={{ color: 'var(--color-text-muted)' }}
             >
               ×
             </button>
@@ -347,7 +351,7 @@ const Timeline: React.FC<TimelineProps> = ({ activities, onEditCategory, onDelet
           />
         )}
 
-        <div className={`mt-6 text-xs ${isDark ? 'text-aether-text-dark-muted' : 'text-aether-text-muted'} flex items-center gap-4`}>
+        <div className="mt-6 text-xs flex items-center gap-4" style={{ color: 'var(--color-text-muted)' }}>
           <span>💡 点击色块修改分类，右键删除记录。色块高度对应耗时。</span>
         </div>
       </div>

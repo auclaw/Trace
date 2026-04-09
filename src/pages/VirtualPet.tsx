@@ -549,7 +549,7 @@ export default function VirtualPet() {
               value={pet.hunger}
               max={100}
               color={hungerColor}
-              bgTint={isDark ? 'var(--color-bg-surface-2)' : 'rgba(34,197,94,0.04)'}
+              bgTint={isDark ? 'var(--color-bg-surface-2)' : 'var(--color-success-soft)'}
             />
             <StatBar
               label="心情"
@@ -557,7 +557,7 @@ export default function VirtualPet() {
               value={pet.mood}
               max={100}
               color="#ec4899"
-              bgTint={isDark ? 'var(--color-bg-surface-2)' : 'rgba(236,72,153,0.04)'}
+              bgTint={isDark ? 'var(--color-bg-surface-2)' : 'rgba(236,72,153,0.06)'}
             />
             <StatBar
               label="体力"
@@ -565,7 +565,7 @@ export default function VirtualPet() {
               value={energy}
               max={100}
               color="#8b5cf6"
-              bgTint={isDark ? 'var(--color-bg-surface-2)' : 'rgba(139,92,246,0.04)'}
+              bgTint={isDark ? 'var(--color-bg-surface-2)' : 'rgba(139,92,246,0.06)'}
             />
             <StatBar
               label="升级进度"
