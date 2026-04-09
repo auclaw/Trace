@@ -544,12 +544,31 @@ export default function Habits() {
                     {/* Streak badge */}
                     {renderStreakBadge(habit)}
 
-                    {/* Multi-check progress bar */}
+                    {/* Multi-check progress bar + individual check marks */}
                     {habit.targetCount > 1 && (
                       <div style={{ width: '100%', marginTop: 8, marginBottom: 4 }}>
                         <div className="flex justify-between text-[10px] text-[var(--color-text-muted)] mb-1">
                           <span>今日进度</span>
                           <span className="tabular-nums">{currentVal}/{habit.targetCount}</span>
+                        </div>
+                        {/* Individual check indicators */}
+                        <div className="flex justify-center gap-1.5 mb-2">
+                          {Array.from({ length: habit.targetCount }, (_, i) => (
+                            <div key={i} style={{
+                              width: 18, height: 18, borderRadius: '50%',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              fontSize: 10, fontWeight: 600,
+                              transition: 'all 300ms cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                              background: i < currentVal
+                                ? `linear-gradient(135deg, ${habit.color}, ${habit.color}cc)`
+                                : `${habit.color}15`,
+                              color: i < currentVal ? '#fff' : `${habit.color}60`,
+                              boxShadow: i < currentVal ? `0 2px 6px ${habit.color}35` : 'none',
+                              transform: i < currentVal ? 'scale(1)' : 'scale(0.85)',
+                            }}>
+                              {i < currentVal ? '\u2713' : '\u00B7'}
+                            </div>
+                          ))}
                         </div>
                         <div style={{
                           height: 6, borderRadius: 999, overflow: 'hidden',
@@ -563,6 +582,15 @@ export default function Habits() {
                             boxShadow: pct > 0 ? `0 1px 4px ${habit.color}30` : 'none',
                           }} />
                         </div>
+                        {/* Celebration micro-animation when all checks complete */}
+                        {currentVal >= habit.targetCount && (
+                          <div style={{
+                            textAlign: 'center', marginTop: 6, fontSize: 18,
+                            animation: 'celebrationBurst 500ms cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
+                          }}>
+                            🎉
+                          </div>
+                        )}
                       </div>
                     )}
 

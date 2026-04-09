@@ -355,7 +355,7 @@ const TimeBlockPlanner: React.FC<TimeBlockPlannerProps> = ({ selectedDate, theme
 
             <div className="space-y-4">
               <div>
-                <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
+                <label className={`block text-sm font-medium text-[var(--color-text-secondary)] mb-1`}>
                   标题
                 </label>
                 <input
@@ -368,7 +368,7 @@ const TimeBlockPlanner: React.FC<TimeBlockPlannerProps> = ({ selectedDate, theme
               </div>
 
               <div>
-                <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
+                <label className={`block text-sm font-medium text-[var(--color-text-secondary)] mb-1`}>
                   分类
                 </label>
                 <input
@@ -381,7 +381,7 @@ const TimeBlockPlanner: React.FC<TimeBlockPlannerProps> = ({ selectedDate, theme
               </div>
 
               <div>
-                <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
+                <label className={`block text-sm font-medium text-[var(--color-text-secondary)] mb-1`}>
                   开始时间
                 </label>
                 <input
@@ -393,7 +393,7 @@ const TimeBlockPlanner: React.FC<TimeBlockPlannerProps> = ({ selectedDate, theme
               </div>
 
               <div>
-                <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
+                <label className={`block text-sm font-medium text-[var(--color-text-secondary)] mb-1`}>
                   持续时长 (分钟)
                 </label>
                 <input
@@ -408,7 +408,7 @@ const TimeBlockPlanner: React.FC<TimeBlockPlannerProps> = ({ selectedDate, theme
               </div>
 
               <div>
-                <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
+                <label className={`block text-sm font-medium text-[var(--color-text-secondary)] mb-1`}>
                   备注 (可选)
                 </label>
                 <textarea
@@ -422,7 +422,7 @@ const TimeBlockPlanner: React.FC<TimeBlockPlannerProps> = ({ selectedDate, theme
 
               {tasks.length > 0 && (
                 <div>
-                  <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
+                  <label className={`block text-sm font-medium text-[var(--color-text-secondary)] mb-1`}>
                     关联任务 (可选)
                   </label>
                   <select

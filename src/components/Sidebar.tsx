@@ -58,7 +58,7 @@ export default function Sidebar() {
         sidebarCollapsed ? 'w-[68px] hover:w-[264px]' : 'w-[264px]',
       ].join(' ')}
       style={{
-        background: 'var(--color-bg-surface-1)',
+        background: 'linear-gradient(180deg, var(--color-bg-surface-1) 0%, var(--color-bg-surface-2) 100%)',
         borderRight: '1px solid var(--color-border-subtle)',
         boxShadow: 'var(--shadow-sm)',
       }}
@@ -110,12 +110,14 @@ export default function Sidebar() {
                   }}
                   onMouseEnter={(e) => {
                     if (!isActive) {
-                      e.currentTarget.style.background = 'var(--color-bg-surface-2)'
+                      e.currentTarget.style.background = 'var(--color-accent-soft)'
+                      e.currentTarget.style.boxShadow = '0 0 8px var(--color-accent-soft)'
                     }
                   }}
                   onMouseLeave={(e) => {
                     if (!isActive) {
                       e.currentTarget.style.background = 'transparent'
+                      e.currentTarget.style.boxShadow = 'none'
                     }
                   }}
                 >
@@ -125,7 +127,8 @@ export default function Sidebar() {
                       className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full"
                       style={{
                         height: '55%',
-                        background: 'var(--color-accent)',
+                        background: 'var(--color-accent-gradient, var(--color-accent))',
+                        boxShadow: '2px 0 8px var(--color-accent-soft)',
                       }}
                     />
                   )}

@@ -24,9 +24,9 @@ const variantBase = 'shadow-[var(--shadow-xs)]';
 const variantStyles: Record<string, string> = {
   primary: [
     variantBase,
-    'bg-[var(--color-accent)] text-white',
-    'hover:brightness-110 hover:shadow-[var(--shadow-accent)]',
-    'disabled:opacity-40 disabled:hover:brightness-100 disabled:hover:shadow-[var(--shadow-xs)]',
+    'text-white',
+    'hover:brightness-110 hover:shadow-[var(--shadow-accent)] hover:-translate-y-[1px]',
+    'disabled:opacity-40 disabled:hover:brightness-100 disabled:hover:shadow-[var(--shadow-xs)] disabled:hover:translate-y-0',
   ].join(' '),
   secondary: [
     variantBase,
@@ -102,6 +102,9 @@ export default function Button({
         fullWidth ? 'w-full' : '',
         className,
       ].join(' ')}
+      style={variant === 'primary' ? {
+        background: 'var(--color-accent-gradient, var(--color-accent))',
+      } : undefined}
     >
       {loading ? (
         <Spinner className={size === 'sm' ? 'h-3.5 w-3.5' : size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'} />

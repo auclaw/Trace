@@ -49,10 +49,14 @@ const MOTIVATIONAL_MSGS = [
 ]
 
 const AMBIENT_SOUNDS = [
+  { id: 'none', label: '无声', icon: '🔇' },
+  { id: 'white-noise', label: '白噪音', icon: '📻' },
   { id: 'rain', label: '雨声', icon: '🌧️' },
-  { id: 'cafe', label: '咖啡馆', icon: '☕' },
-  { id: 'forest', label: '森林', icon: '🌲' },
+  { id: 'cafe', label: '咖啡厅', icon: '☕' },
 ] as const
+
+const LS_AMBIENT_KEY = 'merize-ambient-sound'
+const BREAK_REMINDER_THRESHOLD = 90 * 60 // 90 minutes in seconds
 
 type TabKey = 'timer' | 'shield'
 
@@ -130,8 +134,12 @@ export default function FocusMode() {
   const [activeTab, setActiveTab] = useState<TabKey>('timer')
   const [showSettings, setShowSettings] = useState(false)
   const [todaySessions, setTodaySessions] = useState<FocusSession[]>([])
-  const [ambientSound, setAmbientSound] = useState<string | null>(null)
+  const [ambientSound, setAmbientSound] = useState<string | null>(() => {
+    try { return localStorage.getItem(LS_AMBIENT_KEY) } catch { return null }
+  })
   const [motivIdx, setMotivIdx] = useState(0)
+  const [breakReminderDismissed, setBreakReminderDismissed] = useState(false)
+  const [continuousFocusSeconds, setContinuousFocusSeconds] = useState(0)
 
   // ── FlowBlocks state ──
   const [sites, setSites] = useState<BlockedSite[]>(loadSites)
@@ -159,6 +167,28 @@ export default function FocusMode() {
     const id = setInterval(() => setMotivIdx((i) => (i + 1) % MOTIVATIONAL_MSGS.length), 30000)
     return () => clearInterval(id)
   }, [focusState])
+
+  // ── Track continuous focus time for break reminder ──
+  useEffect(() => {
+    if (focusState !== 'working') {
+      setContinuousFocusSeconds(0)
+      setBreakReminderDismissed(false)
+      return
+    }
+    const id = setInterval(() => setContinuousFocusSeconds((s) => s + 1), 1000)
+    return () => clearInterval(id)
+  }, [focusState])
+
+  const showBreakReminder = focusState === 'working' && continuousFocusSeconds >= BREAK_REMINDER_THRESHOLD && !breakReminderDismissed
+
+  // ── Persist ambient sound selection ──
+  const handleAmbientChange = useCallback((id: string | null) => {
+    setAmbientSound(id)
+    try {
+      if (id) localStorage.setItem(LS_AMBIENT_KEY, id)
+      else localStorage.removeItem(LS_AMBIENT_KEY)
+    } catch { /* noop */ }
+  }, [])
 
   // ── Progress ──
   const totalSeconds = useMemo(() => {
@@ -278,6 +308,35 @@ export default function FocusMode() {
               </p>
             )}
 
+            {/* ── Break reminder banner (90+ min continuous focus) ── */}
+            {showBreakReminder && (
+              <div
+                className="w-full max-w-md mb-4 px-4 py-3 rounded-2xl flex items-center justify-between break-reminder-enter"
+                style={{
+                  background: 'linear-gradient(135deg, color-mix(in srgb, var(--color-warning, #f59e0b) 12%, transparent), color-mix(in srgb, var(--color-warning, #f59e0b) 6%, transparent))',
+                  border: '1px solid color-mix(in srgb, var(--color-warning, #f59e0b) 25%, transparent)',
+                }}
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <span style={{ fontSize: 18 }}>☕</span>
+                  <span className="text-[13px] font-medium text-[var(--color-text-primary)]">
+                    已连续专注90分钟，建议休息10分钟
+                  </span>
+                </div>
+                <button
+                  onClick={() => { pauseFocus(); setBreakReminderDismissed(true) }}
+                  className="flex-shrink-0 ml-3 px-3 py-1.5 rounded-full text-[12px] font-semibold transition-all"
+                  style={{
+                    background: 'var(--color-warning, #f59e0b)',
+                    color: '#fff',
+                    boxShadow: '0 2px 8px color-mix(in srgb, var(--color-warning, #f59e0b) 35%, transparent)',
+                  }}
+                >
+                  休息一下
+                </button>
+              </div>
+            )}
+
             {/* ── Timer ring + Pet widget row ── */}
             <div className="flex items-center justify-center gap-6 mb-8 flex-1 min-h-0 max-h-[380px]">
               {/* Pet mini widget during focus */}
@@ -370,10 +429,10 @@ export default function FocusMode() {
                 <button
                   key={s.id}
                   className={`ambient-chip ${ambientSound === s.id ? 'active' : ''}`}
-                  onClick={() => setAmbientSound(ambientSound === s.id ? null : s.id)}
+                  onClick={() => handleAmbientChange(ambientSound === s.id ? null : s.id)}
                 >
                   {s.icon} {s.label}
-                  {ambientSound === s.id && ' ♪'}
+                  {ambientSound === s.id && s.id !== 'none' && ' ♪'}
                 </button>
               ))}
             </div>
@@ -884,4 +943,10 @@ const FOCUS_STYLES = `
     height: 2px; border-radius: 1px; background: var(--color-accent);
   }
   .focus-tab:hover:not(.active) { color: var(--color-text-secondary); }
+
+  @keyframes breakReminderSlide {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .break-reminder-enter { animation: breakReminderSlide 0.4s ease-out; }
 `
