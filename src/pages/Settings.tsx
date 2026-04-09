@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { changeLanguage, getCurrentLanguage } from '../i18n'
 import { useAppStore } from '../store/useAppStore'
 import useTheme from '../hooks/useTheme'
 import dataService from '../services/dataService'
@@ -1091,8 +1092,56 @@ export default function Settings() {
         )}
       </Section>
 
-      {/* ─── 7. Notification Settings ─── */}
-      <Section title="通知设置" index={7}>
+      {/* ─── 7b. Language Settings ─── */}
+      <Section title="语言 / Language" index={7}>
+        <p
+          className="text-xs"
+          style={{ color: 'var(--color-text-muted)' }}
+        >
+          切换界面语言 / Switch interface language
+        </p>
+
+        <div className="flex gap-3">
+          {[
+            { code: 'zh-CN', label: '简体中文', flag: '🇨🇳' },
+            { code: 'en-US', label: 'English', flag: '🇺🇸' },
+          ].map((lang) => {
+            const isActive = getCurrentLanguage() === lang.code
+            return (
+              <button
+                key={lang.code}
+                onClick={() => {
+                  changeLanguage(lang.code)
+                  addToast('success', lang.code === 'zh-CN' ? '已切换到中文' : 'Switched to English')
+                }}
+                className="flex-1 flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-150"
+                style={{
+                  background: isActive ? 'var(--color-accent-soft)' : 'var(--color-bg-surface-2)',
+                  border: `2px solid ${isActive ? 'var(--color-accent)' : 'transparent'}`,
+                  cursor: 'pointer',
+                }}
+              >
+                <span className="text-xl">{lang.flag}</span>
+                <span
+                  className="text-sm font-medium"
+                  style={{ color: isActive ? 'var(--color-accent)' : 'var(--color-text-primary)' }}
+                >
+                  {lang.label}
+                </span>
+                {isActive && (
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="ml-auto">
+                    <circle cx="8" cy="8" r="8" fill="var(--color-accent)" />
+                    <path d="M5 8l2 2 4-4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      </Section>
+
+      {/* ─── 8. Notification Settings ─── */}
+      <Section title="通知设置" index={8}>
         <p
           className="text-xs"
           style={{ color: 'var(--color-text-muted)' }}

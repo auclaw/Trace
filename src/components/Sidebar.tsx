@@ -1,38 +1,40 @@
 import React, { useMemo } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../store/useAppStore'
 
 interface NavItem {
   key: string
-  label: string
+  i18nKey: string
   path: string
   icon: React.ReactNode
   end?: boolean
 }
 
 const ALL_NAV_ITEMS: NavItem[] = [
-  { key: 'dashboard', label: '仪表盘', path: '/', end: true,
+  { key: 'dashboard', i18nKey: 'nav.dashboard', path: '/', end: true,
     icon: <span className="text-[16px] leading-none">📊</span> },
-  { key: 'timeline', label: '时间线', path: '/timeline',
+  { key: 'timeline', i18nKey: 'nav.timeline', path: '/timeline',
     icon: <span className="text-[16px] leading-none">⏱️</span> },
-  { key: 'planner', label: '计划', path: '/planner',
+  { key: 'planner', i18nKey: 'nav.planner', path: '/planner',
     icon: <span className="text-[16px] leading-none">📋</span> },
-  { key: 'focus', label: '专注', path: '/focus',
+  { key: 'focus', i18nKey: 'nav.focus', path: '/focus',
     icon: <span className="text-[16px] leading-none">🎯</span> },
-  { key: 'habits', label: '习惯', path: '/habits',
+  { key: 'habits', i18nKey: 'nav.habits', path: '/habits',
     icon: <span className="text-[16px] leading-none">✅</span> },
-  { key: 'statistics', label: '统计', path: '/statistics',
+  { key: 'statistics', i18nKey: 'nav.statistics', path: '/statistics',
     icon: <span className="text-[16px] leading-none">📈</span> },
-  { key: 'pet', label: '宠物', path: '/pet',
+  { key: 'pet', i18nKey: 'nav.pet', path: '/pet',
     icon: <span className="text-[16px] leading-none">🐱</span> },
-  { key: 'team', label: '团队', path: '/team',
+  { key: 'team', i18nKey: 'nav.team', path: '/team',
     icon: <span className="text-[16px] leading-none">👥</span> },
-  { key: 'settings', label: '设置', path: '/settings',
+  { key: 'settings', i18nKey: 'nav.settings', path: '/settings',
     icon: <span className="text-[16px] leading-none">⚙️</span> },
 ]
 
 /* ── Sidebar ── */
 export default function Sidebar() {
+  const { t } = useTranslation()
   const activeModules = useAppStore((s) => s.activeModules)
   const sidebarCollapsed = useAppStore((s) => s.sidebarCollapsed)
   const toggleSidebar = useAppStore((s) => s.toggleSidebar)
@@ -87,7 +89,7 @@ export default function Sidebar() {
             Merize
           </span>
           <span className="text-[11px] truncate" style={{ color: 'var(--color-text-muted)' }}>
-            演示用户
+            {t('app.demoUser')}
           </span>
         </div>
       </div>
@@ -144,7 +146,7 @@ export default function Sidebar() {
                     isActive ? 'font-semibold' : 'font-medium',
                     sidebarCollapsed ? 'opacity-0 group-hover/sidebar:opacity-100' : 'opacity-100',
                   ].join(' ')}>
-                    {item.label}
+                    {t(item.i18nKey)}
                   </span>
                 </NavLink>
               </li>
@@ -177,7 +179,7 @@ export default function Sidebar() {
           ].join(' ')}
             style={{ color: 'var(--color-text-muted)' }}
           >
-            今日{' '}
+            {t('nav.today')}{' '}
             <span className="font-semibold" style={{ color: 'var(--color-accent)' }}>
               {h > 0 ? `${h}h ` : ''}{m}m
             </span>
