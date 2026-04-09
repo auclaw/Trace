@@ -7,6 +7,8 @@ import type { Activity, ActivityCategory } from '../services/dataService'
 import useTheme from '../hooks/useTheme'
 import { CATEGORY_COLORS } from '../config/themes'
 import dataService from '../services/dataService'
+import DailySummary from '../components/DailySummary'
+import { trackingService } from '../services/trackingService'
 
 // ── Helpers ──
 
@@ -240,6 +242,8 @@ export default function Dashboard() {
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null)
   const [checkedTasks, setCheckedTasks] = useState<Record<string, boolean>>({})
   const [checkedHabits, setCheckedHabits] = useState<Record<string, boolean>>({})
+  const [showSummary, setShowSummary] = useState(false)
+  const [currentTracking, setCurrentTracking] = useState(trackingService.getCurrentActivity())
 
   // Load data on mount
   useEffect(() => {
@@ -247,6 +251,15 @@ export default function Dashboard() {
     loadTasks()
     loadHabits()
   }, [loadActivities, loadTasks, loadHabits])
+
+  // Subscribe to tracking service for live updates
+  useEffect(() => {
+    const unsub = trackingService.subscribe(() => {
+      setCurrentTracking(trackingService.getCurrentActivity())
+      loadActivities() // refresh activities when new ones are generated
+    })
+    return unsub
+  }, [loadActivities])
 
   // Derived stats
   const today = todayStr()
@@ -349,15 +362,71 @@ export default function Dashboard() {
         />
       )}
 
+      {/* Daily Summary Modal */}
+      <DailySummary isOpen={showSummary} onClose={() => setShowSummary(false)} />
+
       {/* ── Header ── */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--color-text-primary)' }}>
-          今日概览
-        </h1>
-        <p className="text-sm mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
-          {dateLabel} &middot; {greeting()}
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--color-text-primary)' }}>
+            今日概览
+          </h1>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
+            {dateLabel} &middot; {greeting()}
+          </p>
+        </div>
+        <Button size="sm" onClick={() => setShowSummary(true)}>
+          生成今日总结
+        </Button>
       </div>
+
+      {/* ── Tracking Banner ── */}
+      {trackingService.isTracking() && (
+        <div
+          className="flex items-center gap-3 rounded-2xl px-5 py-3"
+          style={{
+            background: currentTracking
+              ? `linear-gradient(135deg, ${CATEGORY_COLORS[currentTracking.category] || 'var(--color-accent)'}12, ${CATEGORY_COLORS[currentTracking.category] || 'var(--color-accent)'}06)`
+              : 'var(--color-bg-surface-2)',
+            border: `1px solid ${currentTracking ? `${CATEGORY_COLORS[currentTracking.category] || 'var(--color-accent)'}30` : 'var(--color-border-subtle)'}`,
+          }}
+        >
+          <span className="relative flex h-3 w-3">
+            <span
+              className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
+              style={{ background: currentTracking ? CATEGORY_COLORS[currentTracking.category] || 'var(--color-accent)' : 'var(--color-accent)' }}
+            />
+            <span
+              className="relative inline-flex rounded-full h-3 w-3"
+              style={{ background: currentTracking ? CATEGORY_COLORS[currentTracking.category] || 'var(--color-accent)' : 'var(--color-accent)' }}
+            />
+          </span>
+          {currentTracking ? (
+            <div className="flex-1 min-w-0">
+              <span className="text-[13px] font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                正在追踪: {currentTracking.name}
+              </span>
+              <span className="text-[12px] ml-2" style={{ color: 'var(--color-text-muted)' }}>
+                {fmtTime(currentTracking.startTime)} 开始 · {currentTracking.category}
+              </span>
+            </div>
+          ) : (
+            <span className="text-[13px]" style={{ color: 'var(--color-text-muted)' }}>
+              AI 追踪已启动 — 等待活动中...
+            </span>
+          )}
+          <button
+            onClick={() => navigate('/timeline')}
+            className="text-[11px] px-2.5 py-1 rounded-full"
+            style={{
+              background: 'var(--color-accent-soft)',
+              color: 'var(--color-accent)',
+            }}
+          >
+            查看时间线
+          </button>
+        </div>
+      )}
 
       {/* ── Stats Row ── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

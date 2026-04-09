@@ -1,10 +1,12 @@
 import React, { Suspense, useEffect } from 'react'
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
 import { useAppStore } from './store/useAppStore'
 import { backgroundSkinConfigs } from './config/themes'
 import { ToastProvider } from './components/ui/Toast'
 import Sidebar from './components/Sidebar'
 import Onboarding from './components/Onboarding'
+import PetMiniWidget from './components/PetMiniWidget'
+import { trackingService } from './services/trackingService'
 
 // Re-export types & configs so existing pages importing from '../App' still work
 export type { Theme, ColorTheme, BackgroundSkin } from './config/themes'
@@ -34,6 +36,13 @@ function PageLoader() {
   )
 }
 
+/* ── Pet widget that hides on /pet page ── */
+function PetWidgetWrapper() {
+  const location = useLocation()
+  if (location.pathname === '/pet') return null
+  return <PetMiniWidget />
+}
+
 /* ── Main app content (inside Router) ── */
 function AppContent() {
   const initialize = useAppStore((s) => s.initialize)
@@ -45,6 +54,14 @@ function AppContent() {
   useEffect(() => {
     initialize()
   }, [initialize])
+
+  // Start AI tracking service when app initializes
+  useEffect(() => {
+    if (initialized && !isFirstLaunch) {
+      trackingService.start()
+      return () => { trackingService.stop() }
+    }
+  }, [initialized, isFirstLaunch])
 
   if (!initialized) {
     return (
@@ -83,6 +100,7 @@ function AppContent() {
           </Suspense>
         </main>
       </div>
+      <PetWidgetWrapper />
     </>
   )
 }
