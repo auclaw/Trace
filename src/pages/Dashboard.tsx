@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Card, Modal, Button, Badge, EmptyState } from '../components/ui'
 import Input from '../components/ui/Input'
 import { useAppStore } from '../store/useAppStore'
-import type { Activity, ActivityCategory } from '../services/dataService'
+import type { Activity, ActivityCategory, TimeBlock } from '../services/dataService'
 import useTheme from '../hooks/useTheme'
 import { CATEGORY_COLORS } from '../config/themes'
 import dataService from '../services/dataService'
@@ -312,6 +312,76 @@ export default function Dashboard() {
     return entries.map(([cat, mins]) => ({ cat, mins, pct: (mins / total) * 100 }))
   }, [dailyStats])
 
+  // ── Plan vs Actual comparison ──
+  const timeBlocks = useMemo(() => dataService.getTimeBlocks(today), [today, activities])
+
+  const planComparison = useMemo(() => {
+    if (timeBlocks.length === 0) return { items: [] as { block: TimeBlock; actual: Activity | null; match: 'full' | 'partial' | 'miss' }[], adherencePct: 0 }
+
+    const items = timeBlocks.map((block) => {
+      const blockStart = new Date(`${block.date}T${block.startTime}`).getTime()
+      const blockEnd = new Date(`${block.date}T${block.endTime}`).getTime()
+
+      // Find overlapping activities
+      const overlapping = sortedActivities.filter((act) => {
+        const aStart = new Date(act.startTime).getTime()
+        const aEnd = new Date(act.endTime).getTime()
+        return aStart < blockEnd && aEnd > blockStart
+      })
+
+      if (overlapping.length === 0) {
+        return { block, actual: null as Activity | null, match: 'miss' as const }
+      }
+
+      // Best match: same category => full, any overlap => partial
+      const categoryMatch = overlapping.find((a) => a.category === block.category)
+      if (categoryMatch) {
+        return { block, actual: categoryMatch, match: 'full' as const }
+      }
+      return { block, actual: overlapping[0], match: 'partial' as const }
+    })
+
+    const matched = items.filter((i) => i.match === 'full').length
+    const partial = items.filter((i) => i.match === 'partial').length
+    const adherencePct = items.length > 0 ? Math.round(((matched + partial * 0.5) / items.length) * 100) : 0
+
+    return { items, adherencePct }
+  }, [timeBlocks, sortedActivities])
+
+  const aiSuggestions = useMemo(() => {
+    const suggestions: string[] = []
+    const cats = dailyStats.categories
+    const deepWorkCats = ['开发', '学习', '工作']
+    const deepMins = deepWorkCats.reduce((s, c) => s + (cats[c] || 0), 0)
+    const totalMinsAll = dailyStats.totalMinutes || 1
+    const deepPct = Math.round((deepMins / totalMinsAll) * 100)
+
+    // Suggestion based on adherence
+    if (planComparison.items.length > 0) {
+      const misses = planComparison.items.filter((i) => i.match === 'miss')
+      if (misses.length > 0) {
+        const missBlocks = misses.slice(0, 2).map((m) => m.block.startTime.slice(0, 5)).join('、')
+        suggestions.push(`你在 ${missBlocks} 时段偏离了计划，建议把高难度任务安排在精力充沛的时段`)
+      }
+      if (planComparison.adherencePct >= 80) {
+        suggestions.push(`今日计划执行率 ${planComparison.adherencePct}%，表现优秀！继续保持这种节奏`)
+      }
+    }
+
+    // Deep work ratio
+    suggestions.push(`今天深度工作占比 ${deepPct}%，${deepPct >= 50 ? '状态不错' : '可以尝试减少碎片化活动'}`)
+
+    // Rest suggestion
+    const restMins = cats['休息'] || 0
+    if (totalMinsAll > 180 && restMins < 20) {
+      suggestions.push('建议每 90 分钟休息 10 分钟以维持专注力')
+    } else if (suggestions.length < 3) {
+      suggestions.push('保持规律的作息和适当休息，有助于提高整体效率')
+    }
+
+    return suggestions.slice(0, 3)
+  }, [dailyStats, planComparison])
+
   // Format today's date
   const dateLabel = new Date().toLocaleDateString('zh-CN', {
     year: 'numeric',
@@ -533,6 +603,241 @@ export default function Dashboard() {
               <span className="text-sm font-normal ml-1" style={{ color: 'var(--color-text-muted)' }}>天</span>
             </p>
             <p className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>每日 &gt; 1小时</p>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Plan vs Actual + AI Suggestions ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Plan vs Actual comparison card */}
+        <div
+          className="rounded-2xl overflow-hidden"
+          style={{
+            background: 'linear-gradient(135deg, #ffffff 0%, #fef8f0 50%, #fdf2e9 100%)',
+            border: '1px solid var(--color-border-subtle)',
+            boxShadow: 'var(--shadow-card)',
+          }}
+        >
+          <div className="px-5 pt-4 pb-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-base">📊</span>
+              <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                计划 vs 实际
+              </h3>
+            </div>
+            {planComparison.items.length > 0 && (
+              <div className="flex items-center gap-2">
+                <div
+                  className="h-1.5 w-16 rounded-full overflow-hidden"
+                  style={{ background: 'var(--color-border-subtle)', opacity: 0.3 }}
+                >
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${planComparison.adherencePct}%`,
+                      background: planComparison.adherencePct >= 70
+                        ? 'linear-gradient(90deg, #22c55e, #4ade80)'
+                        : planComparison.adherencePct >= 40
+                          ? 'linear-gradient(90deg, #eab308, #facc15)'
+                          : 'linear-gradient(90deg, #ef4444, #f87171)',
+                      transition: 'width 700ms ease-out',
+                    }}
+                  />
+                </div>
+                <span
+                  className="text-xs font-bold tabular-nums"
+                  style={{
+                    color: planComparison.adherencePct >= 70
+                      ? '#22c55e'
+                      : planComparison.adherencePct >= 40
+                        ? '#eab308'
+                        : '#ef4444',
+                  }}
+                >
+                  {planComparison.adherencePct}%
+                </span>
+              </div>
+            )}
+          </div>
+
+          <div className="px-5 pb-4">
+            {planComparison.items.length === 0 ? (
+              <div className="text-center py-6">
+                <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                  今天还没有时间块计划
+                </p>
+                <button
+                  onClick={() => navigate('/planner')}
+                  className="text-xs mt-2 px-3 py-1 rounded-full"
+                  style={{
+                    background: 'var(--color-accent-soft)',
+                    color: 'var(--color-accent)',
+                  }}
+                >
+                  去规划时间
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                {planComparison.items.map(({ block, actual, match }) => {
+                  const matchColor = match === 'full'
+                    ? '#22c55e'
+                    : match === 'partial'
+                      ? '#eab308'
+                      : '#ef4444'
+                  const matchBg = match === 'full'
+                    ? 'rgba(34,197,94,0.08)'
+                    : match === 'partial'
+                      ? 'rgba(234,179,8,0.08)'
+                      : 'rgba(239,68,68,0.06)'
+                  const planColor = CATEGORY_COLORS[block.category] || 'var(--color-accent)'
+
+                  return (
+                    <div
+                      key={block.id}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
+                      style={{
+                        background: matchBg,
+                        borderLeft: `3px solid ${matchColor}`,
+                        transition: TRANSITION_ALL,
+                      }}
+                    >
+                      {/* Time slot */}
+                      <span
+                        className="text-[10px] tabular-nums shrink-0 w-[72px]"
+                        style={{ color: 'var(--color-text-muted)' }}
+                      >
+                        {block.startTime.slice(0, 5)}–{block.endTime.slice(0, 5)}
+                      </span>
+
+                      {/* Planned */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className="w-1.5 h-1.5 rounded-full shrink-0"
+                            style={{ background: planColor }}
+                          />
+                          <span
+                            className="text-[11px] font-medium truncate"
+                            style={{ color: 'var(--color-text-primary)' }}
+                          >
+                            {block.title}
+                          </span>
+                        </div>
+                        <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>
+                          计划 · {block.category}
+                        </span>
+                      </div>
+
+                      {/* Arrow */}
+                      <span className="text-[10px]" style={{ color: 'var(--color-text-muted)', opacity: 0.4 }}>→</span>
+
+                      {/* Actual */}
+                      <div className="flex-1 min-w-0">
+                        {actual ? (
+                          <>
+                            <div className="flex items-center gap-1.5">
+                              <span
+                                className="w-1.5 h-1.5 rounded-full shrink-0"
+                                style={{ background: CATEGORY_COLORS[actual.category] || 'var(--color-accent)' }}
+                              />
+                              <span
+                                className="text-[11px] font-medium truncate"
+                                style={{ color: 'var(--color-text-primary)' }}
+                              >
+                                {actual.name}
+                              </span>
+                            </div>
+                            <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>
+                              实际 · {actual.category}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-[11px]" style={{ color: '#ef4444', opacity: 0.7 }}>
+                            未执行
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Match indicator */}
+                      <span
+                        className="text-[10px] font-semibold shrink-0 px-1.5 py-0.5 rounded-full"
+                        style={{
+                          color: matchColor,
+                          background: `${matchColor}15`,
+                        }}
+                      >
+                        {match === 'full' ? '匹配' : match === 'partial' ? '部分' : '偏离'}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* AI Optimization Suggestions card */}
+        <div
+          className="rounded-2xl overflow-hidden"
+          style={{
+            background: 'linear-gradient(135deg, #fffbf5 0%, #fef3e2 50%, #fdf0db 100%)',
+            border: '1px solid var(--color-border-subtle)',
+            boxShadow: 'var(--shadow-card)',
+          }}
+        >
+          <div className="px-5 pt-4 pb-3 flex items-center gap-2">
+            <span className="text-base" style={{ filter: 'drop-shadow(0 0 4px rgba(251,191,36,0.4))' }}>✨</span>
+            <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+              AI 优化建议
+            </h3>
+            <span
+              className="ml-auto text-[10px] px-2 py-0.5 rounded-full font-medium"
+              style={{
+                background: 'linear-gradient(135deg, var(--color-accent), #f59e0b)',
+                color: '#fff',
+              }}
+            >
+              智能分析
+            </span>
+          </div>
+
+          <div className="px-5 pb-5 space-y-3">
+            {aiSuggestions.map((suggestion, i) => (
+              <div
+                key={i}
+                className="flex gap-3 items-start px-3.5 py-3 rounded-xl"
+                style={{
+                  background: 'rgba(255,255,255,0.65)',
+                  backdropFilter: 'blur(8px)',
+                  border: '1px solid rgba(255,255,255,0.5)',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                  transition: TRANSITION_ALL,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateX(4px)'
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateX(0)'
+                  e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.03)'
+                }}
+              >
+                <span
+                  className="flex items-center justify-center w-5 h-5 rounded-full shrink-0 text-[10px] font-bold mt-0.5"
+                  style={{
+                    background: 'linear-gradient(135deg, var(--color-accent), #f59e0b)',
+                    color: '#fff',
+                    boxShadow: '0 2px 6px rgba(245,158,11,0.25)',
+                  }}
+                >
+                  {i + 1}
+                </span>
+                <p className="text-[12px] leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                  {suggestion}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
       </div>

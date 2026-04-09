@@ -2,6 +2,9 @@ import { useState, useCallback } from 'react'
 import { useAppStore } from '../store/useAppStore'
 import useTheme from '../hooks/useTheme'
 import dataService from '../services/dataService'
+import { trackingService } from '../services/trackingService'
+import type { PrivacyLevel, TrackingRule } from '../services/trackingService'
+import type { ActivityCategory } from '../services/dataService'
 import { Card, Button, Badge } from '../components/ui'
 import {
   colorThemeConfigs,
@@ -236,6 +239,188 @@ export default function Settings() {
   const addToast = useAppStore((s) => s.addToast)
 
   const [exporting, setExporting] = useState(false)
+
+  /* ── Privacy level ── */
+  const [privacyLevel, setPrivacyLevel] = useState<PrivacyLevel>(
+    trackingService.getPrivacyLevel(),
+  )
+  const handlePrivacyChange = useCallback(
+    (level: PrivacyLevel) => {
+      setPrivacyLevel(level)
+      trackingService.setPrivacyLevel(level)
+      addToast('success', '隐私级别已更新')
+    },
+    [addToast],
+  )
+
+  /* ── Tracking rules ── */
+  const RULE_CATEGORIES: ActivityCategory[] = [
+    '开发', '工作', '学习', '会议', '休息', '娱乐', '运动', '阅读', '其他',
+  ]
+  const [trackingRules, setTrackingRules] = useState<TrackingRule[]>(
+    trackingService.getTrackingRules(),
+  )
+  const [newRuleKeyword, setNewRuleKeyword] = useState('')
+  const [newRuleCategory, setNewRuleCategory] = useState<ActivityCategory>('其他')
+  const [showRuleForm, setShowRuleForm] = useState(false)
+
+  const handleAddRule = useCallback(() => {
+    if (!newRuleKeyword.trim()) return
+    trackingService.addRule({
+      appName: newRuleKeyword.trim(),
+      targetCategory: newRuleCategory,
+      priority: 5,
+    })
+    setTrackingRules(trackingService.getTrackingRules())
+    setNewRuleKeyword('')
+    setNewRuleCategory('其他')
+    setShowRuleForm(false)
+    addToast('success', '追踪规则已添加')
+  }, [newRuleKeyword, newRuleCategory, addToast])
+
+  const handleDeleteRule = useCallback(
+    (ruleId: string) => {
+      trackingService.removeRule(ruleId)
+      setTrackingRules(trackingService.getTrackingRules())
+      addToast('success', '规则已删除')
+    },
+    [addToast],
+  )
+
+  /* ── Notification settings ── */
+  interface NotificationSettings {
+    habitReminder: boolean
+    breakReminder: boolean
+    focusEndReminder: boolean
+    habitInterval: number
+    breakInterval: number
+  }
+  const NOTIF_KEY = 'merize-notification-settings'
+  const defaultNotif: NotificationSettings = {
+    habitReminder: true,
+    breakReminder: true,
+    focusEndReminder: true,
+    habitInterval: 30,
+    breakInterval: 25,
+  }
+  const [notifSettings, setNotifSettings] = useState<NotificationSettings>(() => {
+    try {
+      const raw = localStorage.getItem(NOTIF_KEY)
+      return raw ? { ...defaultNotif, ...JSON.parse(raw) } : defaultNotif
+    } catch {
+      return defaultNotif
+    }
+  })
+  const updateNotif = useCallback(
+    (patch: Partial<NotificationSettings>) => {
+      setNotifSettings((prev) => {
+        const next = { ...prev, ...patch }
+        localStorage.setItem(NOTIF_KEY, JSON.stringify(next))
+        return next
+      })
+    },
+    [],
+  )
+
+  /* ── Export helpers (daily/weekly report) ── */
+  const exportDailyReport = useCallback(() => {
+    setExporting(true)
+    try {
+      const activities = dataService.getActivities()
+      const today = new Date().toISOString().slice(0, 10)
+      const todayActivities = activities.filter((a) => a.startTime.slice(0, 10) === today)
+      const categoryTotals: Record<string, number> = {}
+      todayActivities.forEach((a) => {
+        categoryTotals[a.category] = (categoryTotals[a.category] || 0) + a.duration
+      })
+      const lines = [
+        `Merize 日报 - ${today}`,
+        '='.repeat(40),
+        '',
+        `总活动数: ${todayActivities.length}`,
+        `总时长: ${todayActivities.reduce((s, a) => s + a.duration, 0)} 分钟`,
+        '',
+        '分类汇总:',
+        ...Object.entries(categoryTotals).map(
+          ([cat, min]) => `  ${cat}: ${min} 分钟 (${(min / 60).toFixed(1)}h)`,
+        ),
+        '',
+        '活动明细:',
+        ...todayActivities.map(
+          (a) =>
+            `  [${a.startTime.slice(11, 16)}-${a.endTime.slice(11, 16)}] ${a.category} | ${a.name} (${a.duration}min)`,
+        ),
+        '',
+        '--- Merize v2.0.0-beta ---',
+      ]
+      const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `merize-daily-report-${today}.txt`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      addToast('success', '日报导出成功')
+    } catch {
+      addToast('error', '导出失败')
+    } finally {
+      setExporting(false)
+    }
+  }, [addToast])
+
+  const exportWeeklyReport = useCallback(() => {
+    setExporting(true)
+    try {
+      const activities = dataService.getActivities()
+      const now = new Date()
+      const weekAgo = new Date(now.getTime() - 7 * 86400000)
+      const weekActivities = activities.filter(
+        (a) => new Date(a.startTime) >= weekAgo,
+      )
+      const categoryTotals: Record<string, number> = {}
+      const dailyTotals: Record<string, number> = {}
+      weekActivities.forEach((a) => {
+        categoryTotals[a.category] = (categoryTotals[a.category] || 0) + a.duration
+        const day = a.startTime.slice(0, 10)
+        dailyTotals[day] = (dailyTotals[day] || 0) + a.duration
+      })
+      const lines = [
+        `Merize 周报 - ${weekAgo.toISOString().slice(0, 10)} ~ ${now.toISOString().slice(0, 10)}`,
+        '='.repeat(50),
+        '',
+        `总活动数: ${weekActivities.length}`,
+        `总时长: ${weekActivities.reduce((s, a) => s + a.duration, 0)} 分钟`,
+        '',
+        '每日时长:',
+        ...Object.entries(dailyTotals)
+          .sort()
+          .map(([day, min]) => `  ${day}: ${min} 分钟 (${(min / 60).toFixed(1)}h)`),
+        '',
+        '分类汇总:',
+        ...Object.entries(categoryTotals)
+          .sort((a, b) => b[1] - a[1])
+          .map(([cat, min]) => `  ${cat}: ${min} 分钟 (${(min / 60).toFixed(1)}h)`),
+        '',
+        '--- Merize v2.0.0-beta ---',
+      ]
+      const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `merize-weekly-report-${now.toISOString().slice(0, 10)}.txt`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      addToast('success', '周报导出成功')
+    } catch {
+      addToast('error', '导出失败')
+    } finally {
+      setExporting(false)
+    }
+  }, [addToast])
 
   /* ── Module toggle ── */
   const toggleModule = useCallback(
@@ -649,8 +834,388 @@ export default function Settings() {
         </p>
       </Section>
 
-      {/* ─── 5. Data Management ─── */}
-      <Section title="数据管理" index={5}>
+      {/* ─── 5. Privacy Level ─── */}
+      <Section title="隐私级别设置" index={5}>
+        <p
+          className="text-xs"
+          style={{ color: 'var(--color-text-muted)' }}
+        >
+          控制自动追踪时收集的信息粒度
+        </p>
+        <div className="space-y-2">
+          {([
+            {
+              level: 'basic' as PrivacyLevel,
+              label: '基础',
+              desc: '仅记录应用名称（如 "VS Code"）',
+            },
+            {
+              level: 'standard' as PrivacyLevel,
+              label: '标准',
+              desc: '记录应用名称和窗口标题（如 "VS Code - App.tsx"）',
+            },
+            {
+              level: 'detailed' as PrivacyLevel,
+              label: '详细',
+              desc: '记录应用名称、窗口标题、URL 及活动摘要',
+            },
+          ]).map((opt) => {
+            const selected = privacyLevel === opt.level
+            return (
+              <button
+                key={opt.level}
+                onClick={() => handlePrivacyChange(opt.level)}
+                className="w-full text-left cursor-pointer"
+                style={{
+                  padding: '14px 16px',
+                  borderRadius: 'var(--radius-lg)',
+                  border: selected
+                    ? '2px solid var(--color-accent)'
+                    : '1.5px solid var(--color-border-subtle)',
+                  backgroundColor: selected
+                    ? 'var(--color-accent-soft)'
+                    : 'transparent',
+                  transition: 'all 0.25s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                }}
+              >
+                <div
+                  style={{
+                    width: 20,
+                    height: 20,
+                    borderRadius: '50%',
+                    border: selected
+                      ? '6px solid var(--color-accent)'
+                      : '2px solid var(--color-border-subtle)',
+                    backgroundColor: selected ? '#fff' : 'transparent',
+                    flexShrink: 0,
+                    transition: 'all 0.2s ease',
+                  }}
+                />
+                <div className="flex-1 min-w-0">
+                  <p
+                    className="text-sm font-semibold"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
+                    {opt.label}
+                  </p>
+                  <p
+                    className="text-xs mt-0.5"
+                    style={{ color: 'var(--color-text-muted)' }}
+                  >
+                    {opt.desc}
+                  </p>
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      </Section>
+
+      {/* ─── 6. Tracking Rules ─── */}
+      <Section title="追踪规则管理" index={6}>
+        <p
+          className="text-xs"
+          style={{ color: 'var(--color-text-muted)' }}
+        >
+          自定义关键词到分类的映射规则，优先级越高越先匹配
+        </p>
+
+        {/* Rules list */}
+        <div
+          style={{
+            borderRadius: 'var(--radius-lg)',
+            border: '1px solid var(--color-border-subtle)',
+            overflow: 'hidden',
+            maxHeight: 320,
+            overflowY: 'auto',
+          }}
+        >
+          {trackingRules.length === 0 ? (
+            <div
+              style={{
+                padding: '20px 16px',
+                textAlign: 'center',
+                color: 'var(--color-text-muted)',
+                fontSize: 13,
+              }}
+            >
+              暂无规则
+            </div>
+          ) : (
+            trackingRules.map((rule, i) => (
+              <div
+                key={rule.id}
+                className="flex items-center justify-between"
+                style={{
+                  padding: '10px 16px',
+                  backgroundColor:
+                    i % 2 === 0 ? 'var(--color-bg-surface-2)' : 'transparent',
+                  borderBottom:
+                    i < trackingRules.length - 1
+                      ? '1px solid var(--color-border-subtle)'
+                      : 'none',
+                }}
+              >
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <span
+                    className="text-sm font-medium"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
+                    {rule.appName}
+                    {rule.titleKeyword ? ` / ${rule.titleKeyword}` : ''}
+                  </span>
+                  <span
+                    className="text-xs"
+                    style={{ color: 'var(--color-text-muted)' }}
+                  >
+                    →
+                  </span>
+                  <Badge variant="accent" size="sm">
+                    {rule.targetCategory}
+                  </Badge>
+                </div>
+                <button
+                  onClick={() => handleDeleteRule(rule.id)}
+                  title="删除规则"
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: 'rgb(200,60,60)',
+                    fontSize: 16,
+                    padding: '2px 6px',
+                    borderRadius: 'var(--radius-sm)',
+                    transition: 'background-color 0.15s ease',
+                    flexShrink: 0,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'rgba(220,60,60,0.1)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent'
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Add rule form */}
+        {showRuleForm ? (
+          <div
+            style={{
+              padding: 16,
+              borderRadius: 'var(--radius-lg)',
+              border: '1.5px solid var(--color-accent)',
+              backgroundColor: 'var(--color-accent-soft)',
+            }}
+          >
+            <div className="flex items-center gap-3 mb-3">
+              <input
+                type="text"
+                value={newRuleKeyword}
+                onChange={(e) => setNewRuleKeyword(e.target.value)}
+                placeholder="应用名或关键词..."
+                style={{
+                  flex: 1,
+                  padding: '8px 12px',
+                  fontSize: 13,
+                  borderRadius: 'var(--radius-md)',
+                  backgroundColor: 'var(--color-bg-surface-2)',
+                  color: 'var(--color-text-primary)',
+                  border: '1.5px solid var(--color-border-subtle)',
+                  outline: 'none',
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--color-accent)'
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--color-border-subtle)'
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleAddRule()
+                }}
+              />
+              <select
+                value={newRuleCategory}
+                onChange={(e) =>
+                  setNewRuleCategory(e.target.value as ActivityCategory)
+                }
+                style={{
+                  padding: '8px 12px',
+                  fontSize: 13,
+                  borderRadius: 'var(--radius-md)',
+                  backgroundColor: 'var(--color-bg-surface-2)',
+                  color: 'var(--color-text-primary)',
+                  border: '1.5px solid var(--color-border-subtle)',
+                  outline: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                {RULE_CATEGORIES.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="primary" size="sm" onClick={handleAddRule}>
+                确认添加
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  setShowRuleForm(false)
+                  setNewRuleKeyword('')
+                }}
+              >
+                取消
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setShowRuleForm(true)}
+          >
+            + 添加规则
+          </Button>
+        )}
+      </Section>
+
+      {/* ─── 7. Notification Settings ─── */}
+      <Section title="通知设置" index={7}>
+        <p
+          className="text-xs"
+          style={{ color: 'var(--color-text-muted)' }}
+        >
+          管理各类提醒的开关与间隔
+        </p>
+
+        <div
+          style={{
+            borderRadius: 'var(--radius-lg)',
+            border: '1px solid var(--color-border-subtle)',
+            overflow: 'hidden',
+          }}
+        >
+          {/* Habit reminder */}
+          <div
+            className="flex items-center justify-between"
+            style={{
+              padding: '12px 16px',
+              backgroundColor: 'var(--color-bg-surface-2)',
+              borderBottom: '1px solid var(--color-border-subtle)',
+            }}
+          >
+            <div>
+              <p
+                className="text-sm font-medium"
+                style={{ color: 'var(--color-text-primary)' }}
+              >
+                习惯提醒
+              </p>
+              <p
+                className="text-xs mt-0.5"
+                style={{ color: 'var(--color-text-muted)' }}
+              >
+                在设定时间提醒完成每日习惯
+              </p>
+            </div>
+            <Toggle
+              checked={notifSettings.habitReminder}
+              onChange={(v) => updateNotif({ habitReminder: v })}
+            />
+          </div>
+
+          {/* Break reminder */}
+          <div
+            className="flex items-center justify-between"
+            style={{
+              padding: '12px 16px',
+              borderBottom: '1px solid var(--color-border-subtle)',
+            }}
+          >
+            <div>
+              <p
+                className="text-sm font-medium"
+                style={{ color: 'var(--color-text-primary)' }}
+              >
+                休息提醒
+              </p>
+              <p
+                className="text-xs mt-0.5"
+                style={{ color: 'var(--color-text-muted)' }}
+              >
+                长时间工作后提醒起身休息
+              </p>
+            </div>
+            <Toggle
+              checked={notifSettings.breakReminder}
+              onChange={(v) => updateNotif({ breakReminder: v })}
+            />
+          </div>
+
+          {/* Focus end reminder */}
+          <div
+            className="flex items-center justify-between"
+            style={{
+              padding: '12px 16px',
+              backgroundColor: 'var(--color-bg-surface-2)',
+            }}
+          >
+            <div>
+              <p
+                className="text-sm font-medium"
+                style={{ color: 'var(--color-text-primary)' }}
+              >
+                专注结束提醒
+              </p>
+              <p
+                className="text-xs mt-0.5"
+                style={{ color: 'var(--color-text-muted)' }}
+              >
+                专注计时结束时发出提醒
+              </p>
+            </div>
+            <Toggle
+              checked={notifSettings.focusEndReminder}
+              onChange={(v) => updateNotif({ focusEndReminder: v })}
+            />
+          </div>
+        </div>
+
+        {/* Interval pickers */}
+        <div className="space-y-3">
+          <NumberField
+            label="习惯提醒间隔"
+            value={notifSettings.habitInterval}
+            onChange={(v) => updateNotif({ habitInterval: v })}
+            min={5}
+            max={120}
+            suffix="分钟"
+          />
+          <NumberField
+            label="休息提醒间隔"
+            value={notifSettings.breakInterval}
+            onChange={(v) => updateNotif({ breakInterval: v })}
+            min={5}
+            max={120}
+            suffix="分钟"
+          />
+        </div>
+      </Section>
+
+      {/* ─── 8. Data Management ─── */}
+      <Section title="数据管理" index={8}>
         <p
           className="text-xs"
           style={{ color: 'var(--color-text-muted)' }}
@@ -677,6 +1242,28 @@ export default function Settings() {
             className="flex-1"
           >
             导出 CSV
+          </Button>
+        </div>
+
+        {/* Report export buttons */}
+        <div className="flex gap-3">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={exportDailyReport}
+            loading={exporting}
+            className="flex-1"
+          >
+            导出日报 (PDF)
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={exportWeeklyReport}
+            loading={exporting}
+            className="flex-1"
+          >
+            导出周报
           </Button>
         </div>
 
@@ -707,19 +1294,85 @@ export default function Settings() {
         </div>
       </Section>
 
-      {/* ─── 6. About ─── */}
-      <Section title="关于" index={6}>
-        <div className="space-y-2 text-sm" style={{ color: 'var(--color-text-muted)' }}>
-          <p className="flex items-center gap-2">
+      {/* ─── 9. About ─── */}
+      <Section title="关于" index={9}>
+        <div className="space-y-3 text-sm" style={{ color: 'var(--color-text-muted)' }}>
+          <div className="flex items-center gap-2">
             <span style={{ color: 'var(--color-text-secondary)' }}>版本</span>
-            <Badge variant="default" size="sm">v1.0.0</Badge>
-          </p>
+            <Badge variant="accent" size="sm">v2.0.0-beta</Badge>
+          </div>
+          <div className="flex items-center gap-2">
+            <span style={{ color: 'var(--color-text-secondary)' }}>构建分支</span>
+            <Badge variant="default" size="sm">redesign/v2</Badge>
+          </div>
           <p style={{ color: 'var(--color-text-secondary)' }}>
             Merize — 让每一分钟都有意义的效率工具
           </p>
           <p className="text-xs">
             数据完全存储在本地浏览器中，不会上传到任何服务器。
           </p>
+          <div
+            style={{
+              padding: '12px 16px',
+              borderRadius: 'var(--radius-lg)',
+              backgroundColor: 'var(--color-bg-surface-2)',
+              border: '1px solid var(--color-border-subtle)',
+            }}
+          >
+            <p
+              className="text-xs font-medium mb-2"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
+              相关链接
+            </p>
+            <div className="flex gap-3">
+              <a
+                href="#docs"
+                onClick={(e) => {
+                  e.preventDefault()
+                  addToast('info', '文档页面即将上线')
+                }}
+                className="text-xs font-medium"
+                style={{
+                  color: 'var(--color-accent)',
+                  textDecoration: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                使用文档
+              </a>
+              <a
+                href="#changelog"
+                onClick={(e) => {
+                  e.preventDefault()
+                  addToast('info', '更新日志即将上线')
+                }}
+                className="text-xs font-medium"
+                style={{
+                  color: 'var(--color-accent)',
+                  textDecoration: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                更新日志
+              </a>
+              <a
+                href="#feedback"
+                onClick={(e) => {
+                  e.preventDefault()
+                  addToast('info', '反馈通道即将上线')
+                }}
+                className="text-xs font-medium"
+                style={{
+                  color: 'var(--color-accent)',
+                  textDecoration: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                意见反馈
+              </a>
+            </div>
+          </div>
         </div>
       </Section>
     </div>
