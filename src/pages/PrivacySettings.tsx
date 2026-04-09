@@ -68,14 +68,12 @@ const PrivacySettings: React.FC<PrivacySettingsProps> = ({ theme }) => {
     loadSettings()
   }, [loadSettings])
 
-  const bgClass = isDark ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'
-  const cardBgClass = isDark ? 'bg-gray-800' : 'bg-gray-50'
-  const borderClass = isDark ? 'border-gray-700' : 'border-gray-200'
-  const textColor = isDark ? 'text-gray-300' : 'text-gray-600'
-  const buttonPrimaryClass = 'bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded disabled:opacity-50'
-  const optionActiveClass = isDark
-    ? 'border-blue-500 ring-1 ring-blue-500 bg-blue-900/20'
-    : 'border-blue-500 ring-1 ring-blue-500 bg-blue-50'
+  const bgClass = 'bg-[var(--color-bg-base)] text-[var(--color-text-primary)]'
+  const cardBgClass = 'bg-[var(--color-bg-surface-2)]'
+  const borderClass = 'border-[var(--color-border-subtle)]'
+  const textColor = 'text-[var(--color-text-secondary)]'
+  const buttonPrimaryClass = 'bg-[var(--color-accent)] hover:brightness-110 text-white px-4 py-2 rounded disabled:opacity-50'
+  const optionActiveClass = 'border-[var(--color-accent)] ring-1 ring-[var(--color-accent)] bg-[var(--color-accent-soft)]'
   const optionInactiveClass = `border ${borderClass}`
 
   if (loading) {

@@ -27,6 +27,18 @@ function minutesSinceMidnight(iso: string): number {
 const HOUR_HEIGHT = 72 // px per hour
 const PRIVACY_LEVELS = ['完全公开', '仅团队', '仅自己'] as const
 
+/* ── Granularity modes ── */
+type GranularityMode = '粗略' | '标准' | '详细'
+const GRANULARITY_OPTIONS: { value: GranularityMode; label: string; desc: string }[] = [
+  { value: '粗略', label: '粗略', desc: '合并<15分钟活动' },
+  { value: '标准', label: '标准', desc: '默认显示' },
+  { value: '详细', label: '详细', desc: '含<5分钟活动' },
+]
+
+/* ── Work hours config ── */
+const WORK_HOUR_START = 9
+const WORK_HOUR_END = 18
+
 /* ── Category picker modal ── */
 // SECTION: CategoryPicker
 function CategoryPicker({
@@ -79,10 +91,18 @@ function TimelineActivityBlock({
   activity,
   adjustedTop,
   onCategoryChange,
+  batchMode,
+  isSelected,
+  onToggleSelect,
+  isPersonalTime,
 }: {
   activity: Activity
   adjustedTop: number
   onCategoryChange: (id: string, cat: ActivityCategory) => void
+  batchMode?: boolean
+  isSelected?: boolean
+  onToggleSelect?: (id: string) => void
+  isPersonalTime?: boolean
 }) {
   const [showPicker, setShowPicker] = useState(false)
   const color = CATEGORY_COLORS[activity.category] || '#94a3b8'
@@ -97,10 +117,36 @@ function TimelineActivityBlock({
         className="relative flex h-full rounded-[var(--radius-md)] overflow-hidden cursor-pointer transition-shadow duration-150 hover:shadow-md"
         style={{
           background: `${color}14`,
-          border: `1px solid ${color}30`,
+          border: `1px solid ${isSelected ? 'var(--color-accent)' : `${color}30`}`,
+          boxShadow: isSelected ? '0 0 0 2px var(--color-accent-soft)' : undefined,
         }}
-        onClick={() => setShowPicker(!showPicker)}
+        onClick={() => batchMode ? onToggleSelect?.(activity.id) : setShowPicker(!showPicker)}
       >
+        {/* Batch checkbox */}
+        {batchMode && (
+          <div className="flex items-center pl-2 flex-shrink-0">
+            <span
+              className="w-4 h-4 rounded flex items-center justify-center border"
+              style={{
+                background: isSelected ? 'var(--color-accent)' : 'transparent',
+                borderColor: isSelected ? 'var(--color-accent)' : 'var(--color-border-subtle)',
+              }}
+            >
+              {isSelected && <span style={{ color: '#fff', fontSize: 10, lineHeight: 1 }}>✓</span>}
+            </span>
+          </div>
+        )}
+        {/* Personal time indicator */}
+        {isPersonalTime && !batchMode && (
+          <div
+            className="flex items-center pl-1.5 flex-shrink-0"
+            title="个人时间"
+          >
+            <span className="text-[9px] px-1 py-0.5 rounded" style={{ background: 'var(--color-bg-surface-2)', color: 'var(--color-text-muted)' }}>
+              个人
+            </span>
+          </div>
+        )}
         <div className="w-[4px] flex-shrink-0 rounded-l-[var(--radius-md)]" style={{ background: color }} />
         <div className="flex-1 min-w-0 px-3 py-1.5 flex flex-col justify-center">
           <div className="flex items-center gap-2">
@@ -215,6 +261,9 @@ export default function Timeline() {
   const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>([])
   const [now, setNow] = useState(new Date())
   const [privacyLevel, setPrivacyLevel] = useState<number>(2) // 0=public,1=team,2=private
+  const [granularity, setGranularity] = useState<GranularityMode>('标准')
+  const [batchMode, setBatchMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const timelineRef = useRef<HTMLDivElement>(null)
 
   // Load data
@@ -253,6 +302,43 @@ export default function Timeline() {
     () => [...activities].sort((a, b) => a.startTime.localeCompare(b.startTime)),
     [activities],
   )
+
+  // Granularity-filtered activities
+  const filteredActivities = useMemo(() => {
+    if (granularity === '标准') return sortedActivities
+    if (granularity === '详细') return sortedActivities // show everything
+    // '粗略' — merge activities shorter than 15 min into neighbors
+    return sortedActivities.filter((a) => a.duration >= 15)
+  }, [sortedActivities, granularity])
+
+  // Context switch counter — counts category transitions
+  const contextSwitches = useMemo(() => {
+    if (sortedActivities.length < 2) return 0
+    let switches = 0
+    for (let i = 1; i < sortedActivities.length; i++) {
+      if (sortedActivities[i].category !== sortedActivities[i - 1].category) switches++
+    }
+    return switches
+  }, [sortedActivities])
+
+  // Batch selection handlers
+  const handleToggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }, [])
+
+  const handleSelectAll = useCallback(() => {
+    setSelectedIds(new Set(filteredActivities.map((a) => a.id)))
+  }, [filteredActivities])
+
+  const handleBatchClear = useCallback(() => {
+    setSelectedIds(new Set())
+    setBatchMode(false)
+  }, [])
 
   // Current activity (simulated tracking)
   const currentActivity = useMemo(() => {
@@ -323,6 +409,46 @@ export default function Timeline() {
         </div>
       </div>
 
+      {/* ── Granularity slider & Batch toggle ── */}
+      <div
+        className="flex items-center gap-4 mb-4 p-3 rounded-[var(--radius-lg)]"
+        style={{ background: 'var(--color-bg-surface-1)', border: '1px solid var(--color-border-subtle)' }}
+      >
+        <div className="flex-1 min-w-0">
+          <div className="text-[11px] font-medium mb-1.5" style={{ color: 'var(--color-text-muted)' }}>活动粒度</div>
+          <div className="flex items-center gap-1">
+            {GRANULARITY_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setGranularity(opt.value)}
+                className="px-3 py-1 rounded-full text-[12px] transition-all"
+                style={{
+                  background: granularity === opt.value ? 'var(--color-accent)' : 'var(--color-bg-surface-2)',
+                  color: granularity === opt.value ? '#fff' : 'var(--color-text-secondary)',
+                  fontWeight: granularity === opt.value ? 600 : 400,
+                }}
+                title={opt.desc}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="h-8 w-px" style={{ background: 'var(--color-border-subtle)' }} />
+        <button
+          onClick={() => { setBatchMode((v) => !v); if (batchMode) setSelectedIds(new Set()) }}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-md)] text-[12px] transition-all"
+          style={{
+            background: batchMode ? 'var(--color-accent)' : 'var(--color-bg-surface-2)',
+            color: batchMode ? '#fff' : 'var(--color-text-secondary)',
+            border: `1px solid ${batchMode ? 'var(--color-accent)' : 'var(--color-border-subtle)'}`,
+            fontWeight: batchMode ? 600 : 400,
+          }}
+        >
+          {batchMode ? '退出批量' : '批量操作'}
+        </button>
+      </div>
+
       {/* ── Currently tracking banner ── */}
       <div
         className="rounded-[var(--radius-lg)] p-4 mb-5"
@@ -364,7 +490,7 @@ export default function Timeline() {
       </div>
 
       {/* ── Top summary row ── */}
-      <div className="grid grid-cols-3 gap-3 mb-5">
+      <div className="grid grid-cols-4 gap-3 mb-5">
         {/* Total time */}
         <div
           className="rounded-[var(--radius-lg)] p-3"
@@ -403,6 +529,28 @@ export default function Timeline() {
           ) : (
             <span className="text-[13px]" style={{ color: 'var(--color-text-muted)' }}>--</span>
           )}
+        </div>
+        {/* Context switch counter */}
+        <div
+          className="rounded-[var(--radius-lg)] p-3"
+          style={{ background: 'var(--color-bg-surface-1)', border: '1px solid var(--color-border-subtle)' }}
+        >
+          <div className="text-[11px] font-medium mb-1" style={{ color: 'var(--color-text-muted)' }}>上下文切换</div>
+          <div className="flex items-center gap-2">
+            <span
+              className="text-lg font-bold"
+              style={{ color: contextSwitches <= 5 ? 'var(--color-success, #22c55e)' : contextSwitches <= 12 ? 'var(--color-warning, #f59e0b)' : 'var(--color-error, #ef4444)' }}
+            >
+              {contextSwitches}
+            </span>
+            <span
+              className="w-2 h-2 rounded-full"
+              style={{ background: contextSwitches <= 5 ? 'var(--color-success, #22c55e)' : contextSwitches <= 12 ? 'var(--color-warning, #f59e0b)' : 'var(--color-error, #ef4444)' }}
+            />
+            <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>
+              {contextSwitches <= 5 ? '优秀' : contextSwitches <= 12 ? '一般' : '偏多'}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -460,6 +608,31 @@ export default function Timeline() {
         }}
       >
         <div className="relative" style={{ height: `${hours.length * HOUR_HEIGHT}px` }}>
+          {/* Work hours background shading (9:00-18:00) */}
+          {(() => {
+            const workStart = Math.max(WORK_HOUR_START - 6, 0)
+            const workEnd = Math.min(WORK_HOUR_END - 6, hours.length)
+            return (
+              <div
+                className="absolute left-[60px] right-0 pointer-events-none"
+                style={{
+                  top: `${workStart * HOUR_HEIGHT}px`,
+                  height: `${(workEnd - workStart) * HOUR_HEIGHT}px`,
+                  background: 'var(--color-accent-soft, rgba(99,102,241,0.04))',
+                  borderLeft: '2px solid var(--color-accent-soft, rgba(99,102,241,0.12))',
+                  zIndex: 1,
+                }}
+              >
+                <span
+                  className="absolute top-1 right-2 text-[9px] font-medium px-1.5 py-0.5 rounded"
+                  style={{ color: 'var(--color-text-muted)', background: 'var(--color-bg-surface-2)', opacity: 0.7 }}
+                >
+                  工作时间 {WORK_HOUR_START}:00-{WORK_HOUR_END}:00
+                </span>
+              </div>
+            )
+          })()}
+
           {/* Hour gridlines */}
           {hours.map((hour, i) => (
             <div
@@ -478,16 +651,21 @@ export default function Timeline() {
           ))}
 
           {/* Activity blocks */}
-          {sortedActivities.map((activity) => {
+          {filteredActivities.map((activity) => {
             const aHour = new Date(activity.startTime).getHours()
             if (aHour < 6) return null
             const adjustedTop = ((minutesSinceMidnight(activity.startTime) - 360) / 60) * HOUR_HEIGHT
+            const isPersonalTime = aHour < WORK_HOUR_START || aHour >= WORK_HOUR_END
             return (
               <TimelineActivityBlock
                 key={activity.id}
                 activity={activity}
                 adjustedTop={adjustedTop}
                 onCategoryChange={handleCategoryChange}
+                batchMode={batchMode}
+                isSelected={selectedIds.has(activity.id)}
+                onToggleSelect={handleToggleSelect}
+                isPersonalTime={isPersonalTime}
               />
             )
           })}
@@ -511,6 +689,60 @@ export default function Timeline() {
           )}
         </div>
       </div>
+
+      {/* ── Batch action floating bar ── */}
+      {batchMode && (
+        <div
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-5 py-3 rounded-full"
+          style={{
+            background: 'var(--color-bg-surface-1)',
+            border: '1px solid var(--color-border-subtle)',
+            boxShadow: 'var(--shadow-lg, 0 8px 30px rgba(0,0,0,0.15))',
+            backdropFilter: 'blur(12px)',
+          }}
+        >
+          <span className="text-[12px] font-medium" style={{ color: 'var(--color-text-muted)' }}>
+            已选 <span style={{ color: 'var(--color-accent)', fontWeight: 700 }}>{selectedIds.size}</span> 项
+          </span>
+          <div className="h-4 w-px" style={{ background: 'var(--color-border-subtle)' }} />
+          <button
+            onClick={handleSelectAll}
+            className="px-3 py-1 rounded-full text-[12px] transition-colors"
+            style={{ background: 'var(--color-bg-surface-2)', color: 'var(--color-text-secondary)' }}
+          >
+            全选
+          </button>
+          <button
+            onClick={() => { /* batch categorize placeholder */ }}
+            className="px-3 py-1 rounded-full text-[12px] font-medium transition-colors"
+            style={{
+              background: selectedIds.size > 0 ? 'var(--color-accent)' : 'var(--color-bg-surface-2)',
+              color: selectedIds.size > 0 ? '#fff' : 'var(--color-text-muted)',
+            }}
+            disabled={selectedIds.size === 0}
+          >
+            批量分类
+          </button>
+          <button
+            onClick={() => { /* batch delete placeholder */ }}
+            className="px-3 py-1 rounded-full text-[12px] font-medium transition-colors"
+            style={{
+              background: selectedIds.size > 0 ? 'var(--color-error, #ef4444)' : 'var(--color-bg-surface-2)',
+              color: selectedIds.size > 0 ? '#fff' : 'var(--color-text-muted)',
+            }}
+            disabled={selectedIds.size === 0}
+          >
+            批量删除
+          </button>
+          <button
+            onClick={handleBatchClear}
+            className="px-3 py-1 rounded-full text-[12px] transition-colors"
+            style={{ background: 'var(--color-bg-surface-2)', color: 'var(--color-text-secondary)' }}
+          >
+            取消
+          </button>
+        </div>
+      )}
     </div>
   )
 }

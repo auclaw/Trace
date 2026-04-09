@@ -37,7 +37,7 @@ export default function Card({
       }
       data-card
       style={{
-        background: 'var(--color-bg-surface-1)',
+        background: 'linear-gradient(180deg, var(--color-bg-surface-1) 0%, var(--color-bg-surface-2) 100%)',
         border: '1px solid var(--color-border-subtle)',
         borderRadius: 'var(--radius-lg)',
         boxShadow: 'var(--shadow-card)',
@@ -46,7 +46,7 @@ export default function Card({
       }}
       className={[
         paddingMap[padding],
-        hover ? 'hover:shadow-[var(--shadow-card-hover)] hover:-translate-y-0.5' : '',
+        hover ? 'hover:shadow-[var(--shadow-card-hover)] hover:-translate-y-[2px]' : '',
         onClick ? 'cursor-pointer' : '',
         className,
       ]

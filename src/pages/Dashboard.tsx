@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card, Modal, Button, Badge, EmptyState } from '../components/ui'
 import Input from '../components/ui/Input'
@@ -239,18 +239,28 @@ export default function Dashboard() {
 
   const dailyGoalMinutes = useAppStore((s) => s.dailyGoalMinutes)
 
+  const pet = useAppStore((s) => s.pet)
+  const loadPet = useAppStore((s) => s.loadPet)
+  const feedPet = useAppStore((s) => s.feedPet)
+  const interactPet = useAppStore((s) => s.interactPet)
+  const addTask = useAppStore((s) => s.addTask)
+
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null)
   const [checkedTasks, setCheckedTasks] = useState<Record<string, boolean>>({})
   const [checkedHabits, setCheckedHabits] = useState<Record<string, boolean>>({})
   const [showSummary, setShowSummary] = useState(false)
   const [currentTracking, setCurrentTracking] = useState(trackingService.getCurrentActivity())
+  const [showQuickTask, setShowQuickTask] = useState(false)
+  const [quickTaskTitle, setQuickTaskTitle] = useState('')
+  const habitsRef = useRef<HTMLDivElement>(null)
 
   // Load data on mount
   useEffect(() => {
     loadActivities()
     loadTasks()
     loadHabits()
-  }, [loadActivities, loadTasks, loadHabits])
+    loadPet()
+  }, [loadActivities, loadTasks, loadHabits, loadPet])
 
   // Subscribe to tracking service for live updates
   useEffect(() => {
@@ -312,6 +322,26 @@ export default function Dashboard() {
     return entries.map(([cat, mins]) => ({ cat, mins, pct: (mins / total) * 100 }))
   }, [dailyStats])
 
+  // Quick task handler
+  const handleQuickAddTask = useCallback(() => {
+    const title = quickTaskTitle.trim()
+    if (!title) return
+    addTask({
+      title,
+      priority: 3,
+      status: 'pending',
+      estimatedMinutes: 30,
+      actualMinutes: 0,
+      project: '',
+      subtasks: [],
+      dueDate: todayStr(),
+      repeatType: 'none',
+      createdAt: new Date().toISOString(),
+    })
+    setQuickTaskTitle('')
+    setShowQuickTask(false)
+  }, [quickTaskTitle, addTask])
+
   // ── Plan vs Actual comparison ──
   const timeBlocks = useMemo(() => dataService.getTimeBlocks(today), [today, activities])
 
@@ -347,6 +377,47 @@ export default function Dashboard() {
 
     return { items, adherencePct }
   }, [timeBlocks, sortedActivities])
+
+  // ── Focus Quality Score ──
+  const focusQualityScore = useMemo(() => {
+    const cats = dailyStats.categories
+    const totalMinsAll = dailyStats.totalMinutes || 1
+
+    // Deep work percentage (40% weight)
+    const deepWorkCats = ['开发', '学习', '工作']
+    const deepMins = deepWorkCats.reduce((s, c) => s + (cats[c] || 0), 0)
+    const deepPct = deepMins / totalMinsAll
+    const deepScore = Math.min(1, deepPct / 0.6)
+
+    // Plan adherence (30% weight)
+    const adherence = planComparison.items.length > 0 ? planComparison.adherencePct / 100 : 0.5
+
+    // Break regularity (15% weight)
+    const restMins = cats['休息'] || 0
+    const restPct = restMins / totalMinsAll
+    const breakScore = totalMinsAll > 30
+      ? restPct >= 0.05 && restPct <= 0.2 ? 1 : restPct > 0 ? 0.5 : 0.2
+      : 0.5
+
+    // Category diversity (15% weight)
+    const catCount = Object.keys(cats).length
+    const diversityScore = catCount >= 2 && catCount <= 5 ? 1 : catCount === 1 ? 0.5 : catCount > 5 ? 0.7 : 0.3
+
+    const raw = deepScore * 40 + adherence * 30 + breakScore * 15 + diversityScore * 15
+    return Math.round(Math.max(0, Math.min(100, raw)))
+  }, [dailyStats, planComparison])
+
+  const focusScoreColor = focusQualityScore > 70
+    ? '#22c55e'
+    : focusQualityScore >= 40
+      ? '#eab308'
+      : '#ef4444'
+
+  const focusScoreGradient = focusQualityScore > 70
+    ? 'linear-gradient(135deg, #22c55e, #4ade80)'
+    : focusQualityScore >= 40
+      ? 'linear-gradient(135deg, #eab308, #facc15)'
+      : 'linear-gradient(135deg, #ef4444, #f87171)'
 
   const aiSuggestions = useMemo(() => {
     const suggestions: string[] = []
@@ -498,8 +569,173 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* ── Quick Action Buttons ── */}
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          onClick={() => navigate('/focus')}
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-[13px] font-medium cursor-pointer"
+          style={{
+            background: 'var(--color-accent)',
+            color: '#fff',
+            boxShadow: '0 2px 8px var(--color-accent-soft)',
+            transition: TRANSITION_ALL,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-1px)'
+            e.currentTarget.style.boxShadow = '0 4px 14px var(--color-accent-soft)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)'
+            e.currentTarget.style.boxShadow = '0 2px 8px var(--color-accent-soft)'
+          }}
+        >
+          <span style={{ fontSize: '14px' }}>&#9654;</span>
+          开始专注
+        </button>
+
+        <button
+          onClick={() => setShowQuickTask((v) => !v)}
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-[13px] font-medium cursor-pointer"
+          style={{
+            background: 'var(--color-accent-soft)',
+            color: 'var(--color-accent)',
+            border: '1px solid var(--color-accent)',
+            transition: TRANSITION_ALL,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-1px)'
+            e.currentTarget.style.background = 'var(--color-accent)'
+            e.currentTarget.style.color = '#fff'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)'
+            e.currentTarget.style.background = 'var(--color-accent-soft)'
+            e.currentTarget.style.color = 'var(--color-accent)'
+          }}
+        >
+          <span style={{ fontSize: '14px' }}>+</span>
+          添加任务
+        </button>
+
+        <button
+          onClick={() => habitsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-[13px] font-medium cursor-pointer"
+          style={{
+            background: 'var(--color-bg-surface-2)',
+            color: 'var(--color-text-secondary)',
+            border: '1px solid var(--color-border-subtle)',
+            transition: TRANSITION_ALL,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-1px)'
+            e.currentTarget.style.borderColor = 'var(--color-accent)'
+            e.currentTarget.style.color = 'var(--color-accent)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)'
+            e.currentTarget.style.borderColor = 'var(--color-border-subtle)'
+            e.currentTarget.style.color = 'var(--color-text-secondary)'
+          }}
+        >
+          <span style={{ fontSize: '14px' }}>&#10003;</span>
+          打卡习惯
+        </button>
+
+        {/* Inline quick task input */}
+        {showQuickTask && (
+          <div
+            className="flex items-center gap-2 ml-2 px-3 py-1.5 rounded-full"
+            style={{
+              background: 'var(--color-bg-surface-1)',
+              border: '1px solid var(--color-accent)',
+              boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+            }}
+          >
+            <input
+              autoFocus
+              type="text"
+              value={quickTaskTitle}
+              onChange={(e) => setQuickTaskTitle(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleQuickAddTask(); if (e.key === 'Escape') setShowQuickTask(false) }}
+              placeholder="输入任务名称，回车创建"
+              className="bg-transparent outline-none text-[13px] w-48"
+              style={{ color: 'var(--color-text-primary)' }}
+            />
+            <button
+              onClick={handleQuickAddTask}
+              className="text-[11px] px-2.5 py-0.5 rounded-full font-medium cursor-pointer"
+              style={{ background: 'var(--color-accent)', color: '#fff' }}
+            >
+              创建
+            </button>
+          </div>
+        )}
+      </div>
+
       {/* ── Stats Row ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Focus Quality Score */}
+        <div
+          className="flex items-center gap-4 rounded-2xl cursor-pointer"
+          onClick={() => navigate('/focus')}
+          style={{
+            background: CARD_GRADIENT_BG,
+            border: '1px solid var(--color-border-subtle)',
+            boxShadow: 'var(--shadow-card)',
+            padding: '20px 24px',
+            transition: TRANSITION_ALL,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.boxShadow = 'var(--shadow-card-hover)'
+            e.currentTarget.style.transform = 'translateY(-2px)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.boxShadow = 'var(--shadow-card)'
+            e.currentTarget.style.transform = 'translateY(0)'
+          }}
+        >
+          <div
+            className="flex items-center justify-center w-[88px] h-[88px] rounded-2xl relative"
+            style={{ background: `${focusScoreColor}12` }}
+          >
+            <span
+              className="tabular-nums font-extrabold"
+              style={{
+                fontSize: '2rem',
+                lineHeight: 1,
+                backgroundImage: focusScoreGradient,
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                filter: `drop-shadow(0 2px 8px ${focusScoreColor}40)`,
+              }}
+            >
+              {focusQualityScore}
+            </span>
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-medium" style={{ color: 'var(--color-text-muted)' }}>专注质量分</p>
+            <div className="flex items-center gap-1.5 mt-1">
+              <div
+                className="h-1.5 w-12 rounded-full overflow-hidden"
+                style={{ background: 'var(--color-border-subtle)', opacity: 0.3 }}
+              >
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    width: `${focusQualityScore}%`,
+                    background: focusScoreGradient,
+                    transition: 'width 700ms ease-out',
+                  }}
+                />
+              </div>
+              <span className="text-[10px]" style={{ color: focusScoreColor }}>
+                {focusQualityScore > 70 ? '优秀' : focusQualityScore >= 40 ? '一般' : '需改善'}
+              </span>
+            </div>
+          </div>
+        </div>
+
         {/* Focus time */}
         <div
           className="flex items-center gap-4 rounded-2xl cursor-pointer"
@@ -988,7 +1224,105 @@ export default function Dashboard() {
             )}
           </Card>
 
+          {/* Pet Status Mini Card */}
+          <div
+            className="rounded-2xl cursor-pointer overflow-hidden"
+            onClick={() => navigate('/pet')}
+            style={{
+              background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 40%, #fbbf24 100%)',
+              border: '1px solid rgba(251,191,36,0.3)',
+              boxShadow: '0 2px 12px rgba(251,191,36,0.15)',
+              padding: '16px 20px',
+              transition: TRANSITION_ALL,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)'
+              e.currentTarget.style.boxShadow = '0 6px 20px rgba(251,191,36,0.25)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)'
+              e.currentTarget.style.boxShadow = '0 2px 12px rgba(251,191,36,0.15)'
+            }}
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-3xl">
+                {pet.type === 'cat' ? '🐱' : pet.type === 'dog' ? '🐶' : '🐰'}
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold" style={{ color: '#78350f' }}>{pet.name}</span>
+                  <span
+                    className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
+                    style={{ background: 'rgba(120,53,15,0.12)', color: '#78350f' }}
+                  >
+                    Lv.{pet.level}
+                  </span>
+                </div>
+                {/* Mood bar */}
+                <div className="flex items-center gap-2 mt-1.5">
+                  <span className="text-[10px]" style={{ color: '#92400e' }}>心情</span>
+                  <div
+                    className="flex-1 h-1.5 rounded-full overflow-hidden"
+                    style={{ background: 'rgba(120,53,15,0.15)' }}
+                  >
+                    <div
+                      className="h-full rounded-full"
+                      style={{
+                        width: `${pet.mood}%`,
+                        background: 'linear-gradient(90deg, #f59e0b, #fbbf24)',
+                        transition: 'width 500ms ease-out',
+                      }}
+                    />
+                  </div>
+                  <span className="text-[10px] tabular-nums" style={{ color: '#92400e' }}>{pet.mood}%</span>
+                </div>
+              </div>
+            </div>
+            {/* Action buttons */}
+            <div className="flex gap-2 mt-3">
+              <button
+                onClick={(e) => { e.stopPropagation(); feedPet() }}
+                className="flex-1 text-[12px] font-medium py-1.5 rounded-xl cursor-pointer"
+                style={{
+                  background: 'rgba(255,255,255,0.6)',
+                  color: '#92400e',
+                  border: '1px solid rgba(255,255,255,0.7)',
+                  backdropFilter: 'blur(4px)',
+                  transition: TRANSITION_ALL,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.85)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.6)'
+                }}
+              >
+                🍖 喂食
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); interactPet() }}
+                className="flex-1 text-[12px] font-medium py-1.5 rounded-xl cursor-pointer"
+                style={{
+                  background: 'rgba(255,255,255,0.6)',
+                  color: '#92400e',
+                  border: '1px solid rgba(255,255,255,0.7)',
+                  backdropFilter: 'blur(4px)',
+                  transition: TRANSITION_ALL,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.85)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.6)'
+                }}
+              >
+                🤗 摸头
+              </button>
+            </div>
+          </div>
+
           {/* Habits */}
+          <div ref={habitsRef}>
           <Card padding="sm">
             <h2 className="text-sm font-semibold px-2 pt-2 pb-3" style={{ color: 'var(--color-text-primary)' }}>
               今日习惯
@@ -1055,6 +1389,7 @@ export default function Dashboard() {
               </div>
             )}
           </Card>
+          </div>
         </div>
       </div>
 
