@@ -1,11 +1,11 @@
 import { create } from 'zustand'
 import dataService from '../services/dataService'
-import type { Activity, Task, Habit, Pet, FocusSession } from '../services/dataService'
+import type { Activity, Task, Habit, Pet, FocusSession, HabitCategory } from '../services/dataService'
 import type { ColorTheme, BackgroundSkin } from '../config/themes'
 import { colorThemeConfigs, DEFAULT_MODULES } from '../config/themes'
 
 // Re-export types for convenience
-export type { Activity, Task, Habit, Pet, FocusSession }
+export type { Activity, Task, Habit, Pet, FocusSession, HabitCategory }
 
 // ─── Focus settings ───
 export interface FocusSettings {

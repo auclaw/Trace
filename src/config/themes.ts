@@ -106,14 +106,11 @@ export const PRIORITY_COLORS: Record<number, string> = {
 // Default feature modules
 export const DEFAULT_MODULES = [
   'dashboard',
+  'timeline',
   'planner',
   'focus',
-  'calendar',
-  'statistics',
   'habits',
+  'statistics',
   'pet',
-  'ai-summary',
-  'deep-work-stats',
-  'flow-blocks',
   'settings',
 ]

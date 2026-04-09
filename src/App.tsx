@@ -4,7 +4,7 @@ import { useAppStore } from './store/useAppStore'
 import { backgroundSkinConfigs } from './config/themes'
 import { ToastProvider } from './components/ui/Toast'
 import Sidebar from './components/Sidebar'
-import ThemeSelector from './components/ThemeSelector'
+import Onboarding from './components/Onboarding'
 
 // Re-export types & configs so existing pages importing from '../App' still work
 export type { Theme, ColorTheme, BackgroundSkin } from './config/themes'
@@ -12,15 +12,12 @@ export { colorThemeConfigs, backgroundSkinConfigs } from './config/themes'
 
 /* ── Lazy-loaded pages ── */
 const Dashboard = React.lazy(() => import('./pages/Dashboard'))
+const Timeline = React.lazy(() => import('./pages/Timeline'))
 const Planner = React.lazy(() => import('./pages/Planner'))
 const FocusMode = React.lazy(() => import('./pages/FocusMode'))
-const Calendar = React.lazy(() => import('./pages/Calendar'))
 const Statistics = React.lazy(() => import('./pages/Statistics'))
 const Habits = React.lazy(() => import('./pages/Habits'))
 const VirtualPet = React.lazy(() => import('./pages/VirtualPet'))
-const AiSummary = React.lazy(() => import('./pages/AiSummary'))
-const DeepWorkStats = React.lazy(() => import('./pages/DeepWorkStats'))
-const FlowBlocks = React.lazy(() => import('./pages/FlowBlocks'))
 const Settings = React.lazy(() => import('./pages/Settings'))
 
 /* ── Loading fallback ── */
@@ -64,7 +61,7 @@ function AppContent() {
 
   return (
     <>
-      {isFirstLaunch && <ThemeSelector />}
+      {isFirstLaunch && <Onboarding />}
       <div
         className={`flex h-screen ${bgClass} transition-colors duration-300 ${
           backgroundSkin === 'glass' ? 'glass-mode' : ''
@@ -75,15 +72,12 @@ function AppContent() {
           <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route path="/" element={<Dashboard />} />
+              <Route path="/timeline" element={<Timeline />} />
               <Route path="/planner" element={<Planner />} />
               <Route path="/focus" element={<FocusMode />} />
-              <Route path="/calendar" element={<Calendar />} />
               <Route path="/statistics" element={<Statistics />} />
               <Route path="/habits" element={<Habits />} />
               <Route path="/pet" element={<VirtualPet />} />
-              <Route path="/ai-summary" element={<AiSummary />} />
-              <Route path="/deep-work-stats" element={<DeepWorkStats />} />
-              <Route path="/flow-blocks" element={<FlowBlocks />} />
               <Route path="/settings" element={<Settings />} />
             </Routes>
           </Suspense>

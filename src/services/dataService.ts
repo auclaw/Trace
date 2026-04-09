@@ -40,14 +40,19 @@ export interface Task {
   createdAt: string;
 }
 
+export type HabitCategory = 'health' | 'learning' | 'fitness' | 'mindfulness' | 'other';
+
 export interface Habit {
   id: string;
   name: string;
   icon: string;
   targetMinutes: number;
+  targetCount: number; // daily target check-in count (default 1)
   color: string;
   streak: number;
-  checkins: Record<string, number>; // date string -> minutes
+  reminders: string[]; // array of HH:mm times
+  category: HabitCategory;
+  checkins: Record<string, number>; // date string -> count (multi-check) or minutes
   createdAt: string;
 }
 
@@ -277,13 +282,14 @@ function seedTasks(): Task[] {
 // SEED:HABITS
 function seedHabits(): Habit[] {
   const now = new Date();
-  const definitions = [
-    { name: '读书', icon: '📚', targetMinutes: 30, color: '#6366f1' },
-    { name: '运动', icon: '🏃', targetMinutes: 45, color: '#ef4444' },
-    { name: '冥想', icon: '🧘', targetMinutes: 15, color: '#8b5cf6' },
-    { name: '编程练习', icon: '💻', targetMinutes: 60, color: '#3b82f6' },
-    { name: '英语学习', icon: '🌍', targetMinutes: 30, color: '#10b981' },
-    { name: '早起', icon: '🌅', targetMinutes: 0, color: '#f59e0b' },
+  const definitions: { name: string; icon: string; targetMinutes: number; targetCount: number; color: string; reminders: string[]; category: HabitCategory }[] = [
+    { name: '读书', icon: '📚', targetMinutes: 30, targetCount: 1, color: '#6366f1', reminders: ['21:00'], category: 'learning' },
+    { name: '运动', icon: '🏃', targetMinutes: 45, targetCount: 1, color: '#ef4444', reminders: ['07:00', '18:00'], category: 'fitness' },
+    { name: '冥想', icon: '🧘', targetMinutes: 15, targetCount: 1, color: '#8b5cf6', reminders: ['06:30'], category: 'mindfulness' },
+    { name: '编程练习', icon: '💻', targetMinutes: 60, targetCount: 1, color: '#3b82f6', reminders: [], category: 'learning' },
+    { name: '喝水', icon: '💧', targetMinutes: 0, targetCount: 8, color: '#06b6d4', reminders: ['09:00', '11:00', '14:00', '16:00'], category: 'health' },
+    { name: '做俯卧撑', icon: '💪', targetMinutes: 0, targetCount: 3, color: '#10b981', reminders: ['08:00', '13:00', '19:00'], category: 'fitness' },
+    { name: '早起', icon: '🌅', targetMinutes: 0, targetCount: 1, color: '#f59e0b', reminders: ['06:00'], category: 'health' },
   ];
 
   let seed = 99;
@@ -302,12 +308,17 @@ function seedHabits(): Habit[] {
       day.setDate(day.getDate() - d);
       const ds = toDateStr(day);
 
-      // Higher chance of checkin for recent days, ~75% overall
       if (rand() < 0.78) {
-        const mins = def.targetMinutes === 0
-          ? 1 // early riser is boolean-like
-          : Math.round(def.targetMinutes * (0.5 + rand()));
-        checkins[ds] = mins;
+        let val: number;
+        if (def.targetCount > 1) {
+          // Multi-check: random count up to targetCount
+          val = Math.max(1, Math.round(def.targetCount * (0.4 + rand() * 0.7)));
+        } else if (def.targetMinutes === 0) {
+          val = 1; // boolean-like
+        } else {
+          val = Math.round(def.targetMinutes * (0.5 + rand()));
+        }
+        checkins[ds] = val;
         currentStreak++;
       } else {
         currentStreak = 0;
@@ -317,7 +328,13 @@ function seedHabits(): Habit[] {
 
     return {
       id: uid(),
-      ...def,
+      name: def.name,
+      icon: def.icon,
+      targetMinutes: def.targetMinutes,
+      targetCount: def.targetCount,
+      color: def.color,
+      reminders: def.reminders,
+      category: def.category,
       streak,
       checkins,
       createdAt: new Date(now.getTime() - 45 * 86400000).toISOString(),

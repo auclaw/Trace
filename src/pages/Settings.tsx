@@ -13,15 +13,12 @@ import type { ColorTheme, BackgroundSkin } from '../config/themes'
 /* ── Module display names ── */
 const MODULE_LABELS: Record<string, string> = {
   dashboard: '仪表盘',
-  planner: '日程规划',
-  focus: '专注模式',
-  calendar: '日历',
+  timeline: '时间线',
+  planner: '计划',
+  focus: '专注',
+  habits: '习惯',
   statistics: '统计',
-  habits: '习惯追踪',
-  pet: '效率宠物',
-  'ai-summary': 'AI 智能总结',
-  'deep-work-stats': '深度工作分析',
-  'flow-blocks': '心流屏蔽',
+  pet: '宠物',
   settings: '设置',
 }
 

@@ -2,23 +2,6 @@ import React, { useMemo } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useAppStore } from '../store/useAppStore'
 
-/* ── SVG icon helper (1.5px stroke weight per research) ── */
-const I = ({ d, size = 20 }: { d: string; size?: number }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className="flex-shrink-0"
-  >
-    <path d={d} />
-  </svg>
-)
-
 interface NavItem {
   key: string
   label: string
@@ -29,40 +12,21 @@ interface NavItem {
 
 const ALL_NAV_ITEMS: NavItem[] = [
   { key: 'dashboard', label: '仪表盘', path: '/', end: true,
-    icon: <I d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9z M9 22V12h6v10" /> },
-  { key: 'planner', label: '今日计划', path: '/planner',
-    icon: <I d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2 M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v0a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2z M9 14l2 2 4-4" /> },
-  { key: 'focus', label: '专注模式', path: '/focus',
-    icon: <I d="M12 2v4 M12 18v4 M4.93 4.93l2.83 2.83 M16.24 16.24l2.83 2.83 M2 12h4 M18 12h4 M4.93 19.07l2.83-2.83 M16.24 7.76l2.83-2.83" /> },
-  { key: 'calendar', label: '日历', path: '/calendar',
-    icon: <I d="M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z M16 2v4 M8 2v4 M3 10h18" /> },
+    icon: <span className="text-[16px] leading-none">📊</span> },
+  { key: 'timeline', label: '时间线', path: '/timeline',
+    icon: <span className="text-[16px] leading-none">⏱️</span> },
+  { key: 'planner', label: '计划', path: '/planner',
+    icon: <span className="text-[16px] leading-none">📋</span> },
+  { key: 'focus', label: '专注', path: '/focus',
+    icon: <span className="text-[16px] leading-none">🎯</span> },
+  { key: 'habits', label: '习惯', path: '/habits',
+    icon: <span className="text-[16px] leading-none">✅</span> },
   { key: 'statistics', label: '统计', path: '/statistics',
-    icon: <I d="M18 20V10 M12 20V4 M6 20v-6" /> },
-  { key: 'habits', label: '习惯打卡', path: '/habits',
-    icon: <I d="M22 11.08V12a10 10 0 1 1-5.93-9.14 M22 4L12 14.01l-3-3" /> },
+    icon: <span className="text-[16px] leading-none">📈</span> },
   { key: 'pet', label: '宠物', path: '/pet',
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
-        <path d="M12 21c-4.97 0-9-2.686-9-6s4.03-6 9-6 9 2.686 9 6-4.03 6-9 6z" />
-        <circle cx="8" cy="9" r="2" /><circle cx="16" cy="9" r="2" />
-        <circle cx="5" cy="5" r="1.5" /><circle cx="19" cy="5" r="1.5" />
-      </svg>
-    ),
-  },
-  { key: 'ai-summary', label: 'AI 总结', path: '/ai-summary',
-    icon: <I d="M12 2L2 7l10 5 10-5-10-5z M2 17l10 5 10-5 M2 12l10 5 10-5" /> },
-  { key: 'deep-work-stats', label: '深度工作', path: '/deep-work-stats',
-    icon: <I d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /> },
-  { key: 'flow-blocks', label: '心流屏蔽', path: '/flow-blocks',
-    icon: <I d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /> },
+    icon: <span className="text-[16px] leading-none">🐱</span> },
   { key: 'settings', label: '设置', path: '/settings',
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
-        <circle cx="12" cy="12" r="3" />
-        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-      </svg>
-    ),
-  },
+    icon: <span className="text-[16px] leading-none">⚙️</span> },
 ]
 
 /* ── Sidebar ── */
