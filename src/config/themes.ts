@@ -112,5 +112,6 @@ export const DEFAULT_MODULES = [
   'habits',
   'statistics',
   'pet',
+  'team',
   'settings',
 ]

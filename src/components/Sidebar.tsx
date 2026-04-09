@@ -25,6 +25,8 @@ const ALL_NAV_ITEMS: NavItem[] = [
     icon: <span className="text-[16px] leading-none">📈</span> },
   { key: 'pet', label: '宠物', path: '/pet',
     icon: <span className="text-[16px] leading-none">🐱</span> },
+  { key: 'team', label: '团队', path: '/team',
+    icon: <span className="text-[16px] leading-none">👥</span> },
   { key: 'settings', label: '设置', path: '/settings',
     icon: <span className="text-[16px] leading-none">⚙️</span> },
 ]
