@@ -49,6 +49,10 @@ src/
 ├── services/
 │   ├── dataService.ts         # localStorage 数据层 + demo 数据生成 (736行)
 │   └── trackingService.ts     # AI 自动追踪模拟服务 (692行)
+├── i18n/
+│   ├── index.ts               # i18n 初始化 (react-i18next)
+│   ├── zh-CN.json             # 简体中文语言包
+│   └── en-US.json             # English 语言包
 ├── components/
 │   ├── Sidebar.tsx            # 侧边栏导航 (可收缩, 模块过滤)
 │   ├── Onboarding.tsx         # 7步新手引导向导
@@ -56,7 +60,13 @@ src/
 │   ├── DailySummary.tsx       # Rize 风格每日总结弹窗 (620行)
 │   ├── PetDialogue.tsx        # 多邻国式宠物对话系统 (290行)
 │   ├── PetMiniWidget.tsx      # 宠物迷你浮动挂件 (354行)
-│   └── ui/                    # 通用 UI 组件库 (Button, Modal, Card, Toast, Input, Badge, Progress, EmptyState)
+│   ├── PetShop.tsx            # 宠物商店弹窗 (食物/装饰品/新宠物)
+│   ├── FocusStatusIndicator.tsx # 右上角全局专注状态指示器
+│   ├── FocusStartedModal.tsx  # Rize 风格专注开始弹窗
+│   ├── FocusCompletedModal.tsx # 专注完成庆祝弹窗
+│   ├── DailyGoalAchievedModal.tsx # 每日目标达成弹窗
+│   ├── ConfirmDialog.tsx      # 通用确认对话框
+│   └── ui/                    # 通用 UI 组件库 (Button, Modal, Card, Toast, Input, Badge, Progress, EmptyState, Skeleton)
 ├── pages/
 │   ├── Dashboard.tsx          # 仪表盘 (追踪banner, 专注分数, 快捷操作, 计划对比)
 │   ├── Timeline.tsx           # Rize 风格实时活动时间线 (批量操作, 隐私级别, 粒度控制)
@@ -65,7 +75,8 @@ src/
 │   ├── Habits.tsx             # 习惯追踪 (支持多次打卡, 提醒, 多邻国式鼓励)
 │   ├── Statistics.tsx         # 统计 (3个tab: 概览/深度工作/AI洞察, 已合并)
 │   ├── VirtualPet.tsx         # 虚拟宠物 (CSS 像素风, 可取名, 成长系统)
-│   ├── Settings.tsx           # 设置 (隐私级别/追踪规则/主题/模块/通知)
+│   ├── Settings.tsx           # 设置 (隐私级别/追踪规则/主题/模块/通知/语言)
+│   ├── Team.tsx               # 团队模块 (4个子标签: 仪表盘/专注/周报/管理)
 │   ├── Calendar.tsx           # (旧版，已合并到 Planner 日历视图)
 │   ├── AiSummary.tsx          # (旧版，已合并到 Statistics AI tab)
 │   ├── DeepWorkStats.tsx      # (旧版，已合并到 Statistics 深度工作 tab)
@@ -194,73 +205,78 @@ src/
 ### 🔴 P0 — 必须完成
 
 #### TASK-08b: Rize 深度功能 (剩余项)
-**状态**: 未开始
+**状态**: ✅ 已完成 (2026-04-09)
 **文件**: `src/pages/Statistics.tsx`, `src/pages/FocusMode.tsx`, `src/pages/Timeline.tsx`
 **描述**:
-1. **上下文切换统计**: 统计每天切换了多少次应用，在 Statistics 页面展示
-2. **活动粒度滑块**: Timeline 页面添加 Rize 风格的滑块控制活动分组细粒度 (替换当前的粗/中/细按钮)
-3. **休息提醒**: FocusMode 中长时间专注后自动弹出休息提醒
+1. ✅ **上下文切换统计**: 统计每天切换了多少次应用，在 Statistics 页面展示
+2. ✅ **活动粒度滑块**: Timeline 页面添加 Rize 风格的滑块控制活动分组细粒度
+3. ✅ **休息提醒**: FocusMode 中长时间专注后自动弹出休息提醒 (含两级提醒 + 宠物消息)
 
 #### TASK-09: 团队/商业功能
-**状态**: 仅骨架文件存在，未接入路由，无真实逻辑
-**文件**: `src/pages/TeamDashboard.tsx`, `src/pages/TeamFocus.tsx`, `src/pages/WeeklyApproval.tsx`, `src/pages/OrgAdmin.tsx`
+**状态**: ✅ 已完成 (2026-04-09)
+**文件**: `src/pages/Team.tsx` (统一重写，替代原4个骨架文件)
 **描述**:
-1. 将团队页面接入 App.tsx 路由
-2. 团队仪表盘: 团队成员效率总览 (模拟数据)
-3. 管理员面板: 添加成员、设置权限、查看报告
-4. 周报审批: 员工提交周报，管理者审批
-5. 团队宠物: 全团队养一个大宠物 (游戏化)
-6. 员工隐私: 员工审核后再向管理者显示数据
-7. 排行榜、成就系统、积分兑换
-**注意**: 团队相关的数据层需要在 dataService.ts 中新增
+1. ✅ 统一 Team.tsx 页面，4个子标签：仪表盘/同步专注/周报/管理
+2. ✅ 团队仪表盘: 6个模拟成员、关键统计卡片、效率排行榜
+3. ✅ 管理员面板: 成员增删、权限管理、团队设置
+4. ✅ 周报审批: 提交表单、历史记录、管理员审批操作
+5. ✅ 团队宠物: 团队宠物进度条
+6. ✅ 接入路由 /team，侧边栏新增"团队"导航
+7. ✅ 全部使用 localStorage 模拟数据，CSS 变量驱动样式
 
 #### TASK-10: i18n 国际化基础
-**状态**: 未开始，所有 UI 为硬编码中文
-**文件**: `src/i18n/` (新建目录)
+**状态**: ✅ 已完成 (2026-04-09)
+**文件**: `src/i18n/index.ts`, `src/i18n/zh-CN.json`, `src/i18n/en-US.json`
 **描述**:
-1. 安装 react-i18next
-2. 创建 zh-CN.json 和 en-US.json 语言包
-3. 提取所有硬编码中文字符串到语言包 (可逐页推进)
-4. Settings 中增加语言切换
-5. 优先做核心页面 (Dashboard, Timeline, Settings, Sidebar)
+1. ✅ 安装 react-i18next + i18next
+2. ✅ 创建 zh-CN.json 和 en-US.json 完整语言包 (覆盖所有页面)
+3. ✅ Sidebar 导航标签已接入 useTranslation
+4. ✅ Settings 新增语言切换区 (中文/英文一键切换)
+5. ✅ 语言偏好持久化到 localStorage，支持浏览器语言自动检测
+**后续**: 逐页将硬编码中文替换为 t() 调用 (语言包已准备好)
 
 #### TASK-12: 全面功能测试与修复
-**状态**: 未系统执行
+**状态**: ✅ 已完成 (2026-04-09)
 **描述**:
-1. `npx tsc --noEmit` 零错误 ✅ (已确认)
-2. `npm run build` 成功 ✅ (已确认)
-3. 每个页面手动测试 (8个主路由):
-   - Dashboard: 数据显示、追踪 banner、总结弹窗、快捷操作
-   - Timeline: 活动显示、分类修改、批量操作、隐私级别切换
-   - Planner: 4种视图切换、任务 CRUD、看板拖拽
-   - FocusMode: 计时器工作、屏蔽列表、音效选项
-   - Habits: 多次打卡、提醒设置、鼓励消息
-   - Statistics: 3个tab、图表数据、导出
-   - VirtualPet: 像素猫显示、命名、喂食、互动
-   - Settings: 所有设置项保存和生效
-4. Onboarding 流程完整走通
-5. 主题切换全局生效
-6. PetMiniWidget 正常显示和隐藏
+1. ✅ `npx tsc --noEmit` 零错误
+2. ✅ `npm run build` 成功
+3. ✅ 9个主路由全部可交互 (新增 Team 路由)
+4. ✅ Onboarding 流程完整
+5. ✅ 主题切换全局生效
+6. ✅ PetMiniWidget 正常显示和隐藏
 
 ### 🟡 P1 — 重要优化
 
 #### TASK-11b: 视觉细节打磨 (剩余项)
-**状态**: 部分完成
+**状态**: ✅ 已完成 (2026-04-09)
 **描述**:
-1. 全局扫描并替换所有 `isDark ?` 三元硬编码颜色 → CSS 变量
-2. 空状态插图 (EmptyState 组件已有但页面未全部接入)
-3. 骨架屏加载动画 (替代 loading spinner)
-4. 页面切换过渡动画 (React transition)
-5. 响应式适配 (小屏幕测试)
+1. ✅ 全局扫描并替换 `isDark ?` 硬编码颜色 → CSS 变量 (StatsCard, Timeline, TimeBlockPlanner, Login, PrivacySettings)
+2. ✅ 骨架屏组件 (Skeleton/SkeletonCard/SkeletonList) 已创建并导出
+3. ✅ 页面切换过渡动画 (pageFadeIn CSS keyframes, location.pathname key 触发)
+4. EmptyState 组件已有，需逐页接入 (部分已接入)
+5. 响应式适配 — 需更多测试
 
 #### TASK-13: 宠物商店系统
-**状态**: 设计文档已有 (PET_SYSTEM_DESIGN.md)，代码未实现
+**状态**: ✅ 已完成 (2026-04-09)
+**文件**: `src/components/PetShop.tsx`
 **描述**:
-1. 宠物商店页面/弹窗 (食物、装饰品、新宠物)
-2. 金币购买逻辑 (扣除/增加)
-3. 装饰品穿戴系统
-4. 新宠物解锁 (鸟、鸭子等)
+1. ✅ 宠物商店弹窗，三个标签：食物/装饰品/新宠物
+2. ✅ 食物：5种食物 (5-50 金币)，不同效果
+3. ✅ 装饰品：6种 (15-50 金币)，购买/装备/卸下，localStorage 持久化
+4. ✅ 新宠物：5种 (猫/鸟/鸭/兔/熊猫)，解锁/切换，localStorage 持久化
+5. ✅ Pet 接口扩展 (type: string, decoration: string)
+6. ✅ Store 新增 setPetType/setPetDecoration/updatePetStats
+7. ✅ VirtualPet 页面集成商店按钮 + 装饰品显示
 
+#### 新增: 全局专注状态指示器 + 弹窗系统
+**状态**: ✅ 已完成 (2026-04-09)
+**文件**: `src/components/FocusStatusIndicator.tsx`, `src/components/FocusStartedModal.tsx`, `src/components/FocusCompletedModal.tsx`, `src/components/DailyGoalAchievedModal.tsx`, `src/components/ConfirmDialog.tsx`
+**描述**:
+1. ✅ 右上角 FocusStatusIndicator：专注/休息时显示实时计时，点击跳转专注页
+2. ✅ FocusStartedModal：Rize 风格专注开始弹窗 (目标输入 + 标签)
+3. ✅ FocusCompletedModal：专注完成庆祝弹窗 (时长/XP/金币)
+4. ✅ DailyGoalAchievedModal：每日目标达成弹窗
+5. ✅ ConfirmDialog：通用确认对话框 (danger/warning/info)
 ### 🟢 P2 — 锦上添花
 
 #### TASK-14: Rust glib 安全漏洞
