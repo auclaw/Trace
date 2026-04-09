@@ -28,12 +28,15 @@ const HOUR_HEIGHT = 72 // px per hour
 const PRIVACY_LEVELS = ['完全公开', '仅团队', '仅自己'] as const
 
 /* ── Granularity modes ── */
-type GranularityMode = '粗略' | '标准' | '详细'
-const GRANULARITY_OPTIONS: { value: GranularityMode; label: string; desc: string }[] = [
-  { value: '粗略', label: '粗略', desc: '合并<15分钟活动' },
-  { value: '标准', label: '标准', desc: '默认显示' },
-  { value: '详细', label: '详细', desc: '含<5分钟活动' },
-]
+const GRANULARITY_MIN = 1
+const GRANULARITY_MAX = 5
+const GRANULARITY_LABELS: Record<number, { label: string; desc: string }> = {
+  1: { label: '粗略', desc: '合并<30分钟活动' },
+  2: { label: '较粗', desc: '合并<15分钟活动' },
+  3: { label: '标准', desc: '默认显示' },
+  4: { label: '较细', desc: '含<5分钟活动' },
+  5: { label: '详细', desc: '显示所有活动' },
+}
 
 /* ── Work hours config ── */
 const WORK_HOUR_START = 9
@@ -261,7 +264,7 @@ export default function Timeline() {
   const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>([])
   const [now, setNow] = useState(new Date())
   const [privacyLevel, setPrivacyLevel] = useState<number>(2) // 0=public,1=team,2=private
-  const [granularity, setGranularity] = useState<GranularityMode>('标准')
+  const [granularity, setGranularity] = useState<number>(3)
   const [batchMode, setBatchMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const timelineRef = useRef<HTMLDivElement>(null)
@@ -304,11 +307,13 @@ export default function Timeline() {
   )
 
   // Granularity-filtered activities
+  // Level 1: hide activities <30 min; Level 2: hide <15 min; Level 3: show all >=5 min (standard)
+  // Level 4: show all >=2 min; Level 5: show everything
   const filteredActivities = useMemo(() => {
-    if (granularity === '标准') return sortedActivities
-    if (granularity === '详细') return sortedActivities // show everything
-    // '粗略' — merge activities shorter than 15 min into neighbors
-    return sortedActivities.filter((a) => a.duration >= 15)
+    const thresholds: Record<number, number> = { 1: 30, 2: 15, 3: 5, 4: 2, 5: 0 }
+    const minDuration = thresholds[granularity] ?? 5
+    if (minDuration === 0) return sortedActivities
+    return sortedActivities.filter((a) => a.duration >= minDuration)
   }, [sortedActivities, granularity])
 
   // Context switch counter — counts category transitions
@@ -416,22 +421,36 @@ export default function Timeline() {
       >
         <div className="flex-1 min-w-0">
           <div className="text-[11px] font-medium mb-1.5" style={{ color: 'var(--color-text-muted)' }}>活动粒度</div>
-          <div className="flex items-center gap-1">
-            {GRANULARITY_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() => setGranularity(opt.value)}
-                className="px-3 py-1 rounded-full text-[12px] transition-all"
-                style={{
-                  background: granularity === opt.value ? 'var(--color-accent)' : 'var(--color-bg-surface-2)',
-                  color: granularity === opt.value ? '#fff' : 'var(--color-text-secondary)',
-                  fontWeight: granularity === opt.value ? 600 : 400,
-                }}
-                title={opt.desc}
-              >
-                {opt.label}
-              </button>
-            ))}
+          <div className="flex items-center gap-3">
+            <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--color-text-muted)', width: 24 }}>粗</span>
+            <input
+              type="range"
+              min={GRANULARITY_MIN}
+              max={GRANULARITY_MAX}
+              step={1}
+              value={granularity}
+              onChange={(e) => setGranularity(Number(e.target.value))}
+              className="flex-1 cursor-pointer"
+              style={{
+                accentColor: 'var(--color-accent)',
+                height: 4,
+              }}
+            />
+            <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--color-text-muted)', width: 24 }}>细</span>
+          </div>
+          <div className="flex items-center justify-between mt-1">
+            <span
+              className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
+              style={{
+                background: 'var(--color-accent-soft)',
+                color: 'var(--color-accent)',
+              }}
+            >
+              {GRANULARITY_LABELS[granularity]?.label}
+            </span>
+            <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>
+              {GRANULARITY_LABELS[granularity]?.desc}
+            </span>
           </div>
         </div>
         <div className="h-8 w-px" style={{ background: 'var(--color-border-subtle)' }} />

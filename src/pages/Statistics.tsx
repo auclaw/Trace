@@ -190,6 +190,42 @@ export default function Statistics() {
     return { name: entries[0][0], minutes: entries[0][1] }
   }, [data])
 
+  // Context switch stats: count category transitions per day
+  const contextSwitchStats = useMemo(() => {
+    const dates = data.daily.map((d) => d.date)
+    let totalSwitches = 0
+    let daysWithData = 0
+    const dailySwitches: number[] = []
+
+    for (const date of dates) {
+      const dayActivities = dataService.getActivities(date)
+        .sort((a, b) => a.startTime.localeCompare(b.startTime))
+      if (dayActivities.length < 2) {
+        dailySwitches.push(0)
+        continue
+      }
+      daysWithData++
+      let switches = 0
+      for (let i = 1; i < dayActivities.length; i++) {
+        if (dayActivities[i].category !== dayActivities[i - 1].category) switches++
+      }
+      totalSwitches += switches
+      dailySwitches.push(switches)
+    }
+
+    const avg = daysWithData > 0 ? totalSwitches / daysWithData : 0
+
+    // Compute trend: compare first half vs second half
+    const mid = Math.floor(dailySwitches.length / 2)
+    const firstHalf = dailySwitches.slice(0, mid)
+    const secondHalf = dailySwitches.slice(mid)
+    const avgFirst = firstHalf.length > 0 ? firstHalf.reduce((s, v) => s + v, 0) / firstHalf.length : 0
+    const avgSecond = secondHalf.length > 0 ? secondHalf.reduce((s, v) => s + v, 0) / secondHalf.length : 0
+    const trend: 'up' | 'down' | 'flat' = avgSecond > avgFirst + 0.5 ? 'up' : avgSecond < avgFirst - 0.5 ? 'down' : 'flat'
+
+    return { avg, total: totalSwitches, trend, dailySwitches }
+  }, [data])
+
   const barData = useMemo(
     () =>
       data.daily.map((d) => ({
@@ -467,7 +503,7 @@ export default function Statistics() {
           ) : (
             <>
               {/* Overview Cards */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-5">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-5">
                 <Card padding="sm" className="text-center" style={warmCardStyle}>
                   <div className="py-5 px-3">
                     <div className="text-lg mb-2">⏱</div>
@@ -509,6 +545,27 @@ export default function Statistics() {
                     ) : (
                       <p className="text-sm text-[var(--color-text-muted)]">-</p>
                     )}
+                  </div>
+                </Card>
+                <Card padding="sm" className="text-center" style={warmCardStyle}>
+                  <div className="py-5 px-3">
+                    <div className="text-lg mb-2">🔀</div>
+                    <p className="metric-label mb-2">上下文切换</p>
+                    <div>
+                      <p className="metric-value tabular-nums" style={{
+                        color: contextSwitchStats.avg <= 5 ? 'var(--color-success, #22c55e)' : contextSwitchStats.avg <= 10 ? 'var(--color-warning, #f59e0b)' : 'var(--color-error, #ef4444)',
+                      }}>
+                        {contextSwitchStats.avg.toFixed(1)}<span style={{ fontSize: '0.75rem', fontWeight: 400, opacity: 0.6 }}>/天</span>
+                      </p>
+                      <div className="flex items-center justify-center gap-1 mt-1">
+                        <span style={{
+                          fontSize: '0.75rem',
+                          color: contextSwitchStats.trend === 'down' ? 'var(--color-success, #22c55e)' : contextSwitchStats.trend === 'up' ? 'var(--color-error, #ef4444)' : 'var(--color-text-muted)',
+                        }}>
+                          {contextSwitchStats.trend === 'down' ? '↓ 减少' : contextSwitchStats.trend === 'up' ? '↑ 增加' : '→ 持平'}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </Card>
               </div>

@@ -4,6 +4,7 @@ import { useAppStore } from '../store/useAppStore'
 import useTheme from '../hooks/useTheme'
 import dataService from '../services/dataService'
 import { PetMiniWidget } from './VirtualPet'
+import { PetDialogue } from '../components/PetDialogue'
 import type { FocusSession } from '../services/dataService'
 
 // ── Helpers ──
@@ -56,7 +57,28 @@ const AMBIENT_SOUNDS = [
 ] as const
 
 const LS_AMBIENT_KEY = 'merize-ambient-sound'
-const BREAK_REMINDER_THRESHOLD = 90 * 60 // 90 minutes in seconds
+const URGENT_BREAK_THRESHOLD = 50 * 60 // 50 minutes in seconds — second, more urgent reminder
+
+const BREAK_PET_MESSAGES = [
+  '休息一下吧！你已经很棒了～',
+  '该让眼睛放松一会儿了！',
+  '站起来走走，对身体好哦～',
+  '你的专注力让我佩服！但也要休息呀～',
+  '休息是为了走更长的路！',
+  '喝杯水，伸个懒腰吧！',
+]
+
+const URGENT_BREAK_PET_MESSAGES = [
+  '主人！你已经超时工作了！必须休息！',
+  '太久不休息会影响效率的！快停下来！',
+  '我都替你累了...拜托休息一下！',
+  '健康第一！现在就休息吧！',
+]
+
+function pickBreakMessage(isUrgent: boolean): string {
+  const pool = isUrgent ? URGENT_BREAK_PET_MESSAGES : BREAK_PET_MESSAGES
+  return pool[Math.floor(Math.random() * pool.length)]
+}
 
 type TabKey = 'timer' | 'shield'
 
@@ -139,7 +161,11 @@ export default function FocusMode() {
   })
   const [motivIdx, setMotivIdx] = useState(0)
   const [breakReminderDismissed, setBreakReminderDismissed] = useState(false)
+  const [urgentReminderDismissed, setUrgentReminderDismissed] = useState(false)
   const [continuousFocusSeconds, setContinuousFocusSeconds] = useState(0)
+  const [breakTimerActive, setBreakTimerActive] = useState(false)
+  const [breakTimeLeft, setBreakTimeLeft] = useState(5 * 60) // 5 minutes break
+  const [breakPetMessage, setBreakPetMessage] = useState('')
 
   // ── FlowBlocks state ──
   const [sites, setSites] = useState<BlockedSite[]>(loadSites)
@@ -173,13 +199,72 @@ export default function FocusMode() {
     if (focusState !== 'working') {
       setContinuousFocusSeconds(0)
       setBreakReminderDismissed(false)
+      setUrgentReminderDismissed(false)
       return
     }
     const id = setInterval(() => setContinuousFocusSeconds((s) => s + 1), 1000)
     return () => clearInterval(id)
   }, [focusState])
 
-  const showBreakReminder = focusState === 'working' && continuousFocusSeconds >= BREAK_REMINDER_THRESHOLD && !breakReminderDismissed
+  // Break reminder threshold = user-configured workMinutes
+  const breakReminderThreshold = focusSettings.workMinutes * 60
+
+  // Show first reminder at workMinutes, second (urgent) at 50 min
+  const showBreakReminderModal =
+    focusState === 'working' &&
+    continuousFocusSeconds >= breakReminderThreshold &&
+    !breakReminderDismissed &&
+    !breakTimerActive
+
+  const showUrgentBreakReminderModal =
+    focusState === 'working' &&
+    continuousFocusSeconds >= URGENT_BREAK_THRESHOLD &&
+    !urgentReminderDismissed &&
+    breakReminderDismissed && // only show after first was dismissed
+    !breakTimerActive
+
+  // Generate pet message when modal opens
+  useEffect(() => {
+    if (showBreakReminderModal || showUrgentBreakReminderModal) {
+      setBreakPetMessage(pickBreakMessage(showUrgentBreakReminderModal))
+    }
+  }, [showBreakReminderModal, showUrgentBreakReminderModal])
+
+  // Break timer countdown
+  useEffect(() => {
+    if (!breakTimerActive) return
+    if (breakTimeLeft <= 0) {
+      setBreakTimerActive(false)
+      setBreakTimeLeft(5 * 60)
+      addToast('success', '休息结束！继续加油吧~')
+      return
+    }
+    const id = setInterval(() => setBreakTimeLeft((t) => t - 1), 1000)
+    return () => clearInterval(id)
+  }, [breakTimerActive, breakTimeLeft, addToast])
+
+  // Handlers for break reminder modal
+  const handleTakeBreak = useCallback(() => {
+    pauseFocus()
+    setBreakTimerActive(true)
+    setBreakTimeLeft(5 * 60)
+    setBreakReminderDismissed(true)
+    setUrgentReminderDismissed(true)
+  }, [pauseFocus])
+
+  const handleContinueFocus = useCallback(() => {
+    if (showUrgentBreakReminderModal) {
+      setUrgentReminderDismissed(true)
+    } else {
+      setBreakReminderDismissed(true)
+    }
+  }, [showUrgentBreakReminderModal])
+
+  const handleEndSession = useCallback(() => {
+    resetFocus()
+    setBreakReminderDismissed(true)
+    setUrgentReminderDismissed(true)
+  }, [resetFocus])
 
   // ── Persist ambient sound selection ──
   const handleAmbientChange = useCallback((id: string | null) => {
@@ -308,31 +393,29 @@ export default function FocusMode() {
               </p>
             )}
 
-            {/* ── Break reminder banner (90+ min continuous focus) ── */}
-            {showBreakReminder && (
+            {/* ── Break timer overlay (5 min rest countdown) ── */}
+            {breakTimerActive && (
               <div
-                className="w-full max-w-md mb-4 px-4 py-3 rounded-2xl flex items-center justify-between break-reminder-enter"
+                className="w-full max-w-md mb-4 px-5 py-4 rounded-2xl text-center break-reminder-enter"
                 style={{
-                  background: 'linear-gradient(135deg, color-mix(in srgb, var(--color-warning, #f59e0b) 12%, transparent), color-mix(in srgb, var(--color-warning, #f59e0b) 6%, transparent))',
-                  border: '1px solid color-mix(in srgb, var(--color-warning, #f59e0b) 25%, transparent)',
+                  background: 'linear-gradient(135deg, color-mix(in srgb, var(--color-success, #22c55e) 12%, transparent), color-mix(in srgb, var(--color-success, #22c55e) 6%, transparent))',
+                  border: '1px solid color-mix(in srgb, var(--color-success, #22c55e) 25%, transparent)',
                 }}
               >
-                <div className="flex items-center gap-2 min-w-0">
-                  <span style={{ fontSize: 18 }}>☕</span>
-                  <span className="text-[13px] font-medium text-[var(--color-text-primary)]">
-                    已连续专注90分钟，建议休息10分钟
-                  </span>
-                </div>
+                <span style={{ fontSize: 24 }}>🧘</span>
+                <p className="text-[14px] font-semibold text-[var(--color-text-primary)] mt-1">
+                  休息中...
+                </p>
+                <p className="text-2xl font-bold tabular-nums text-[var(--color-text-primary)] mt-1">
+                  {formatMM_SS(breakTimeLeft)}
+                </p>
+                <p className="text-[12px] text-[var(--color-text-muted)] mt-1">放松一下，闭目养神</p>
                 <button
-                  onClick={() => { pauseFocus(); setBreakReminderDismissed(true) }}
-                  className="flex-shrink-0 ml-3 px-3 py-1.5 rounded-full text-[12px] font-semibold transition-all"
-                  style={{
-                    background: 'var(--color-warning, #f59e0b)',
-                    color: '#fff',
-                    boxShadow: '0 2px 8px color-mix(in srgb, var(--color-warning, #f59e0b) 35%, transparent)',
-                  }}
+                  onClick={() => { setBreakTimerActive(false); setBreakTimeLeft(5 * 60); startFocus() }}
+                  className="mt-3 px-4 py-1.5 rounded-full text-[12px] font-medium transition-all"
+                  style={{ background: 'var(--color-bg-surface-2)', color: 'var(--color-text-secondary)', border: '1px solid var(--color-border-subtle)' }}
                 >
-                  休息一下
+                  跳过休息，继续专注
                 </button>
               </div>
             )}
@@ -723,6 +806,87 @@ export default function FocusMode() {
         <p className="text-xs text-[var(--color-text-muted)] mt-2">
           不需要输入 http:// 或 www.，会自动清理。
         </p>
+      </Modal>
+
+      {/* ── Break Reminder Modal ── */}
+      <Modal
+        isOpen={showBreakReminderModal || showUrgentBreakReminderModal}
+        onClose={handleContinueFocus}
+        title={showUrgentBreakReminderModal ? '⚠️ 紧急休息提醒' : '☕ 休息一下吧！'}
+        size="sm"
+      >
+        <div className="text-center py-2">
+          {/* Urgency-based styling */}
+          <div
+            className="mx-auto mb-4 w-16 h-16 rounded-full flex items-center justify-center"
+            style={{
+              background: showUrgentBreakReminderModal
+                ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.08))'
+                : 'linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.08))',
+              fontSize: 32,
+            }}
+          >
+            {showUrgentBreakReminderModal ? '🚨' : '☕'}
+          </div>
+
+          <p
+            className="text-base font-semibold mb-2"
+            style={{ color: 'var(--color-text-primary)' }}
+          >
+            休息一下吧！你已经专注了 {Math.floor(continuousFocusSeconds / 60)} 分钟
+          </p>
+
+          {/* Pet dialogue integration */}
+          {breakPetMessage && (
+            <div className="mb-4">
+              <PetDialogue
+                message={breakPetMessage}
+                mood={showUrgentBreakReminderModal ? 'sad' : 'happy'}
+                visible={true}
+                autoHide={0}
+              />
+            </div>
+          )}
+
+          {showUrgentBreakReminderModal && (
+            <p
+              className="text-sm mb-4 px-3 py-2 rounded-lg"
+              style={{
+                background: 'color-mix(in srgb, var(--color-error, #ef4444) 8%, transparent)',
+                color: 'var(--color-error, #ef4444)',
+              }}
+            >
+              长时间不休息会降低专注力和效率，强烈建议休息！
+            </p>
+          )}
+
+          <div className="flex flex-col gap-2 mt-4">
+            <Button
+              variant="primary"
+              size="md"
+              onClick={handleTakeBreak}
+              className="!w-full !rounded-xl"
+            >
+              🧘 休息5分钟
+            </Button>
+            <Button
+              variant="secondary"
+              size="md"
+              onClick={handleContinueFocus}
+              className="!w-full !rounded-xl"
+            >
+              💪 继续专注
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleEndSession}
+              className="!w-full !rounded-xl"
+            >
+              结束专注
+            </Button>
+          </div>
+        </div>
       </Modal>
     </>
   )
