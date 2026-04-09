@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Merize 项目深度审计与竞品分析报告</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;500;700&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  ::selection { background: #7b61ff55; color: #fff; }
+  body { font-family: 'Noto Sans SC', system-ui, sans-serif; }
+
+  /* Noise overlay */
+  body::before {
+    content: ''; position: fixed; inset: 0; z-index: 9999; pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    background-size: 200px; opacity: 0.5;
+  }
+
+  /* Glow text */
+  .glow-text { text-shadow: 0 0 20px rgba(0,240,255,0.3), 0 0 60px rgba(0,240,255,0.1); }
+  .glow-neon { text-shadow: 0 0 20px rgba(123,97,255,0.4), 0 0 60px rgba(123,97,255,0.15); }
+  .glow-rose { text-shadow: 0 0 20px rgba(255,51,102,0.4); }
+  .glow-lime { text-shadow: 0 0 20px rgba(57,255,20,0.4); }
+
+  /* Progress bar */
+  #progress-bar {
+    position: fixed; top: 0; left: 0; height: 3px; z-index: 10000;
+    background: linear-gradient(90deg, #7b61ff, #00f0ff, #39ff14);
+    transform-origin: left; transform: scaleX(0); will-change: transform;
+  }
+
+  /* Floating grid bg */
+  .grid-bg {
+    background-image:
+      linear-gradient(rgba(0,240,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,240,255,0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+
+  /* Cards */
+  .card {
+    background: linear-gradient(135deg, rgba(21,27,48,0.9), rgba(26,32,53,0.7));
+    border: 1px solid rgba(0,240,255,0.08);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    transition: all 0.4s cubic-bezier(0.4,0,0.2,1);
+  }
+  .card:hover {
+    border-color: rgba(0,240,255,0.2);
+    box-shadow: 0 0 30px rgba(0,240,255,0.05), 0 20px 60px rgba(0,0,0,0.3);
+    transform: translateY(-2px);
+  }
+
+  /* Severity badges */
+  .badge-critical { background: rgba(255,51,102,0.15); color: #ff3366; border: 1px solid rgba(255,51,102,0.3); }
+  .badge-high { background: rgba(255,170,0,0.15); color: #ffaa00; border: 1px solid rgba(255,170,0,0.3); }
+  .badge-medium { background: rgba(0,240,255,0.1); color: #00f0ff; border: 1px solid rgba(0,240,255,0.25); }
+  .badge-low { background: rgba(57,255,20,0.1); color: #39ff14; border: 1px solid rgba(57,255,20,0.25); }
+  .badge-done { background: rgba(57,255,20,0.12); color: #39ff14; border: 1px solid rgba(57,255,20,0.25); }
+  .badge-partial { background: rgba(255,170,0,0.12); color: #ffaa00; border: 1px solid rgba(255,170,0,0.25); }
+  .badge-missing { background: rgba(255,51,102,0.12); color: #ff3366; border: 1px solid rgba(255,51,102,0.25); }
+
+  /* Table */
+  .audit-table { border-collapse: separate; border-spacing: 0; width: 100%; }
+  .audit-table th {
+    background: rgba(0,240,255,0.06); color: #00f0ff; font-weight: 500;
+    font-family: 'JetBrains Mono', monospace; font-size: 12px; text-transform: uppercase;
+    letter-spacing: 0.1em; padding: 14px 18px; text-align: left;
+    border-bottom: 1px solid rgba(0,240,255,0.15);
+  }
+  .audit-table td {
+    padding: 14px 18px; border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-size: 14px; vertical-align: top;
+  }
+  .audit-table tr:hover td { background: rgba(0,240,255,0.02); }
+
+  /* Code block */
+  .code-ref {
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    background: rgba(123,97,255,0.1); color: #b4a0ff; padding: 2px 8px;
+    border-radius: 4px; border: 1px solid rgba(123,97,255,0.2);
+    white-space: nowrap;
+  }
+
+  /* Section counter */
+  .section-num {
+    font-family: 'JetBrains Mono', monospace; font-size: 13px;
+    color: #00f0ff; letter-spacing: 0.15em; text-transform: uppercase;
+    opacity: 0.7;
+  }
+
+  /* Animated underline */
+  .heading-line {
+    display: block; height: 2px; margin-top: 12px;
+    background: linear-gradient(90deg, #7b61ff, #00f0ff, transparent);
+    border-radius: 2px;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: #0a0e1a; }
+  ::-webkit-scrollbar-thumb { background: #2a3050; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #3a4060; }
+
+  /* Animate-in */
+  .reveal { opacity: 0; transform: translateY(40px); }
+
+  /* Roadmap connector */
+  .roadmap-line { position: absolute; left: 23px; top: 48px; bottom: 0; width: 2px; background: linear-gradient(180deg, #7b61ff, #00f0ff, #39ff14); opacity: 0.3; }
+  .roadmap-dot { width: 12px; height: 12px; border-radius: 50%; position: absolute; left: 18px; top: 6px; }
+
+  /* Metric ring */
+  @keyframes pulse-glow { 0%,100% { box-shadow: 0 0 20px rgba(0,240,255,0.2); } 50% { box-shadow: 0 0 40px rgba(0,240,255,0.4); } }
+  .metric-ring { animation: pulse-glow 3s ease-in-out infinite; }
+
+  /* Hero scan line */
+  @keyframes scanline { 0% { top: -10%; } 100% { top: 110%; } }
+  .scanline { position: absolute; width: 100%; height: 100px; background: linear-gradient(180deg, transparent, rgba(0,240,255,0.03), transparent); animation: scanline 8s linear infinite; pointer-events: none; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .hero-title { font-size: 2.5rem !important; }
+    .grid-2 { grid-template-columns: 1fr !important; }
+  }
+</style>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        noir: '#0a0e1a',
+        midnight: '#0f1629',
+        slate: '#1a2035',
+        panel: '#151b30',
+        glow: '#00f0ff',
+        neon: '#7b61ff',
+        lime: '#39ff14',
+        rose: '#ff3366',
+        amber: '#ffaa00',
+        surface: '#1e2642',
+      },
+      fontFamily: {
+        sans: ['"Noto Sans SC"', 'system-ui', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'monospace'],
+        display: ['"Playfair Display"', 'serif'],
+      }
+    }
+  }
+}
+</script>
+</head>
+<body class="bg-noir text-gray-200 overflow-x-hidden">
+
+<div id="progress-bar"></div>
+
+<!-- ═══════ HERO ═══════ -->
+<section class="relative min-h-screen flex items-center justify-center grid-bg overflow-hidden">
+  <div class="scanline"></div>
+  <div class="absolute inset-0" style="background: radial-gradient(ellipse 60% 50% at 50% 40%, rgba(123,97,255,0.08), transparent);"></div>
+  <div class="absolute top-1/4 left-1/4 w-96 h-96 rounded-full opacity-20 blur-3xl" style="background: radial-gradient(circle, #7b61ff33, transparent);"></div>
+  <div class="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full opacity-15 blur-3xl" style="background: radial-gradient(circle, #00f0ff22, transparent);"></div>
+
+  <div class="relative z-10 text-center px-6 max-w-5xl mx-auto">
+    <div class="inline-block mb-6 px-4 py-1.5 rounded-full border border-neon/30 bg-neon/5 font-mono text-xs tracking-widest text-neon/80 uppercase">
+      Project Audit Report &middot; 2026-04-09
+    </div>
+    <h1 class="hero-title font-display text-5xl md:text-7xl font-black text-white leading-tight mb-6" style="letter-spacing:-0.02em;">
+      Merize<br>
+      <span class="bg-gradient-to-r from-glow via-neon to-rose bg-clip-text text-transparent">深度审计与竞品分析</span>
+    </h1>
+    <p class="text-lg md:text-xl text-gray-400 max-w-2xl mx-auto leading-relaxed mb-10 font-light">
+      基于完整代码审查、构建验证与 Rize.io 竞品研究<br>
+      <span class="text-glow/60 font-mono text-sm">13 TASKS &middot; 11 ISSUES &middot; 22 SOURCE FILES &middot; 5,800+ LOC</span>
+    </p>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto mt-10">
+      <div class="card p-5 text-center metric-ring">
+        <div class="font-mono text-3xl font-bold text-lime glow-lime" id="hero-done">0</div>
+        <div class="text-xs text-gray-500 mt-1 tracking-wider uppercase font-mono">Tasks Done</div>
+      </div>
+      <div class="card p-5 text-center">
+        <div class="font-mono text-3xl font-bold text-amber" id="hero-partial">0</div>
+        <div class="text-xs text-gray-500 mt-1 tracking-wider uppercase font-mono">Partial</div>
+      </div>
+      <div class="card p-5 text-center">
+        <div class="font-mono text-3xl font-bold text-rose glow-rose" id="hero-bugs">0</div>
+        <div class="text-xs text-gray-500 mt-1 tracking-wider uppercase font-mono">Critical Bugs</div>
+      </div>
+      <div class="card p-5 text-center">
+        <div class="font-mono text-3xl font-bold text-glow glow-text" id="hero-score">0</div>
+        <div class="text-xs text-gray-500 mt-1 tracking-wider uppercase font-mono">Health Score</div>
+      </div>
+    </div>
+
+    <div class="mt-16 animate-bounce">
+      <i class="ph ph-caret-double-down text-2xl text-glow/40"></i>
+    </div>
+  </div>
+</section>
+<!-- ═══════ SECTION 1: TASK COMPLETION ═══════ -->
+<section class="py-24 px-6 relative">
+  <div class="max-w-6xl mx-auto">
+    <div class="reveal">
+      <div class="section-num mb-3">Section 01</div>
+      <h2 class="text-3xl md:text-4xl font-bold text-white mb-1">需求完成度审核</h2>
+      <span class="heading-line w-32"></span>
+      <p class="text-gray-400 mt-4 max-w-xl">逐项对照 WORK_TRACKER.md 中声称的完成状态与实际代码实现情况。</p>
+    </div>
+
+    <!-- Completion chart -->
+    <div class="grid grid-2 md:grid-cols-3 gap-6 mt-12">
+      <div class="card p-6 col-span-1 reveal">
+        <div id="chart-completion" style="width:100%;height:280px;"></div>
+      </div>
+      <div class="card p-6 col-span-2 reveal">
+        <div id="chart-task-status" style="width:100%;height:280px;"></div>
+      </div>
+    </div>
+
+    <!-- Task table -->
+    <div class="card mt-10 overflow-hidden reveal">
+      <div class="overflow-x-auto">
+        <table class="audit-table">
+          <thead>
+            <tr>
+              <th style="width:140px;">Task ID</th>
+              <th>功能描述</th>
+              <th style="width:110px;">声称状态</th>
+              <th style="width:110px;">实际状态</th>
+              <th>审计发现</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="font-mono text-neon/80 text-sm">TASK-01</td>
+              <td>AI 自动追踪核心系统</td>
+              <td><span class="inline-block px-2.5 py-0.5 rounded-full text-xs badge-done">已完成</span></td>
+              <td><span class="inline-block px-2.5 py-0.5 rounded-full text-xs badge-done">已完成</span></td>
+              <td class="text-gray-400 text-sm">trackingService.ts 692行, 25+ 模拟应用, 分类管道完整。<span class="code-ref ml-1">批量操作除外</span></td>
+            </tr>
+            <tr>
+              <td class="font-mono text-neon/80 text-sm">TASK-02</td>
+              <td>计划 vs 实际时间对比</td>
+              <td><span class="inline-block px-2.5 py-0.5 rounded-full text-xs badge-done">已完成</span></td>
+              <td><span class="inline-block px-2.5 py-0.5 rounded-full text-xs badge-done">已完成</span></td>
+              <td class="text-gray-400 text-sm">Dashboard 进度环 + DailySummary 对比均已实现</td>
+            </tr>
+            <tr>
+              <td class="font-mono text-neon/80 text-sm">TASK-03</td>
+              <td>当日总结弹窗</td>
+              <td><span class="inline-block px-2.5 py-0.5 rounded-full text-xs badge-done">已完成</span></td>
+              <td><span class="inline-block px-2.5 py-0.5 rounded-full text-xs badge-done">已完成</span></td>
+              <td class="text-gray-400 text-sm">DailySummary.tsx 620行, 环形图+进度环+导出。<span class="code-ref ml-1">残留4个placeholder注释</span></td>
+            </tr>
+            <tr>
+              <td class="font-mono text-neon/80 text-sm">TASK-04</td>
+              <td>多邻国式互动对话系统</td>
+              <td><span class="inline-block px-2.5 py-0.5 rounded-full text-xs badge-done">已完成</span></td>
+              <td><span class="inline-block px-2.5 py-0.5 rounded-full text-xs badge-done">已完成</span></td>
+              <td class="text-gray-400 text-sm">PetDialogue.tsx 290行, 6种触发场景完整</td>
+            </tr>
+            <tr>
+              <td class="font-mono text-neon/80 text-sm">TASK-05</td>
+              <td>宠物迷你挂件</td>
+              <td><span class="inline-block px-2.5 py-0.5 rounded-full text-xs badge-done">已完成</span></td>
+              <td><span class="inline-block px-2.5 py-0.5 rounded-full text-xs badge-done">已完成</span></td>
+              <td class="text-gray-400 text-sm">PetMiniWidget.tsx 354行, 浮动+自动隐藏正常</td>
+            </tr>
+            <tr>
+              <td class="font-mono text-neon/80 text-sm">TASK-06</td>
+              <td>Settings 页面</td>
+              <td><span class="inline-block px-2.5 py-0.5 rounded-full text-xs badge-done">已完成</span></td>
+              <td><span class="inline-block px-2.5 py-0.5 rounded-full text-xs badge-done">已完成</span></td>
+              <td class="text-gray-400 text-sm">隐私/追踪规则/模块/专注/目标/主题 设置齐全</td>
+            </tr>
+            <tr>
+              <td class="font-mono text-neon/80 text-sm">TASK-07</td>
+              <td>Dashboard 增强</td>
+              <td><span class="inline-block px-2.5 py-0.5 rounded-full text-xs badge-done">已完成</span></td>
+              <td><span class="inline-block px-2.5 py-0.5 rounded-full text-xs badge-done">已完成</span></td>
+              <td class="text-gray-400 text-sm">追踪 banner + 专注分数 + 快捷操作 + 时间线可视化</td>
+            </tr>
+            <tr>
+              <td class="font-mono text-neon/80 text-sm">TASK-08</td>
+              <td>Rize 深度功能对齐</td>
+              <td><span class="inline-block px-2.5 py-0.5 rounded-full text-xs badge-done">已完成</span></td>
+              <td><span class="inline-block px-2.5 py-0.5 rounded-full text-xs badge-partial">部分完成</span></td>
+              <td class="text-gray-400 text-sm">
+                上下文切换 ✅ 休息提醒 ✅<br>
+                <span class="text-rose">批量操作按钮为空 placeholder</span> <span class="code-ref">Timeline.tsx:735,746</span><br>
+                活动粒度是模式切换而非 Rize 风格滑块
+              </td>
+            </tr>
+            <tr>
+              <td class="font-mono text-neon/80 text-sm">TASK-09</td>
+              <td>团队/商业功能</td>
+              <td><span class="inline-block px-2.5 py-0.5 rounded-full text-xs badge-done">已完成</span></td>
+              <td><span class="inline-block px-2.5 py-0.5 rounded-full text-xs badge-done">已完成</span></td>
+              <td class="text-gray-400 text-sm">Team.tsx 统一重写, localStorage 模拟, 4个子标签功能齐全</td>
+            </tr>
+            <tr>
+              <td class="font-mono text-neon/80 text-sm">TASK-10</td>
+              <td>i18n 国际化</td>
+              <td><span class="inline-block px-2.5 py-0.5 rounded-full text-xs badge-done">已完成</span></td>
+              <td><span class="inline-block px-2.5 py-0.5 rounded-full text-xs badge-missing">严重不足</span></td>
+              <td class="text-gray-400 text-sm">
+                <span class="text-rose">仅 Sidebar 接入 useTranslation()</span><br>
+                Dashboard / FocusMode / Habits / Statistics / Planner 等全部硬编码中文<br>
+                语言包文件已创建但未使用
+              </td>
+            </tr>
+            <tr>
+              <td class="font-mono text-neon/80 text-sm">TASK-11</td>
+              <td>视觉细节打磨</td>
+              <td><span class="inline-block px-2.5 py-0.5 rounded-full text-xs badge-done">已完成</span></td>
+              <td><span class="inline-block px-2.5 py-0.5 rounded-full text-xs badge-partial">部分完成</span></td>
+              <td class="text-gray-400 text-sm">
+                CSS 变量覆盖 ✅ 渐变卡片 ✅ 暖色阴影 ✅<br>
+                <span class="text-amber">骨架屏已创建但未接入页面</span><br>
+                <span class="text-amber">EmptyState 部分接入, 响应式未充分测试</span>
+              </td>
+            </tr>
+            <tr>
+              <td class="font-mono text-neon/80 text-sm">TASK-12</td>
+              <td>全面功能测试</td>
+              <td><span class="inline-block px-2.5 py-0.5 rounded-full text-xs badge-done">已完成</span></td>
+              <td><span class="inline-block px-2.5 py-0.5 rounded-full text-xs badge-done">已完成</span></td>
+              <td class="text-gray-400 text-sm">tsc --noEmit 零错误, npm run build 通过 (已验证)</td>
+            </tr>
+            <tr>
+              <td class="font-mono text-neon/80 text-sm">TASK-13</td>
+              <td>宠物商店系统</td>
+              <td><span class="inline-block px-2.5 py-0.5 rounded-full text-xs badge-done">已完成</span></td>
+              <td><span class="inline-block px-2.5 py-0.5 rounded-full text-xs badge-done">已完成</span></td>
+              <td class="text-gray-400 text-sm">PetShop.tsx 食物/装饰品/新宠物 三标签, localStorage 持久化</td>
+            </tr>
+            <tr>
+              <td class="font-mono text-neon/80 text-sm">EXTRA</td>
+              <td>全局专注指示器 + 弹窗</td>
+              <td><span class="inline-block px-2.5 py-0.5 rounded-full text-xs badge-done">已完成</span></td>
+              <td><span class="inline-block px-2.5 py-0.5 rounded-full text-xs badge-done">已完成</span></td>
+              <td class="text-gray-400 text-sm">FocusStatusIndicator + FocusStartedModal + FocusCompletedModal + DailyGoalAchievedModal</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+<!-- ═══════ SECTION 2: CRITICAL ISSUES ═══════ -->
+<section class="py-24 px-6 relative" style="background: linear-gradient(180deg, transparent, rgba(255,51,102,0.02), transparent);">
+  <div class="max-w-6xl mx-auto">
+    <div class="reveal">
+      <div class="section-num mb-3">Section 02</div>
+      <h2 class="text-3xl md:text-4xl font-bold text-white mb-1">关键问题清单</h2>
+      <span class="heading-line w-32" style="background: linear-gradient(90deg, #ff3366, #ffaa00, transparent);"></span>
+      <p class="text-gray-400 mt-4 max-w-xl">按严重程度分级排列, 附代码定位与影响分析。</p>
+    </div>
+
+    <div class="grid grid-2 md:grid-cols-2 gap-6 mt-12">
+      <div class="card p-6 reveal" id="chart-severity-wrap">
+        <div id="chart-severity" style="width:100%;height:300px;"></div>
+      </div>
+      <div class="card p-6 reveal">
+        <h3 class="text-sm font-mono text-glow/70 uppercase tracking-wider mb-4">Issue Distribution</h3>
+        <div class="space-y-4">
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-sm text-rose font-medium">Critical</span>
+              <span class="font-mono text-sm text-rose">3</span>
+            </div>
+            <div class="h-2 rounded-full bg-white/5 overflow-hidden"><div class="h-full rounded-full" style="width:27%;background:linear-gradient(90deg,#ff3366,#ff336688);"></div></div>
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-sm text-amber font-medium">High</span>
+              <span class="font-mono text-sm text-amber">3</span>
+            </div>
+            <div class="h-2 rounded-full bg-white/5 overflow-hidden"><div class="h-full rounded-full" style="width:27%;background:linear-gradient(90deg,#ffaa00,#ffaa0088);"></div></div>
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-sm text-glow font-medium">Medium</span>
+              <span class="font-mono text-sm text-glow">5</span>
+            </div>
+            <div class="h-2 rounded-full bg-white/5 overflow-hidden"><div class="h-full rounded-full" style="width:45%;background:linear-gradient(90deg,#00f0ff,#00f0ff88);"></div></div>
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-sm text-lime font-medium">Low</span>
+              <span class="font-mono text-sm text-lime">2</span>
+            </div>
+            <div class="h-2 rounded-full bg-white/5 overflow-hidden"><div class="h-full rounded-full" style="width:18%;background:linear-gradient(90deg,#39ff14,#39ff1488);"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Issue Cards -->
+    <div class="space-y-5 mt-10">
+      <!-- CRITICAL -->
+      <div class="card p-6 reveal" style="border-left: 3px solid #ff3366;">
+        <div class="flex items-start gap-4">
+          <div class="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center bg-rose/10 text-rose">
+            <i class="ph-fill ph-warning text-xl"></i>
+          </div>
+          <div class="flex-1">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="badge-critical px-2.5 py-0.5 rounded-full text-xs font-mono">CRITICAL</span>
+              <h4 class="text-white font-medium">Timeline 批量操作按钮为空壳</h4>
+            </div>
+            <p class="text-gray-400 text-sm leading-relaxed">
+              "批量分类" 和 "批量删除" 按钮的 onClick handler 是空的 placeholder 注释, 用户选中活动后点击按钮没有任何反应。
+              WORK_TRACKER 声称 "批量分类和删除 ✅ 已完成", 与实际不符。
+            </p>
+            <div class="mt-3 flex flex-wrap gap-2">
+              <span class="code-ref">Timeline.tsx:735</span>
+              <span class="code-ref">Timeline.tsx:746</span>
+              <span class="code-ref">onClick={() => { /* batch categorize placeholder */ })</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card p-6 reveal" style="border-left: 3px solid #ff3366;">
+        <div class="flex items-start gap-4">
+          <div class="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center bg-rose/10 text-rose">
+            <i class="ph-fill ph-warning text-xl"></i>
+          </div>
+          <div class="flex-1">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="badge-critical px-2.5 py-0.5 rounded-full text-xs font-mono">CRITICAL</span>
+              <h4 class="text-white font-medium">遗留 API 页面在 Web Demo 模式崩溃</h4>
+            </div>
+            <p class="text-gray-400 text-sm leading-relaxed">
+              OrgAdmin / PrivacySettings / WeeklyApproval / TeamDashboard / TeamFocus 5个遗留页面直接调用 REST API (<code class="code-ref">apiRequest('/api/org/list')</code>),
+              在纯前端 web demo 环境下无后端响应, 触发 fetch 错误。虽然当前路由未直接挂载这些页面, 但遗留代码增加维护风险。
+            </p>
+            <div class="mt-3 flex flex-wrap gap-2">
+              <span class="code-ref">OrgAdmin.tsx:50</span>
+              <span class="code-ref">PrivacySettings.tsx:56</span>
+              <span class="code-ref">WeeklyApproval.tsx:51</span>
+              <span class="code-ref">TeamDashboard.tsx:47</span>
+              <span class="code-ref">TeamFocus.tsx</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- HIGH -->
+      <div class="card p-6 reveal" style="border-left: 3px solid #ffaa00;">
+        <div class="flex items-start gap-4">
+          <div class="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center bg-amber/10 text-amber">
+            <i class="ph-fill ph-flag text-xl"></i>
+          </div>
+          <div class="flex-1">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="badge-high px-2.5 py-0.5 rounded-full text-xs font-mono">HIGH</span>
+              <h4 class="text-white font-medium">i18n 国际化名不副实</h4>
+            </div>
+            <p class="text-gray-400 text-sm leading-relaxed">
+              WORK_TRACKER 标记 TASK-10 已完成, 但实际只有 <code class="code-ref">Sidebar.tsx</code> 使用了 <code class="code-ref">useTranslation()</code>。
+              Dashboard / FocusMode / Habits / Statistics / Planner / VirtualPet 等页面全部硬编码中文字符串。
+              用户切换为英文后, 大部分界面仍显示中文。语言包文件 (zh-CN.json / en-US.json) 已准备但未被引用。
+            </p>
+            <div class="mt-3 flex flex-wrap gap-2">
+              <span class="code-ref">Dashboard.tsx:34-39 greeting()</span>
+              <span class="code-ref">FocusMode.tsx MOTIVATIONAL_MSGS</span>
+              <span class="code-ref">Habits.tsx ENCOURAGEMENTS</span>
+              <span class="code-ref">Planner.tsx FILTER_LABELS</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card p-6 reveal" style="border-left: 3px solid #ffaa00;">
+        <div class="flex items-start gap-4">
+          <div class="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center bg-amber/10 text-amber">
+            <i class="ph-fill ph-flag text-xl"></i>
+          </div>
+          <div class="flex-1">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="badge-high px-2.5 py-0.5 rounded-full text-xs font-mono">HIGH</span>
+              <h4 class="text-white font-medium">生产代码中的 console.error 与循环依赖</h4>
+            </div>
+            <p class="text-gray-400 text-sm leading-relaxed">
+              多个文件包含 <code class="code-ref">console.error('加载组织列表失败')</code> 等输出, 应改为 Toast 通知或条件日志。
+              Login.tsx / OrgAdmin.tsx 等从 App.tsx 导入 Theme 类型存在循环依赖风险, 应直接从 config/themes.ts 导入。
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- MEDIUM -->
+      <div class="card p-6 reveal" style="border-left: 3px solid #00f0ff;">
+        <div class="flex items-start gap-4">
+          <div class="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center bg-glow/10 text-glow">
+            <i class="ph ph-info text-xl"></i>
+          </div>
+          <div class="flex-1">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="badge-medium px-2.5 py-0.5 rounded-full text-xs font-mono">MEDIUM</span>
+              <h4 class="text-white font-medium">代码质量与包体积问题</h4>
+            </div>
+            <p class="text-gray-400 text-sm leading-relaxed">
+              <span class="text-glow/80">1.</span> DailySummary.tsx 残留 4 个 placeholder 注释 (line 34-37) 应清理<br>
+              <span class="text-glow/80">2.</span> Statistics.tsx 961 行 / gzip 119KB, 是最大的单文件, 需拆分为子组件<br>
+              <span class="text-glow/80">3.</span> Skeleton 组件已创建但未在任何页面使用<br>
+              <span class="text-glow/80">4.</span> EmptyState 组件仅部分页面接入<br>
+              <span class="text-glow/80">5.</span> CSS warning: themes.ts 中 <code class="code-ref">--tw-ring-color: ${s.accent}</code> 模板语法问题
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<!-- ═══════ SECTION 3: CODE QUALITY ═══════ -->
+<section class="py-24 px-6 relative">
+  <div class="max-w-6xl mx-auto">
+    <div class="reveal">
+      <div class="section-num mb-3">Section 03</div>
+      <h2 class="text-3xl md:text-4xl font-bold text-white mb-1">代码质量评估</h2>
+      <span class="heading-line w-32"></span>
+      <p class="text-gray-400 mt-4 max-w-xl">构建验证、包体积分析与模块结构。</p>
+    </div>
+
+    <div class="grid grid-2 md:grid-cols-3 gap-6 mt-12">
+      <!-- Build status -->
+      <div class="card p-6 reveal">
+        <h3 class="text-sm font-mono text-glow/70 uppercase tracking-wider mb-5">Build Status</h3>
+        <div class="space-y-4">
+          <div class="flex items-center gap-3">
+            <span class="w-3 h-3 rounded-full bg-lime"></span>
+            <span class="text-sm text-gray-300">TypeScript 编译</span>
+            <span class="ml-auto font-mono text-xs text-lime">PASS — 0 errors</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="w-3 h-3 rounded-full bg-lime"></span>
+            <span class="text-sm text-gray-300">Vite Build</span>
+            <span class="ml-auto font-mono text-xs text-lime">PASS — 6.96s</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="w-3 h-3 rounded-full bg-lime"></span>
+            <span class="text-sm text-gray-300">npm 安全漏洞</span>
+            <span class="ml-auto font-mono text-xs text-lime">0 vulnerabilities</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="w-3 h-3 rounded-full bg-amber"></span>
+            <span class="text-sm text-gray-300">CSS Warning</span>
+            <span class="ml-auto font-mono text-xs text-amber">1 warning</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="w-3 h-3 rounded-full bg-lime"></span>
+            <span class="text-sm text-gray-300">Dependencies</span>
+            <span class="ml-auto font-mono text-xs text-lime">212 packages</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bundle chart -->
+      <div class="card p-6 col-span-2 reveal">
+        <div id="chart-bundle" style="width:100%;height:300px;"></div>
+      </div>
+    </div>
+
+    <!-- Route health -->
+    <div class="card mt-10 p-6 reveal">
+      <h3 class="text-sm font-mono text-glow/70 uppercase tracking-wider mb-5">路由完整性检查 — 9 个主路由</h3>
+      <div class="grid grid-cols-3 md:grid-cols-5 gap-3">
+        <div class="rounded-xl p-3 text-center bg-lime/5 border border-lime/20">
+          <div class="font-mono text-xs text-lime mb-1">/</div>
+          <div class="text-xs text-gray-400">Dashboard</div>
+          <div class="text-lime text-xs mt-1">OK</div>
+        </div>
+        <div class="rounded-xl p-3 text-center bg-lime/5 border border-lime/20">
+          <div class="font-mono text-xs text-lime mb-1">/timeline</div>
+          <div class="text-xs text-gray-400">Timeline</div>
+          <div class="text-lime text-xs mt-1">OK</div>
+        </div>
+        <div class="rounded-xl p-3 text-center bg-lime/5 border border-lime/20">
+          <div class="font-mono text-xs text-lime mb-1">/planner</div>
+          <div class="text-xs text-gray-400">Planner</div>
+          <div class="text-lime text-xs mt-1">OK</div>
+        </div>
+        <div class="rounded-xl p-3 text-center bg-lime/5 border border-lime/20">
+          <div class="font-mono text-xs text-lime mb-1">/focus</div>
+          <div class="text-xs text-gray-400">FocusMode</div>
+          <div class="text-lime text-xs mt-1">OK</div>
+        </div>
+        <div class="rounded-xl p-3 text-center bg-lime/5 border border-lime/20">
+          <div class="font-mono text-xs text-lime mb-1">/habits</div>
+          <div class="text-xs text-gray-400">Habits</div>
+          <div class="text-lime text-xs mt-1">OK</div>
+        </div>
+        <div class="rounded-xl p-3 text-center bg-lime/5 border border-lime/20">
+          <div class="font-mono text-xs text-lime mb-1">/statistics</div>
+          <div class="text-xs text-gray-400">Statistics</div>
+          <div class="text-lime text-xs mt-1">OK</div>
+        </div>
+        <div class="rounded-xl p-3 text-center bg-lime/5 border border-lime/20">
+          <div class="font-mono text-xs text-lime mb-1">/pet</div>
+          <div class="text-xs text-gray-400">VirtualPet</div>
+          <div class="text-lime text-xs mt-1">OK</div>
+        </div>
+        <div class="rounded-xl p-3 text-center bg-lime/5 border border-lime/20">
+          <div class="font-mono text-xs text-lime mb-1">/settings</div>
+          <div class="text-xs text-gray-400">Settings</div>
+          <div class="text-lime text-xs mt-1">OK</div>
+        </div>
+        <div class="rounded-xl p-3 text-center bg-lime/5 border border-lime/20">
+          <div class="font-mono text-xs text-lime mb-1">/team</div>
+          <div class="text-xs text-gray-400">Team</div>
+          <div class="text-lime text-xs mt-1">OK</div>
+        </div>
+        <div class="rounded-xl p-3 text-center bg-rose/5 border border-rose/20">
+          <div class="font-mono text-xs text-rose/70 mb-1">5 orphaned</div>
+          <div class="text-xs text-gray-500">OrgAdmin etc.</div>
+          <div class="text-rose/60 text-xs mt-1">未路由</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<!-- ═══════ SECTION 4: RIZE COMPETITIVE ANALYSIS ═══════ -->
+<section class="py-24 px-6 relative" style="background: linear-gradient(180deg, transparent, rgba(123,97,255,0.03), transparent);">
+  <div class="max-w-6xl mx-auto">
+    <div class="reveal">
+      <div class="section-num mb-3">Section 04</div>
+      <h2 class="text-3xl md:text-4xl font-bold text-white mb-1">Rize.io 竞品深度研究</h2>
+      <span class="heading-line w-32" style="background: linear-gradient(90deg, #7b61ff, #00f0ff, transparent);"></span>
+      <p class="text-gray-400 mt-4 max-w-xl">对标 Rize 最新产品状态 (2026-03), 分析定价、功能、策略差异。</p>
+    </div>
+
+    <!-- Pricing -->
+    <div class="grid grid-2 md:grid-cols-4 gap-5 mt-12">
+      <div class="card p-6 reveal text-center hover:border-neon/30">
+        <div class="text-xs font-mono text-gray-500 uppercase tracking-wider mb-3">Basic</div>
+        <div class="text-3xl font-bold text-white">$9.99<span class="text-sm text-gray-500 font-normal">/月</span></div>
+        <div class="text-xs text-gray-500 mt-1">年付, 省 23%</div>
+        <div class="mt-5 text-left text-xs text-gray-400 space-y-2">
+          <div class="flex items-center gap-2"><i class="ph ph-check text-lime text-sm"></i>自动追踪</div>
+          <div class="flex items-center gap-2"><i class="ph ph-check text-lime text-sm"></i>AI 自动分类</div>
+          <div class="flex items-center gap-2"><i class="ph ph-check text-lime text-sm"></i>专注检测</div>
+          <div class="flex items-center gap-2"><i class="ph ph-check text-lime text-sm"></i>专注音乐</div>
+          <div class="flex items-center gap-2"><i class="ph ph-check text-lime text-sm"></i>效率报告</div>
+          <div class="flex items-center gap-2"><i class="ph ph-check text-lime text-sm"></i>AI Coach</div>
+          <div class="flex items-center gap-2"><i class="ph ph-check text-lime text-sm"></i>干扰拦截</div>
+        </div>
+      </div>
+      <div class="card p-6 reveal text-center hover:border-neon/30" style="border: 1px solid rgba(123,97,255,0.25);">
+        <div class="text-xs font-mono text-neon uppercase tracking-wider mb-3">Professional</div>
+        <div class="text-3xl font-bold text-white">$14.99<span class="text-sm text-gray-500 font-normal">/月</span></div>
+        <div class="text-xs text-gray-500 mt-1">年付, 省 21%</div>
+        <div class="mt-5 text-left text-xs text-gray-400 space-y-2">
+          <div class="flex items-center gap-2"><i class="ph ph-check text-neon text-sm"></i>Basic 全部功能</div>
+          <div class="flex items-center gap-2"><i class="ph ph-check text-neon text-sm"></i>客户 / 项目追踪</div>
+          <div class="flex items-center gap-2"><i class="ph ph-check text-neon text-sm"></i>定时报告 PDF/CSV</div>
+          <div class="flex items-center gap-2"><i class="ph ph-check text-neon text-sm"></i>API & Webhooks</div>
+          <div class="flex items-center gap-2"><i class="ph ph-check text-neon text-sm"></i>Zapier 集成</div>
+          <div class="flex items-center gap-2"><i class="ph ph-check text-neon text-sm"></i>ClickUp / Linear</div>
+        </div>
+      </div>
+      <div class="card p-6 reveal text-center hover:border-glow/30">
+        <div class="text-xs font-mono text-glow uppercase tracking-wider mb-3">Team</div>
+        <div class="text-3xl font-bold text-white">$19.99<span class="text-sm text-gray-500 font-normal">/人/月</span></div>
+        <div class="text-xs text-gray-500 mt-1">年付, 最少 2 人</div>
+        <div class="mt-5 text-left text-xs text-gray-400 space-y-2">
+          <div class="flex items-center gap-2"><i class="ph ph-check text-glow text-sm"></i>Pro 全部功能</div>
+          <div class="flex items-center gap-2"><i class="ph ph-check text-glow text-sm"></i>团队分析仪表盘</div>
+          <div class="flex items-center gap-2"><i class="ph ph-check text-glow text-sm"></i>盈利性分析</div>
+          <div class="flex items-center gap-2"><i class="ph ph-check text-glow text-sm"></i>管理权限</div>
+          <div class="flex items-center gap-2"><i class="ph ph-check text-glow text-sm"></i>无限工作空间</div>
+          <div class="flex items-center gap-2"><i class="ph ph-check text-glow text-sm"></i>优先支持</div>
+        </div>
+      </div>
+      <div class="card p-6 reveal text-center hover:border-amber/30" style="background: linear-gradient(135deg, rgba(255,170,0,0.05), rgba(21,27,48,0.9));">
+        <div class="text-xs font-mono text-amber uppercase tracking-wider mb-3">Merize</div>
+        <div class="text-3xl font-bold text-white">¥29<span class="text-sm text-gray-500 font-normal">/月</span></div>
+        <div class="text-xs text-amber/60 mt-1">或 ¥199/年, 约 Rize 1/3</div>
+        <div class="mt-5 text-left text-xs text-gray-400 space-y-2">
+          <div class="flex items-center gap-2"><i class="ph ph-check text-amber text-sm"></i>自动追踪 (Tauri)</div>
+          <div class="flex items-center gap-2"><i class="ph ph-check text-amber text-sm"></i>规则+AI 分类</div>
+          <div class="flex items-center gap-2"><i class="ph ph-check text-amber text-sm"></i>完整中文界面</div>
+          <div class="flex items-center gap-2"><i class="ph ph-check text-amber text-sm"></i>游戏化宠物系统</div>
+          <div class="flex items-center gap-2"><i class="ph ph-check text-amber text-sm"></i>内置任务管理</div>
+          <div class="flex items-center gap-2"><i class="ph ph-check text-amber text-sm"></i>习惯追踪</div>
+          <div class="flex items-center gap-2"><i class="ph ph-check text-amber text-sm"></i>团队功能</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rize recent updates -->
+    <div class="card p-6 mt-10 reveal">
+      <h3 class="text-sm font-mono text-glow/70 uppercase tracking-wider mb-5">Rize 2026 年 3 月重大更新</h3>
+      <div class="grid grid-2 md:grid-cols-2 gap-4">
+        <div class="flex items-start gap-3 p-3 rounded-xl bg-white/[0.02]">
+          <span class="w-8 h-8 rounded-lg flex items-center justify-center bg-neon/10 text-neon text-sm flex-shrink-0"><i class="ph ph-squares-four"></i></span>
+          <div>
+            <div class="text-sm text-white font-medium">自定义仪表盘</div>
+            <div class="text-xs text-gray-500 mt-0.5">拖拽 Widget, 个性化数据看板</div>
+          </div>
+        </div>
+        <div class="flex items-start gap-3 p-3 rounded-xl bg-white/[0.02]">
+          <span class="w-8 h-8 rounded-lg flex items-center justify-center bg-neon/10 text-neon text-sm flex-shrink-0"><i class="ph ph-check-square"></i></span>
+          <div>
+            <div class="text-sm text-white font-medium">批量操作 & 时间条目分组</div>
+            <div class="text-xs text-gray-500 mt-0.5">多选审批/标记/删除, 粒度滑块</div>
+          </div>
+        </div>
+        <div class="flex items-start gap-3 p-3 rounded-xl bg-white/[0.02]">
+          <span class="w-8 h-8 rounded-lg flex items-center justify-center bg-neon/10 text-neon text-sm flex-shrink-0"><i class="ph ph-brain"></i></span>
+          <div>
+            <div class="text-sm text-white font-medium">AI 置信度评分 & 自动标记</div>
+            <div class="text-xs text-gray-500 mt-0.5">GPT-5 驱动, 高置信度自动 Tag</div>
+          </div>
+        </div>
+        <div class="flex items-start gap-3 p-3 rounded-xl bg-white/[0.02]">
+          <span class="w-8 h-8 rounded-lg flex items-center justify-center bg-neon/10 text-neon text-sm flex-shrink-0"><i class="ph ph-plugs-connected"></i></span>
+          <div>
+            <div class="text-sm text-white font-medium">Asana 集成 (Beta)</div>
+            <div class="text-xs text-gray-500 mt-0.5">双向同步, 继 ClickUp / Linear 之后</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<!-- ═══════ SECTION 5: FEATURE COMPARISON ═══════ -->
+<section class="py-24 px-6 relative">
+  <div class="max-w-6xl mx-auto">
+    <div class="reveal">
+      <div class="section-num mb-3">Section 05</div>
+      <h2 class="text-3xl md:text-4xl font-bold text-white mb-1">功能对比矩阵</h2>
+      <span class="heading-line w-32"></span>
+      <p class="text-gray-400 mt-4 max-w-xl">Merize 与 Rize.io 核心能力逐项对比, 识别差距与差异化优势。</p>
+    </div>
+
+    <div class="grid grid-2 md:grid-cols-2 gap-6 mt-12">
+      <div class="card p-6 reveal">
+        <div id="chart-radar" style="width:100%;height:380px;"></div>
+      </div>
+      <div class="card p-6 reveal">
+        <div id="chart-gap" style="width:100%;height:380px;"></div>
+      </div>
+    </div>
+
+    <!-- Comparison Table -->
+    <div class="card mt-10 overflow-hidden reveal">
+      <div class="overflow-x-auto">
+        <table class="audit-table">
+          <thead>
+            <tr>
+              <th>功能维度</th>
+              <th style="color:#00f0ff;">Rize.io</th>
+              <th style="color:#ffaa00;">Merize</th>
+              <th>差距评估</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-white font-medium text-sm">桌面原生追踪</td>
+              <td><span class="text-lime text-sm">原生 Mac/Win, &lt;1% CPU</span></td>
+              <td><span class="text-amber text-sm">Tauri 2 框架</span></td>
+              <td class="text-gray-400 text-sm">Tauri 可行, 需完善原生体验</td>
+            </tr>
+            <tr>
+              <td class="text-white font-medium text-sm">AI 分类能力</td>
+              <td><span class="text-lime text-sm">GPT-5 + 置信度 + 自动标记</span></td>
+              <td><span class="text-rose text-sm">仅规则模拟</span></td>
+              <td class="text-rose text-sm font-medium">关键差距 — 需接入真实 AI</td>
+            </tr>
+            <tr>
+              <td class="text-white font-medium text-sm">客户/项目/任务分类</td>
+              <td><span class="text-lime text-sm">三级分类体系</span></td>
+              <td><span class="text-rose text-sm">仅活动类别</span></td>
+              <td class="text-rose text-sm font-medium">缺失 — 影响 B 端竞争力</td>
+            </tr>
+            <tr>
+              <td class="text-white font-medium text-sm">计费时间追踪</td>
+              <td><span class="text-lime text-sm">完整计费 + 费率设定</span></td>
+              <td><span class="text-rose text-sm">无</span></td>
+              <td class="text-rose text-sm">缺失</td>
+            </tr>
+            <tr>
+              <td class="text-white font-medium text-sm">盈利性分析</td>
+              <td><span class="text-lime text-sm">按客户/项目 ROI 仪表盘</span></td>
+              <td><span class="text-rose text-sm">无</span></td>
+              <td class="text-gray-400 text-sm">缺失, 但非个人用户核心需求</td>
+            </tr>
+            <tr>
+              <td class="text-white font-medium text-sm">第三方集成</td>
+              <td><span class="text-lime text-sm">ClickUp/Linear/Asana/Zapier/Calendar</span></td>
+              <td><span class="text-rose text-sm">无</span></td>
+              <td class="text-amber text-sm">中期需补齐 (飞书/钉钉)</td>
+            </tr>
+            <tr>
+              <td class="text-white font-medium text-sm">API / Webhooks</td>
+              <td><span class="text-lime text-sm">GraphQL API + Webhooks</span></td>
+              <td><span class="text-rose text-sm">无开放 API</span></td>
+              <td class="text-gray-400 text-sm">长期需建设</td>
+            </tr>
+            <tr>
+              <td class="text-white font-medium text-sm">报告导出</td>
+              <td><span class="text-lime text-sm">定时 PDF/CSV + 客户报告</span></td>
+              <td><span class="text-amber text-sm">JSON 导出</span></td>
+              <td class="text-amber text-sm">需增加 PDF 报告</td>
+            </tr>
+            <tr style="background: rgba(57,255,20,0.02);">
+              <td class="text-white font-medium text-sm">中文本地化</td>
+              <td><span class="text-rose text-sm">无 — 仅英文</span></td>
+              <td><span class="text-lime text-sm">完整中文界面</span></td>
+              <td class="text-lime text-sm font-medium">Merize 核心优势</td>
+            </tr>
+            <tr style="background: rgba(57,255,20,0.02);">
+              <td class="text-white font-medium text-sm">游戏化 / 宠物</td>
+              <td><span class="text-rose text-sm">无</span></td>
+              <td><span class="text-lime text-sm">宠物 + 金币 + 装饰 + 成长</span></td>
+              <td class="text-lime text-sm font-medium">Merize 独有差异化</td>
+            </tr>
+            <tr style="background: rgba(57,255,20,0.02);">
+              <td class="text-white font-medium text-sm">内置任务管理</td>
+              <td><span class="text-rose text-sm">无 — 依赖集成</span></td>
+              <td><span class="text-lime text-sm">4 种视图 (列表/看板/日历/时间线)</span></td>
+              <td class="text-lime text-sm font-medium">Merize 一站式优势</td>
+            </tr>
+            <tr style="background: rgba(57,255,20,0.02);">
+              <td class="text-white font-medium text-sm">习惯追踪</td>
+              <td><span class="text-rose text-sm">无</span></td>
+              <td><span class="text-lime text-sm">多次打卡 + 提醒 + 鼓励</span></td>
+              <td class="text-lime text-sm font-medium">Merize 独有</td>
+            </tr>
+            <tr style="background: rgba(57,255,20,0.02);">
+              <td class="text-white font-medium text-sm">定价</td>
+              <td><span class="text-gray-300 text-sm">$9.99 ~ $19.99/月</span></td>
+              <td><span class="text-lime text-sm">¥29/月 (约 $4)</span></td>
+              <td class="text-lime text-sm font-medium">Merize 约 1/3 价格</td>
+            </tr>
+            <tr style="background: rgba(57,255,20,0.02);">
+              <td class="text-white font-medium text-sm">隐私控制</td>
+              <td><span class="text-gray-300 text-sm">不截屏/不记录按键</span></td>
+              <td><span class="text-lime text-sm">三级隐私 (基础/标准/详细)</span></td>
+              <td class="text-lime text-sm">Merize 更精细</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Strengths summary -->
+    <div class="grid grid-2 md:grid-cols-2 gap-6 mt-10">
+      <div class="card p-6 reveal">
+        <h3 class="text-sm font-mono text-lime uppercase tracking-wider mb-4 glow-lime">Merize 差异化优势</h3>
+        <div class="space-y-3">
+          <div class="flex items-start gap-3">
+            <span class="text-lime text-lg mt-0.5"><i class="ph-fill ph-star"></i></span>
+            <div>
+              <div class="text-sm text-white font-medium">中文优先 + 国内部署</div>
+              <div class="text-xs text-gray-500">Rize 无中文, 国内访问慢</div>
+            </div>
+          </div>
+          <div class="flex items-start gap-3">
+            <span class="text-lime text-lg mt-0.5"><i class="ph-fill ph-star"></i></span>
+            <div>
+              <div class="text-sm text-white font-medium">游戏化激励系统</div>
+              <div class="text-xs text-gray-500">宠物 / 金币 / 连续打卡 / 装饰品, 多邻国式互动</div>
+            </div>
+          </div>
+          <div class="flex items-start gap-3">
+            <span class="text-lime text-lg mt-0.5"><i class="ph-fill ph-star"></i></span>
+            <div>
+              <div class="text-sm text-white font-medium">一站式效率工具</div>
+              <div class="text-xs text-gray-500">时间追踪 + 任务管理 + 习惯追踪 + 番茄钟, Rize 需集成第三方</div>
+            </div>
+          </div>
+          <div class="flex items-start gap-3">
+            <span class="text-lime text-lg mt-0.5"><i class="ph-fill ph-star"></i></span>
+            <div>
+              <div class="text-sm text-white font-medium">极具竞争力的定价</div>
+              <div class="text-xs text-gray-500">¥29/月 vs Rize $9.99/月, 不到 1/2</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card p-6 reveal">
+        <h3 class="text-sm font-mono text-rose uppercase tracking-wider mb-4 glow-rose">需补齐的关键差距</h3>
+        <div class="space-y-3">
+          <div class="flex items-start gap-3">
+            <span class="text-rose text-lg mt-0.5"><i class="ph-fill ph-warning-circle"></i></span>
+            <div>
+              <div class="text-sm text-white font-medium">客户/项目三级分类</div>
+              <div class="text-xs text-gray-500">Rize 核心商业能力, B 端必需</div>
+            </div>
+          </div>
+          <div class="flex items-start gap-3">
+            <span class="text-rose text-lg mt-0.5"><i class="ph-fill ph-warning-circle"></i></span>
+            <div>
+              <div class="text-sm text-white font-medium">真实 AI 分类 (非规则模拟)</div>
+              <div class="text-xs text-gray-500">接入火山引擎 / 百度大模型 API</div>
+            </div>
+          </div>
+          <div class="flex items-start gap-3">
+            <span class="text-rose text-lg mt-0.5"><i class="ph-fill ph-warning-circle"></i></span>
+            <div>
+              <div class="text-sm text-white font-medium">第三方集成生态</div>
+              <div class="text-xs text-gray-500">至少支持飞书 / 钉钉 / 企业微信</div>
+            </div>
+          </div>
+          <div class="flex items-start gap-3">
+            <span class="text-rose text-lg mt-0.5"><i class="ph-fill ph-warning-circle"></i></span>
+            <div>
+              <div class="text-sm text-white font-medium">计费追踪 + 报告</div>
+              <div class="text-xs text-gray-500">自由职业者和机构的核心付费动力</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<!-- ═══════ SECTION 6: ACTION ROADMAP ═══════ -->
+<section class="py-24 px-6 relative" style="background: linear-gradient(180deg, transparent, rgba(0,240,255,0.02), transparent);">
+  <div class="max-w-6xl mx-auto">
+    <div class="reveal">
+      <div class="section-num mb-3">Section 06</div>
+      <h2 class="text-3xl md:text-4xl font-bold text-white mb-1">优先级行动路线图</h2>
+      <span class="heading-line w-32" style="background: linear-gradient(90deg, #ff3366, #ffaa00, #39ff14, transparent);"></span>
+      <p class="text-gray-400 mt-4 max-w-xl">从 Bug 修复到产品竞争力提升, 四阶段执行计划。</p>
+    </div>
+
+    <div class="mt-12 space-y-0">
+      <!-- P0 -->
+      <div class="reveal">
+        <div class="card p-6 mb-4" style="border-left: 4px solid #ff3366;">
+          <div class="flex items-center gap-3 mb-4">
+            <span class="w-10 h-10 rounded-xl flex items-center justify-center bg-rose/15 text-rose font-mono text-sm font-bold">P0</span>
+            <div>
+              <h3 class="text-white font-bold">立即修复</h3>
+              <div class="text-xs text-gray-500 font-mono">CRITICAL — 阻塞发布</div>
+            </div>
+          </div>
+          <div class="grid grid-2 md:grid-cols-3 gap-3">
+            <div class="p-3 rounded-xl bg-white/[0.02] border border-white/5">
+              <div class="text-sm text-white font-medium mb-1">实现批量操作逻辑</div>
+              <div class="text-xs text-gray-500">Timeline.tsx:735,746 填充真实 handler, 批量分类弹窗 + 批量删除确认</div>
+              <div class="mt-2"><span class="code-ref">Timeline.tsx</span></div>
+            </div>
+            <div class="p-3 rounded-xl bg-white/[0.02] border border-white/5">
+              <div class="text-sm text-white font-medium mb-1">清理遗留 API 页面</div>
+              <div class="text-xs text-gray-500">删除或改写 OrgAdmin 等 5 个不挂载的遗留文件, 减少维护负担</div>
+            </div>
+            <div class="p-3 rounded-xl bg-white/[0.02] border border-white/5">
+              <div class="text-sm text-white font-medium mb-1">修复 CSS 语法 Warning</div>
+              <div class="text-xs text-gray-500">themes.ts 中 --tw-ring-color 模板字符串在 CSS 中的插值问题</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- P1 -->
+      <div class="reveal">
+        <div class="card p-6 mb-4" style="border-left: 4px solid #ffaa00;">
+          <div class="flex items-center gap-3 mb-4">
+            <span class="w-10 h-10 rounded-xl flex items-center justify-center bg-amber/15 text-amber font-mono text-sm font-bold">P1</span>
+            <div>
+              <h3 class="text-white font-bold">短期优化</h3>
+              <div class="text-xs text-gray-500 font-mono">HIGH — 产品完整性</div>
+            </div>
+          </div>
+          <div class="grid grid-2 md:grid-cols-3 gap-3">
+            <div class="p-3 rounded-xl bg-white/[0.02] border border-white/5">
+              <div class="text-sm text-white font-medium mb-1">i18n 全页面接入</div>
+              <div class="text-xs text-gray-500">逐页替换硬编码中文为 t() 调用, 使语言切换真正生效</div>
+            </div>
+            <div class="p-3 rounded-xl bg-white/[0.02] border border-white/5">
+              <div class="text-sm text-white font-medium mb-1">拆分 Statistics.tsx</div>
+              <div class="text-xs text-gray-500">961 行 → OverviewTab + DeepWorkTab + AIInsightsTab 三个子组件</div>
+            </div>
+            <div class="p-3 rounded-xl bg-white/[0.02] border border-white/5">
+              <div class="text-sm text-white font-medium mb-1">清理 & 接入组件</div>
+              <div class="text-xs text-gray-500">清除 placeholder 注释, 接入骨架屏 Skeleton + EmptyState 到各页面</div>
+            </div>
+            <div class="p-3 rounded-xl bg-white/[0.02] border border-white/5">
+              <div class="text-sm text-white font-medium mb-1">响应式适配</div>
+              <div class="text-xs text-gray-500">移动端和平板测试, 修复布局溢出问题</div>
+            </div>
+            <div class="p-3 rounded-xl bg-white/[0.02] border border-white/5">
+              <div class="text-sm text-white font-medium mb-1">删除废弃页面</div>
+              <div class="text-xs text-gray-500">Calendar/AiSummary/DeepWorkStats 重定向页已无用, 应删除</div>
+            </div>
+            <div class="p-3 rounded-xl bg-white/[0.02] border border-white/5">
+              <div class="text-sm text-white font-medium mb-1">console 清理</div>
+              <div class="text-xs text-gray-500">替换 console.error 为 Toast 通知或开发环境条件日志</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- P2 -->
+      <div class="reveal">
+        <div class="card p-6 mb-4" style="border-left: 4px solid #00f0ff;">
+          <div class="flex items-center gap-3 mb-4">
+            <span class="w-10 h-10 rounded-xl flex items-center justify-center bg-glow/15 text-glow font-mono text-sm font-bold">P2</span>
+            <div>
+              <h3 class="text-white font-bold">中期规划 — 补齐产品差距</h3>
+              <div class="text-xs text-gray-500 font-mono">MEDIUM — 竞争力</div>
+            </div>
+          </div>
+          <div class="grid grid-2 md:grid-cols-2 gap-3">
+            <div class="p-3 rounded-xl bg-white/[0.02] border border-white/5">
+              <div class="text-sm text-white font-medium mb-1">客户/项目分类维度</div>
+              <div class="text-xs text-gray-500">活动不仅按类别分, 还支持关联客户和项目, 构建三级体系</div>
+            </div>
+            <div class="p-3 rounded-xl bg-white/[0.02] border border-white/5">
+              <div class="text-sm text-white font-medium mb-1">真实 AI 分类</div>
+              <div class="text-xs text-gray-500">后端接入火山引擎/百度模型, 替代前端规则模拟, 支持置信度评分</div>
+            </div>
+            <div class="p-3 rounded-xl bg-white/[0.02] border border-white/5">
+              <div class="text-sm text-white font-medium mb-1">PDF/CSV 报告导出</div>
+              <div class="text-xs text-gray-500">日报/周报 PDF 生成, 支持邮件定时发送</div>
+            </div>
+            <div class="p-3 rounded-xl bg-white/[0.02] border border-white/5">
+              <div class="text-sm text-white font-medium mb-1">计费时间追踪</div>
+              <div class="text-xs text-gray-500">按项目设定费率, 自动计算计费金额, 支持 billable/non-billable 标记</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- P3 -->
+      <div class="reveal">
+        <div class="card p-6" style="border-left: 4px solid #39ff14;">
+          <div class="flex items-center gap-3 mb-4">
+            <span class="w-10 h-10 rounded-xl flex items-center justify-center bg-lime/15 text-lime font-mono text-sm font-bold">P3</span>
+            <div>
+              <h3 class="text-white font-bold">长期规划 — 竞争力建设</h3>
+              <div class="text-xs text-gray-500 font-mono">FUTURE — 生态 & 扩展</div>
+            </div>
+          </div>
+          <div class="grid grid-2 md:grid-cols-3 gap-3">
+            <div class="p-3 rounded-xl bg-white/[0.02] border border-white/5">
+              <div class="text-sm text-white font-medium mb-1">盈利性分析仪表盘</div>
+              <div class="text-xs text-gray-500">按客户/项目 ROI, 利用率分析</div>
+            </div>
+            <div class="p-3 rounded-xl bg-white/[0.02] border border-white/5">
+              <div class="text-sm text-white font-medium mb-1">飞书/钉钉/企微集成</div>
+              <div class="text-xs text-gray-500">国内生态优先于国际工具</div>
+            </div>
+            <div class="p-3 rounded-xl bg-white/[0.02] border border-white/5">
+              <div class="text-sm text-white font-medium mb-1">自定义仪表盘</div>
+              <div class="text-xs text-gray-500">拖拽 Widget, 用户自定义看板</div>
+            </div>
+            <div class="p-3 rounded-xl bg-white/[0.02] border border-white/5">
+              <div class="text-sm text-white font-medium mb-1">开放 API & Webhooks</div>
+              <div class="text-xs text-gray-500">REST/GraphQL API, 开发者生态</div>
+            </div>
+            <div class="p-3 rounded-xl bg-white/[0.02] border border-white/5">
+              <div class="text-sm text-white font-medium mb-1">发票/账单生成</div>
+              <div class="text-xs text-gray-500">基于计费时间自动生成发票</div>
+            </div>
+            <div class="p-3 rounded-xl bg-white/[0.02] border border-white/5">
+              <div class="text-sm text-white font-medium mb-1">活动粒度滑块</div>
+              <div class="text-xs text-gray-500">Rize 风格连续滑块, 替代离散模式</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<!-- ═══════ FOOTER ═══════ -->
+<footer class="py-16 px-6 border-t border-white/5">
+  <div class="max-w-6xl mx-auto text-center">
+    <div class="font-mono text-xs text-gray-600 space-y-1">
+      <div>Merize Project Audit Report &middot; Generated 2026-04-09</div>
+      <div>Based on full source code review, build verification & Rize.io competitive research</div>
+      <div class="text-glow/30 mt-3">13 Tasks Audited &middot; 11 Issues Found &middot; 22 Source Files Reviewed &middot; 5,800+ LOC</div>
+    </div>
+  </div>
+</footer>
+<script>
+gsap.registerPlugin(ScrollTrigger);
+
+// ── Progress bar ──
+gsap.to('#progress-bar', {
+  scaleX: 1,
+  ease: 'none',
+  scrollTrigger: { trigger: 'body', start: 'top top', end: 'bottom bottom', scrub: 0.3 }
+});
+
+// ── Reveal animations ──
+document.querySelectorAll('.reveal').forEach(el => {
+  gsap.fromTo(el,
+    { opacity: 0, y: 40 },
+    { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out',
+      scrollTrigger: { trigger: el, start: 'top 88%', toggleActions: 'play none none none' }
+    }
+  );
+});
+
+// ── Hero counter animation ──
+function animateCounter(id, target, duration) {
+  const el = document.getElementById(id);
+  gsap.to({ val: 0 }, {
+    val: target, duration: duration, ease: 'power2.out',
+    onUpdate: function() { el.textContent = Math.round(this.targets()[0].val); }
+  });
+}
+setTimeout(() => {
+  animateCounter('hero-done', 11, 2);
+  animateCounter('hero-partial', 2, 2);
+  animateCounter('hero-bugs', 3, 1.5);
+  animateCounter('hero-score', 72, 2.5);
+}, 400);
+
+// ── ECharts Theme ──
+const eTheme = {
+  bg: 'transparent',
+  text: '#8892a4',
+  line: 'rgba(0,240,255,0.06)',
+  glow: '#00f0ff',
+  neon: '#7b61ff',
+  lime: '#39ff14',
+  rose: '#ff3366',
+  amber: '#ffaa00',
+};
+const chartFont = 'JetBrains Mono, monospace';
+
+// ── Chart: Completion Donut ──
+const c1 = echarts.init(document.getElementById('chart-completion'), null, { renderer: 'svg' });
+c1.setOption({
+  title: { text: '完成率', left: 'center', top: 'center', textStyle: { color: '#fff', fontSize: 18, fontFamily: chartFont } },
+  series: [{
+    type: 'pie', radius: ['65%', '85%'], center: ['50%', '50%'],
+    avoidLabelOverlap: false, label: { show: false },
+    itemStyle: { borderRadius: 6, borderColor: '#0a0e1a', borderWidth: 3 },
+    data: [
+      { value: 11, name: '已完成', itemStyle: { color: new echarts.graphic.LinearGradient(0,0,1,1,[{offset:0,color:'#39ff14'},{offset:1,color:'#00f0ff'}]) } },
+      { value: 2, name: '部分完成', itemStyle: { color: '#ffaa00' } },
+      { value: 1, name: '未完成', itemStyle: { color: '#ff3366' } },
+    ],
+    emphasis: { itemStyle: { shadowBlur: 20, shadowColor: 'rgba(0,240,255,0.3)' } }
+  }],
+  tooltip: {
+    backgroundColor: '#151b30', borderColor: 'rgba(0,240,255,0.2)', textStyle: { color: '#fff', fontFamily: chartFont, fontSize: 12 },
+    formatter: p => `<b style="color:${p.color}">${p.name}</b><br/>${p.value} tasks (${((p.value/14)*100).toFixed(0)}%)`
+  }
+});
+
+// ── Chart: Task Status Bar ──
+const c2 = echarts.init(document.getElementById('chart-task-status'), null, { renderer: 'svg' });
+c2.setOption({
+  tooltip: { backgroundColor: '#151b30', borderColor: 'rgba(0,240,255,0.2)', textStyle: { color: '#fff', fontFamily: chartFont, fontSize: 12 } },
+  grid: { top: 30, bottom: 30, left: 50, right: 20 },
+  xAxis: { type: 'value', splitLine: { lineStyle: { color: eTheme.line } }, axisLabel: { color: eTheme.text, fontFamily: chartFont, fontSize: 10 } },
+  yAxis: {
+    type: 'category', axisLine: { show: false }, axisTick: { show: false },
+    axisLabel: { color: '#ccc', fontFamily: chartFont, fontSize: 10 },
+    data: ['EXTRA','T-13','T-12','T-11','T-10','T-09','T-08','T-07','T-06','T-05','T-04','T-03','T-02','T-01']
+  },
+  series: [{
+    type: 'bar', barWidth: 14, label: { show: false },
+    itemStyle: { borderRadius: [0, 4, 4, 0] },
+    data: [
+      { value: 100, itemStyle: { color: '#39ff14' } },
+      { value: 100, itemStyle: { color: '#39ff14' } },
+      { value: 100, itemStyle: { color: '#39ff14' } },
+      { value: 70, itemStyle: { color: '#ffaa00' } },
+      { value: 30, itemStyle: { color: '#ff3366' } },
+      { value: 100, itemStyle: { color: '#39ff14' } },
+      { value: 65, itemStyle: { color: '#ffaa00' } },
+      { value: 100, itemStyle: { color: '#39ff14' } },
+      { value: 100, itemStyle: { color: '#39ff14' } },
+      { value: 100, itemStyle: { color: '#39ff14' } },
+      { value: 100, itemStyle: { color: '#39ff14' } },
+      { value: 100, itemStyle: { color: '#39ff14' } },
+      { value: 100, itemStyle: { color: '#39ff14' } },
+      { value: 100, itemStyle: { color: '#39ff14' } },
+    ],
+    markLine: { silent: true, data: [{ xAxis: 100, lineStyle: { color: '#39ff1440', type: 'dashed' } }], label: { show: false }, symbol: 'none' }
+  }]
+});
+
+// ── Chart: Severity ──
+const c3 = echarts.init(document.getElementById('chart-severity'), null, { renderer: 'svg' });
+c3.setOption({
+  title: { text: '问题严重性分布', left: 'center', textStyle: { color: '#fff', fontSize: 14, fontFamily: chartFont, fontWeight: 500 } },
+  tooltip: { backgroundColor: '#151b30', borderColor: 'rgba(0,240,255,0.2)', textStyle: { color: '#fff', fontFamily: chartFont, fontSize: 12 } },
+  series: [{
+    type: 'pie', radius: ['45%', '75%'], center: ['50%', '55%'],
+    roseType: 'radius', label: { color: '#ccc', fontFamily: chartFont, fontSize: 11 },
+    itemStyle: { borderRadius: 6, borderColor: '#0a0e1a', borderWidth: 3 },
+    data: [
+      { value: 3, name: 'Critical', itemStyle: { color: '#ff3366' } },
+      { value: 3, name: 'High', itemStyle: { color: '#ffaa00' } },
+      { value: 5, name: 'Medium', itemStyle: { color: '#00f0ff' } },
+      { value: 2, name: 'Low', itemStyle: { color: '#39ff14' } },
+    ]
+  }]
+});
+
+// ── Chart: Bundle Size ──
+const c4 = echarts.init(document.getElementById('chart-bundle'), null, { renderer: 'svg' });
+c4.setOption({
+  title: { text: '包体积分析 (gzip KB)', left: 'center', textStyle: { color: '#fff', fontSize: 14, fontFamily: chartFont, fontWeight: 500 } },
+  tooltip: { backgroundColor: '#151b30', borderColor: 'rgba(0,240,255,0.2)', textStyle: { color: '#fff', fontFamily: chartFont, fontSize: 12 },
+    formatter: p => `<b>${p.name}</b><br/>gzip: ${p.value} KB` },
+  grid: { top: 40, bottom: 40, left: 110, right: 30 },
+  xAxis: { type: 'value', splitLine: { lineStyle: { color: eTheme.line } }, axisLabel: { color: eTheme.text, fontFamily: chartFont, fontSize: 10 }, name: 'gzip KB', nameTextStyle: { color: eTheme.text, fontFamily: chartFont, fontSize: 10 } },
+  yAxis: {
+    type: 'category', axisLine: { show: false }, axisTick: { show: false },
+    axisLabel: { color: '#ccc', fontFamily: chartFont, fontSize: 10 },
+    data: ['Team','Timeline','Habits','VirtualPet','Settings','FocusMode','Planner','Dashboard','index (core)','Statistics']
+  },
+  series: [{
+    type: 'bar', barWidth: 16,
+    itemStyle: { borderRadius: [0, 4, 4, 0] },
+    data: [
+      { value: 5.12, itemStyle: { color: '#39ff14' } },
+      { value: 4.67, itemStyle: { color: '#39ff14' } },
+      { value: 6.42, itemStyle: { color: '#39ff14' } },
+      { value: 7.55, itemStyle: { color: '#00f0ff' } },
+      { value: 7.06, itemStyle: { color: '#00f0ff' } },
+      { value: 8.76, itemStyle: { color: '#00f0ff' } },
+      { value: 7.45, itemStyle: { color: '#00f0ff' } },
+      { value: 11.48, itemStyle: { color: '#ffaa00' } },
+      { value: 108.10, itemStyle: { color: '#7b61ff' } },
+      { value: 119.24, itemStyle: { color: '#ff3366' } },
+    ],
+    markLine: {
+      silent: true,
+      data: [{ xAxis: 50, lineStyle: { color: '#ff336640', type: 'dashed' }, label: { show: true, formatter: '50KB threshold', color: '#ff336688', fontFamily: chartFont, fontSize: 10, position: 'insideEndTop' } }],
+      symbol: 'none'
+    }
+  }]
+});
+
+// ── Chart: Radar Comparison ──
+const c5 = echarts.init(document.getElementById('chart-radar'), null, { renderer: 'svg' });
+c5.setOption({
+  title: { text: '能力雷达 — Merize vs Rize', left: 'center', textStyle: { color: '#fff', fontSize: 14, fontFamily: chartFont, fontWeight: 500 } },
+  tooltip: { backgroundColor: '#151b30', borderColor: 'rgba(0,240,255,0.2)', textStyle: { color: '#fff', fontFamily: chartFont, fontSize: 12 } },
+  legend: { bottom: 0, textStyle: { color: '#8892a4', fontFamily: chartFont, fontSize: 11 }, data: ['Rize', 'Merize'] },
+  radar: {
+    indicator: [
+      { name: '自动追踪', max: 10 }, { name: 'AI 分类', max: 10 }, { name: '集成生态', max: 10 },
+      { name: '报告能力', max: 10 }, { name: '游戏化', max: 10 }, { name: '任务管理', max: 10 },
+      { name: '中文支持', max: 10 }, { name: '定价', max: 10 },
+    ],
+    axisName: { color: '#8892a4', fontFamily: chartFont, fontSize: 10 },
+    splitArea: { areaStyle: { color: ['rgba(0,240,255,0.02)', 'transparent'] } },
+    splitLine: { lineStyle: { color: 'rgba(0,240,255,0.06)' } },
+    axisLine: { lineStyle: { color: 'rgba(0,240,255,0.1)' } },
+  },
+  series: [{
+    type: 'radar',
+    data: [
+      {
+        value: [10, 10, 9, 9, 0, 2, 1, 5],
+        name: 'Rize',
+        lineStyle: { color: '#00f0ff', width: 2 },
+        areaStyle: { color: 'rgba(0,240,255,0.08)' },
+        itemStyle: { color: '#00f0ff' }
+      },
+      {
+        value: [7, 3, 0, 3, 9, 9, 10, 9],
+        name: 'Merize',
+        lineStyle: { color: '#ffaa00', width: 2 },
+        areaStyle: { color: 'rgba(255,170,0,0.08)' },
+        itemStyle: { color: '#ffaa00' }
+      }
+    ]
+  }]
+});
+
+// ── Chart: Gap Analysis ──
+const c6 = echarts.init(document.getElementById('chart-gap'), null, { renderer: 'svg' });
+c6.setOption({
+  title: { text: '功能差距分析', left: 'center', textStyle: { color: '#fff', fontSize: 14, fontFamily: chartFont, fontWeight: 500 } },
+  tooltip: { backgroundColor: '#151b30', borderColor: 'rgba(0,240,255,0.2)', textStyle: { color: '#fff', fontFamily: chartFont, fontSize: 12 } },
+  grid: { top: 40, bottom: 30, left: 100, right: 30 },
+  xAxis: { type: 'value', max: 10, splitLine: { lineStyle: { color: eTheme.line } }, axisLabel: { color: eTheme.text, fontFamily: chartFont, fontSize: 10 } },
+  yAxis: {
+    type: 'category', axisLine: { show: false }, axisTick: { show: false },
+    axisLabel: { color: '#ccc', fontFamily: chartFont, fontSize: 10 },
+    data: ['隐私控制','定价竞争力','习惯追踪','游戏化','任务管理','中文本地化','报告导出','集成生态','客户/项目分类','AI 分类']
+  },
+  series: [
+    { name: 'Rize', type: 'bar', barWidth: 10, stack: false, barGap: '20%', itemStyle: { color: '#00f0ff55', borderRadius: [0,3,3,0] },
+      data: [7, 5, 0, 0, 2, 1, 9, 9, 10, 10] },
+    { name: 'Merize', type: 'bar', barWidth: 10, itemStyle: { color: '#ffaa0099', borderRadius: [0,3,3,0] },
+      data: [9, 9, 9, 9, 9, 10, 3, 0, 0, 3] },
+  ],
+  legend: { bottom: 0, textStyle: { color: '#8892a4', fontFamily: chartFont, fontSize: 11 } }
+});
+
+// ── Resize handler ──
+window.addEventListener('resize', () => {
+  [c1,c2,c3,c4,c5,c6].forEach(c => c.resize());
+});
+</script>
+
+</body>
+</html>
