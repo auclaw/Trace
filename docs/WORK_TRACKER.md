@@ -425,3 +425,236 @@ grep -rn "placeholder\|TODO\|FIXME\|HACK" src/ --include="*.tsx" --include="*.ts
 # 4. 无硬编码中文新增 (i18n 完成后)
 # grep -rn "[\u4e00-\u9fff]" src/pages/ --include="*.tsx" | grep -v "import" | grep -v "//"
 ```
+
+---
+
+## Rize 功能参考 (截图实录) / Rize Feature Reference
+
+> 来源: 实际使用 Rize 桌面端截图 (2026-04-07/09)
+
+### Rize Productivity Coach (专注教练弹窗)
+- 专注结束后弹出 "Your focus session ended"
+- **Focus Score**: 90.0 (Very Good), Focus Time 39 min, Focus Time % 91.12
+- **Top Categories 分布**: Learning 38% (17 min), Code 21% (9 min), Productivity 21% (9 min)
+- **User Rating 自评**: 1-10 刻度, Not Focused → Very Focused
+- 两个 CTA 按钮: "Review Session" / "Start Break (5 min)"
+- **Merize 现状**: FocusCompletedModal 有时长/XP/金币, 缺少 Focus Score 详细分解和自评系统
+- **需补齐**: 添加 Focus Score 分解 (按类别) + 用户自评 1-10 刻度
+
+### Rize Tracking Rule 编辑器
+- 三种规则模式:
+  1. "Categorize app or website from your activity" (从活动中选)
+  2. "Categorize a website based on a custom URL" (自定义 URL)
+  3. "Categorize an app based on the name" (按应用名)
+- 下拉选择应用/网站
+- 关键词匹配标题 (Enter keywords to match on the title)
+- 类别选择: 预设 (Admin/Break/Browsing/Code) + "Create a new category" + "Exclude from tracking"
+- **Merize 现状**: Settings 中有追踪规则管理, 支持 app→category 映射, 但缺少关键词标题匹配和 URL 规则
+- **需补齐**: 支持标题关键词匹配规则, URL 匹配规则
+
+### Rize 顶栏状态条
+- 实时显示: "07:56 TIME SINCE LAST BREAK | 4 hr 20 min WORK HOURS | 54% PERCENT OF DAY"
+- **Merize 现状**: FocusStatusIndicator 显示专注计时, 但缺少 "距上次休息" 和 "当天工作百分比"
+- **需补齐**: 顶栏增加 TIME SINCE LAST BREAK 和 PERCENT OF DAY 指标
+
+### Rize 侧边栏完整菜单
+- Tracking (追踪)
+- Day Summary (每日总结)
+- Breaks (休息记录)
+- Meetings (会议)
+- Time Entries (时间条目)
+- Tracking Rules (追踪规则)
+- Discussion Review (讨论回顾)
+- Planning (计划)
+- Calendar (日历)
+- Data Export (数据导出)
+- **Merize 对比**: 基本覆盖, 但缺少独立的 Breaks 页面和 Time Entries (计费时间条目) 页面
+
+---
+
+## AI Agent 集成现状评估 / AI Agent Integration Status
+
+> README 声称 "原生支持 AI Agent 调用", 以下是实际代码审查结论:
+
+### 后端 API 现状 (backend/app.py — 2,485 行, 75 个路由)
+
+**已有 API 端点 (可供 Agent 调用)**:
+```
+GET  /api/activities/today          — 获取今日活动
+POST /api/ai/classify               — AI 分类活动
+POST /api/ai/reschedule             — AI 重排任务
+GET  /api/tasks                     — 列出任务
+POST /api/tasks/create              — 创建任务
+POST /api/tasks/<id>/update         — 更新任务
+POST /api/tasks/<id>/delete         — 删除任务
+POST /api/tasks/<id>/toggle         — 切换任务状态
+GET  /api/habits                    — 获取习惯
+POST /api/habits/create             — 创建习惯
+POST /api/habits/checkin            — 习惯打卡
+GET  /api/subscription/status       — 订阅状态
+```
+
+### Agent 集成差距评估
+
+| 维度 | README 声称 | 实际状态 | 评估 |
+|------|-------------|----------|------|
+| REST API 端点 | ✅ 标准化 API | ✅ 75 个路由已实现 | **基础具备** |
+| `get_time_summary(days)` | ✅ 声称支持 | ⚠️ 仅有 `/api/activities/today`, 缺少按天数汇总 | 需添加 |
+| `create_task(title)` | ✅ 声称支持 | ✅ `/api/tasks/create` 已实现 | OK |
+| `list_tasks(status)` | ✅ 声称支持 | ✅ `/api/tasks` 已实现 | OK |
+| `get_insights()` | ✅ 声称支持 | ❌ 无对应端点 | **缺失** |
+| `update_activity_category()` | ✅ 声称支持 | ✅ Tauri invoke 有, REST API 缺 | 需添加 REST |
+| MCP 协议适配 | "未来一键适配" | ❌ 无 MCP schema 定义 | **完全未实现** |
+| API 文档 | 隐含 | ❌ 无 OpenAPI/Swagger 文档 | **缺失** |
+| 认证机制 | JWT | ✅ Bearer Token 已实现 | OK |
+
+### 结论
+
+**现状**: 后端 REST API 基础结构存在 (75 个路由), 但**不构成"原生 AI Agent 支持"**:
+1. 缺少 `/api/insights` (获取洞察建议) 端点
+2. 缺少 `/api/activities/summary?days=N` (按天数汇总) 端点
+3. 缺少 OpenAPI/Swagger API 文档 (Agent 无法自动发现能力)
+4. 缺少 MCP (Model Context Protocol) schema 定义
+5. 前端 Tauri invoke 函数与 REST API 不完全对应
+
+**需要做的事 (添加为 TASK)**:
+
+#### TASK-P2-5: AI Agent 真正可用的 API 层
+1. 添加缺失的 REST 端点: `/api/activities/summary`, `/api/insights`, `/api/activities/<id>/category`
+2. 生成 OpenAPI 3.0 文档 (使用 flask-restx 或手写 YAML)
+3. 创建 `docs/API_REFERENCE.md` 供 Agent 开发者阅读
+4. 前端/后端 API 端点对齐 (Tauri invoke 和 REST API 保持一致)
+**验证标准**:
+- [ ] 外部 Agent 可通过 HTTP 调用完成: 获取时间汇总、创建任务、获取洞察
+- [ ] OpenAPI spec 文件存在且可被 Swagger UI 渲染
+- [ ] API 文档中列出所有可调用能力
+
+#### TASK-P3-7: MCP 协议适配
+1. 定义 MCP Tool schema (JSON 格式)
+2. 实现 MCP server 端点 (基于 Flask)
+3. 测试: 用 Claude/Cursor 等支持 MCP 的客户端连接
+**验证标准**:
+- [ ] MCP schema 文件存在
+- [ ] 支持 MCP 的 AI 客户端可自动发现 Merize 的能力
+
+---
+
+## 代码体积分析 & 精简建议 / Code Size Analysis
+
+### 当前代码规模
+
+| 分类 | 文件数 | 总行数 |
+|------|--------|--------|
+| 前端 src/ 全部 (tsx/ts) | ~40 | **20,831** |
+| 后端 backend/ | ~15 | ~4,500 |
+| **合计** | ~55 | **~25,300** |
+
+### 前端大文件排名 (Top 10)
+
+| 文件 | 行数 | 是否可精简 |
+|------|------|-----------|
+| Dashboard.tsx | 1,445 | ⚠️ 可拆分 (多个 section 组件) |
+| Settings.tsx | 1,429 | ⚠️ 可拆分 (按 tab 拆分) |
+| FocusMode.tsx | 1,116 | ⚠️ 可拆分 (计时器 + 屏蔽列表 + 休息提醒) |
+| Statistics.tsx | 961 | ⚠️ **必须拆分** (已在 P1 计划中) |
+| VirtualPet.tsx | 869 | 合理 (CSS 动画占比高) |
+| Onboarding.tsx | 853 | 合理 (7 步向导) |
+| Planner.tsx | 848 | ⚠️ 可拆分 (4 种视图各一个子组件) |
+| Habits.tsx | 811 | 边缘, 可考虑拆分 |
+| Timeline.tsx | 767 | 合理 |
+| dataService.ts | 737 | 合理 (demo 数据生成器占比) |
+
+### 可安全删除的废弃文件 (节省 ~4,163 行)
+
+| 文件 | 行数 | 原因 |
+|------|------|------|
+| FlowBlocks.tsx | 560 | 已合并到 FocusMode |
+| StylePreview.tsx | 593 | 开发调试页, 非产品功能 |
+| OrgAdmin.tsx | 345 | 遗留 API 页面, 功能已合并到 Team.tsx |
+| PrivacySettings.tsx | 247 | 遗留, 功能在 Settings 中 |
+| WeeklyApproval.tsx | 282 | 遗留, 功能在 Team.tsx 中 |
+| TeamDashboard.tsx | 355 | 遗留, 功能在 Team.tsx 中 |
+| TeamFocus.tsx | 390 | 遗留, 功能在 Team.tsx 中 |
+| utils/api.ts | 497 | Web demo 模式不使用, 可移到独立包 |
+| OnboardingTour.tsx | 289 | 旧版引导, 已被 Onboarding.tsx 替代 |
+| Calendar.tsx | 22 | 重定向, 无实际代码 |
+| AiSummary.tsx | 16 | 重定向 |
+| DeepWorkStats.tsx | 16 | 重定向 |
+| Login.tsx | 189 | Web demo 不需要登录 |
+| components/Timeline.tsx | 362 | 旧版组件, 已被 pages/Timeline.tsx 替代 |
+| **合计** | **~4,163** | **删除后前端从 20,831 → ~16,668 行 (减少 20%)** |
+
+### 精简结论
+
+**可以在保证功能完整的前提下减少约 20% 代码量**, 主要通过删除废弃/遗留文件。大文件拆分不会减少总行数, 但会显著提升可维护性。核心功能代码 (~16,000 行) 对于这个功能规模来说是合理的。
+
+---
+
+## 更新日志 / Changelog
+
+### 2026-04-09 (今天)
+
+**代码功能**:
+- ✅ `feat: TASK-01/03/04/05` — AI 追踪服务 + 每日总结 + 宠物对话 + 迷你挂件
+- ✅ `feat: TASK-02/06` — 计划 vs 实际对比 + Settings 增强
+- ✅ `feat: TASK-07/08/11` — Focus Score + 快捷操作 + Rize 功能 + 视觉打磨
+- ✅ `feat: TASK-08b + TASK-12` — 上下文切换统计 + 活动粒度 + 休息提醒 + 全面测试
+- ✅ `feat: 全局专注状态指示器 + 弹窗系统` — FocusStatusIndicator + 3 个弹窗
+- ✅ `feat: TASK-09` — 团队模块完整实现 (4 个子标签)
+- ✅ `feat: TASK-10` — i18n 基础 (react-i18next + 语言包)
+- ✅ `style: TASK-11b` — 视觉打磨 (CSS 变量 + 骨架屏组件 + 过渡动画)
+- ✅ `feat: TASK-13` — 宠物商店系统 (食物/装饰品/新宠物)
+- ✅ `fix: 安全漏洞修复` — vite→6.x, lodash→4.17.24+, picomatch→2.3.2+
+
+**文档 & 审计**:
+- ✅ 删除 9 个过时文档 (docs/legacy/ + aurum 快照)
+- ✅ 深度代码审计 — 发现 3 个 Critical + 3 个 High + 5 个 Medium 问题
+- ✅ 竞品深度研究 — Rize / TickTick / Things / Trello / Notion / Forest / Monday
+- ✅ 生成审计报告 (docs/AUDIT_REPORT_2026-04-09.html)
+- ✅ 重写 WORK_TRACKER.md — 按 P0-P3 优先级重新规划, 添加验证标准
+
+### 2026-04-08 (昨天)
+
+**代码功能**:
+- ✅ `feat: complete UI/UX redesign` — 暖色设计系统, CSS 变量驱动
+- ✅ `feat: comprehensive visual upgrade` — 所有页面视觉升级
+- ✅ `feat: major restructure` — 页面结构重组 + 新功能 + 设计文档
+
+---
+
+## 参考资源 / Reference Resources
+
+### Rize.io
+- **官网**: https://rize.io
+- **定价**: https://rize.io/pricing ($9.99/$14.99/$19.99 三档)
+- **文档**: https://docs.rize.io
+- **Changelog**: https://rize.io/changelog
+- **功能页**:
+  - 自动追踪: https://rize.io/features/automatic-time-tracking
+  - 效率工具: https://rize.io/features/productivity
+  - 计费报告: https://rize.io/features/billable-time-and-reporting
+  - 团队分析: https://rize.io/features/team-analytics
+  - 集成: https://rize.io/features/integrations
+  - 发票: https://rize.io/features/invoicing
+- **YouTube**: https://www.youtube.com/@RizeIO
+- **截图文件夹**: `merize uiux 截图/rize screenshots/` (16 张产品截图)
+
+### 竞品
+- **滴答清单 (TickTick)**: https://ticktick.com / https://dida365.com (¥3/月 Premium)
+- **Things 3**: https://culturedcode.com/things/ ($49.99 Mac 一次性)
+- **Trello**: https://trello.com ($5-10/人/月)
+- **Notion**: https://notion.so ($10-20/人/月)
+- **Forest (专注森林)**: https://www.forestapp.cc ($3.99 一次性)
+- **Monday.com**: https://monday.com ($9-19/人/月)
+
+### 设计参考
+- `DESIGN.md` — 设计令牌规范
+- `docs/PRODUCT_DESIGN.md` — 产品设计文档
+- `docs/VISUAL_DESIGN_RESEARCH.md` — 竞品视觉研究
+- `merize uiux 截图/` — UI/UX 参考截图集合
+
+### 技术参考
+- Tauri 2 文档: https://v2.tauri.app
+- react-i18next: https://react.i18next.com
+- Zustand: https://docs.pmnd.rs/zustand
+- ECharts (Statistics 页用): https://echarts.apache.org
