@@ -52,6 +52,7 @@ const DEFAULT_PET: Pet = {
   coins: 50,
   lastFed: new Date().toISOString(),
   lastInteracted: new Date().toISOString(),
+  decoration: '',
 }
 
 const DEFAULT_FOCUS: FocusSettings = {
@@ -116,6 +117,9 @@ export interface AppState {
   feedPet: () => void
   interactPet: () => void
   renamePet: (name: string) => void
+  setPetType: (type: string) => void
+  setPetDecoration: (decoration: string) => void
+  updatePetStats: (updates: Partial<Pet>) => void
 
   // UI State
   sidebarCollapsed: boolean
@@ -414,6 +418,21 @@ export const useAppStore = create<AppState>()((set, get) => ({
     const updated = dataService.updatePet({ name })
     set({ pet: updated })
     get().addToast('success', '重命名成功！')
+  },
+
+  setPetType: (type) => {
+    const updated = dataService.updatePet({ type })
+    set({ pet: updated })
+  },
+
+  setPetDecoration: (decoration) => {
+    const updated = dataService.updatePet({ decoration })
+    set({ pet: updated })
+  },
+
+  updatePetStats: (updates) => {
+    const updated = dataService.updatePet(updates)
+    set({ pet: updated })
   },
 
   // ── UI ──

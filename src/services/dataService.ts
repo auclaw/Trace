@@ -69,7 +69,7 @@ export interface FocusSession {
 
 export interface Pet {
   name: string;
-  type: 'cat' | 'dog' | 'rabbit';
+  type: string;
   level: number;
   xp: number;
   hunger: number;
@@ -77,6 +77,7 @@ export interface Pet {
   coins: number;
   lastFed: string;
   lastInteracted: string;
+  decoration: string;
 }
 
 export interface AppSettings {
@@ -411,6 +412,7 @@ function seedPet(): Pet {
     coins: 320,
     lastFed: new Date(now.getTime() - 3 * 3600000).toISOString(),
     lastInteracted: new Date(now.getTime() - 1 * 3600000).toISOString(),
+    decoration: '',
   };
 }
 

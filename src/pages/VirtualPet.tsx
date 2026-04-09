@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useAppStore } from '../store/useAppStore'
 import useTheme from '../hooks/useTheme'
 import { Button, Modal, Input, Progress } from '../components/ui'
+import PetShop from '../components/PetShop'
 
 // ─── Constants ───
 
@@ -374,6 +375,7 @@ export default function VirtualPet() {
   const [renameOpen, setRenameOpen] = useState(false)
   const [nameInput, setNameInput] = useState('')
   const [firstVisitChecked, setFirstVisitChecked] = useState(false)
+  const [shopOpen, setShopOpen] = useState(false)
   const animTimeout = useRef<ReturnType<typeof setTimeout>>()
 
   useEffect(() => {
@@ -513,6 +515,20 @@ export default function VirtualPet() {
             />
             <div className="relative">
               <PixelCat hunger={pet.hunger} mood={pet.mood} anim={anim} />
+              {pet.decoration && (
+                <span
+                  style={{
+                    position: 'absolute',
+                    top: -12,
+                    right: -8,
+                    fontSize: 22,
+                    pointerEvents: 'none',
+                    filter: 'drop-shadow(0 1px 2px rgba(44,24,16,0.3))',
+                  }}
+                >
+                  {pet.decoration}
+                </span>
+              )}
             </div>
           </div>
 
@@ -607,12 +623,12 @@ export default function VirtualPet() {
               摸摸
             </Button>
             <Button
-              variant="ghost"
+              variant="secondary"
               size="lg"
-              disabled
-              icon={<span className="text-lg">👗</span>}
+              onClick={() => setShopOpen(true)}
+              icon={<span className="text-lg">🛒</span>}
             >
-              换装 (即将推出)
+              商店
             </Button>
             {/* Coin badge */}
             <div
@@ -663,7 +679,7 @@ export default function VirtualPet() {
                 ['等级', <span className="metric-value" style={{ fontSize: '1.1rem' }}>{pet.level}</span>],
                 ['经验', <span className="text-[var(--color-text-primary)] font-semibold tabular-nums">{pet.xp} XP</span>],
                 ['金币', <span className="font-semibold tabular-nums" style={{ background: 'var(--color-gold-gradient)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{pet.coins}</span>],
-                ['类型', <span className="text-[var(--color-text-primary)] font-medium">🐱 猫咪</span>],
+                ['类型', <span className="text-[var(--color-text-primary)] font-medium">{pet.type === 'cat' ? '🐱 猫咪' : pet.type === 'bird' ? '🐦 蓝鸟' : pet.type === 'duck' ? '🐤 黄鸭' : pet.type === 'rabbit' ? '🐰 白兔' : pet.type === 'panda' ? '🐼 熊猫' : '🐱 猫咪'}</span>],
                 ['体力', <span className="text-[var(--color-text-primary)] font-semibold tabular-nums">{energy}/100</span>],
               ].map(([lbl, val], i) => (
                 <div key={i}>
@@ -800,6 +816,9 @@ export default function VirtualPet() {
           />
         </div>
       </Modal>
+
+      {/* ═══ Pet Shop Modal ═══ */}
+      <PetShop isOpen={shopOpen} onClose={() => setShopOpen(false)} />
     </div>
   )
 }
