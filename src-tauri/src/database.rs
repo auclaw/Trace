@@ -1,24 +1,22 @@
-"""
-SQLite database module for local data persistence
-- activities: 追踪活动记录
-- tasks: 计划任务
-- habits: 习惯追踪
-- focus_sessions: 专注会话
-- pet: 虚拟宠物数据
-- settings: 用户设置
-"""
+//! SQLite database module for local data persistence
+//! - activities: 追踪活动记录
+//! - tasks: 计划任务
+//! - habits: 习惯追踪
+//! - focus_sessions: 专注会话
+//! - pet: 虚拟宠物数据
+//! - settings: 用户设置
 
-use anyhow::{Result, anyhow};
 use serde::{Serialize, Deserialize};
-use tauri_plugin_sql::{DbPool, Migration};
+use tauri_plugin_sql::Migration;
 
 // Database migrations
 pub fn get_migrations() -> Vec<Migration> {
     vec![
         Migration {
             version: 1,
-            description: "Create core tables",
-            sql: r#"
+            description: "Create core tables ",
+            kind: tauri_plugin_sql::MigrationKind::Up,
+            sql: r###"
 -- Activities table - tracked window activities
 CREATE TABLE IF NOT EXISTS activities (
     id TEXT PRIMARY KEY,
@@ -45,7 +43,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     priority INTEGER DEFAULT 3,
     estimated_minutes INTEGER DEFAULT 0,
     actual_minutes REAL DEFAULT 0,
-    status TEXT DEFAULT 'pending',
+    status TEXT DEFAULT "pending",
     due_date TEXT,
     completed_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -95,8 +93,8 @@ CREATE TABLE IF NOT EXISTS focus_sessions (
 CREATE TABLE IF NOT EXISTS pets (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER DEFAULT 1 UNIQUE,
-    pet_type TEXT DEFAULT 'cat',
-    name TEXT DEFAULT 'Trace',
+    pet_type TEXT DEFAULT "cat",
+    name TEXT DEFAULT "Trace",
     level INTEGER DEFAULT 1,
     experience INTEGER DEFAULT 0,
     hunger INTEGER DEFAULT 100,
@@ -113,13 +111,13 @@ CREATE TABLE IF NOT EXISTS pets (
 CREATE TABLE IF NOT EXISTS settings (
     id INTEGER PRIMARY KEY DEFAULT 1,
     user_id INTEGER DEFAULT 1 UNIQUE,
-    theme TEXT DEFAULT 'light',
-    color_theme TEXT DEFAULT 'blue',
-    background_skin TEXT DEFAULT 'default',
+    theme TEXT DEFAULT "light",
+    color_theme TEXT DEFAULT "blue",
+    background_skin TEXT DEFAULT "default",
     daily_goal_minutes INTEGER DEFAULT 480,
-    language TEXT DEFAULT 'zh-CN',
+    language TEXT DEFAULT "zh-CN",
     ai_api_key TEXT,
-    ai_provider TEXT DEFAULT 'ernie',
+    ai_provider TEXT DEFAULT "ernie",
     auto_start_on_boot INTEGER DEFAULT 1,
     blocked_patterns TEXT, -- JSON array
     feature_flags TEXT, -- JSON object
@@ -150,7 +148,7 @@ CREATE TABLE IF NOT EXISTS blocked_patterns (
     id TEXT PRIMARY KEY,
     user_id INTEGER DEFAULT 1,
     pattern TEXT NOT NULL,
-    type TEXT NOT NULL, -- 'domain' or 'app'
+    type TEXT NOT NULL, -- domain or app
     enabled INTEGER DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -178,19 +176,19 @@ CREATE TABLE IF NOT EXISTS classification_overrides (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(user_id, app_name, title)
 );
-"#,
+"###,
             },
             Migration {
                 version: 2,
-                description: "Add default settings row",
-                sql: r#"
+                description: "Add default settings row ",
+                kind: tauri_plugin_sql::MigrationKind::Up,
+                sql: r###"
 INSERT OR IGNORE INTO settings (id, user_id) VALUES (1, 1);
 INSERT OR IGNORE INTO pets (id, user_id) VALUES (1, 1);
-"#,
+"###,
             },
         ]
     }
-}
 
 // Rust types for database rows
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -294,38 +292,43 @@ pub struct DbTimeBlock {
 }
 
 // Helper functions
-pub async fn init_default_data(pool: &DbPool) -> Result<()> {
-    // Check if settings exist
-    let mut conn = pool.acquire().await?;
-    let result: Result<Option<i32>, _> = sqlx::query_scalar!(
-        "SELECT id FROM settings WHERE id = 1"
-    )
-    .fetch_optional(&mut *conn)
-    .await;
-
-    if result.is_ok() && result.unwrap().is_none() {
-        // Insert default settings
-        sqlx::query!(
-            "INSERT INTO settings (id, user_id, theme, color_theme, background_skin, daily_goal_minutes, language, auto_start_on_boot) VALUES (1, 1, 'light', 'blue', 'default', 480, 'zh-CN', 1)"
-        )
-        .execute(&mut *conn)
-        .await?;
-    }
-
-    // Check if pet exists
-    let pet_result: Result<Option<i32>, _> = sqlx::query_scalar!(
-        "SELECT id FROM pets WHERE user_id = 1"
-    )
-    .fetch_optional(&mut *conn)
-    .await;
-
-    if pet_result.is_ok() && pet_result.unwrap().is_none() {
-        sqlx::query!(
-            "INSERT INTO pets (id, user_id, pet_type, name) VALUES (1, 1, 'cat', 'Trace')"
-        )
-        .execute(&mut *conn)
-        .await?;
-    }
-
-    Ok(())
-}
+// NOTE: Default data is already inserted by migration v2 (INSERT OR IGNORE)
+// pub async fn init_default_data(pool: &DbPool) -> Result<()> {
+//     // Check if settings exist
+//     let mut conn = pool.acquire().await?;
+//     let result: Result<Option<i32>, _> = sqlx::query_scalar!(
+//         "SELECT id FROM settings WHERE id = 1"
+//     )
+//     .fetch_optional(&mut *conn)
+//     .await;
+//
+//     if result.is_ok() && result.unwrap().is_none() {
+//         // Insert default settings
+//         sqlx::query!(
+//             r###"
+// INSERT INTO settings (id, user_id, theme, color_theme, background_skin, daily_goal_minutes, language, auto_start_on_boot) VALUES (1, 1, "light", "blue", "default", 480, "zh-CN", 1)
+// "###
+//         )
+//         .execute(&mut *conn)
+//         .await?;
+//     }
+//
+//     // Check if pet exists
+//     let pet_result: Result<Option<i32>, _> = sqlx::query_scalar!(
+//         "SELECT id FROM pets WHERE user_id = 1"
+//     )
+//     .fetch_optional(&mut *conn)
+//     .await;
+//
+//     if pet_result.is_ok() && pet_result.unwrap().is_none() {
+//         sqlx::query!(
+//             r###"
+// INSERT INTO pets (id, user_id, pet_type, name) VALUES (1, 1, "cat", "Trace")
+// "###
+//         )
+//         .execute(&mut *conn)
+//         .await?;
+//     }
+//
+//     Ok(())
+// }

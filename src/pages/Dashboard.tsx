@@ -18,19 +18,25 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
   rectSortingStrategy,
-  useSortable,
 } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
-import { Card, Modal, Button, Badge, EmptyState } from '../components/ui'
+import { Card, Button, EmptyState } from '../components/ui'
 import { SkeletonCard } from '../components/ui/Skeleton'
-import Input from '../components/ui/Input'
 import { useAppStore } from '../store/useAppStore'
-import type { Activity, ActivityCategory, TimeBlock } from '../services/dataService'
+import type { Activity, TimeBlock } from '../services/dataService'
 import useTheme from '../hooks/useTheme'
 import { CATEGORY_COLORS } from '../config/themes'
 import dataService from '../services/dataService'
 import DailySummary from '../components/DailySummary'
 import { trackingService } from '../services/trackingService'
+
+// Import split components
+import ActiveTrackingCard from '../components/Dashboard/ActiveTrackingCard'
+import DailyInsightsCard from '../components/Dashboard/DailyInsightsCard'
+import EditActivityModal from '../components/Dashboard/EditActivityModal'
+import QuickActions from '../components/Dashboard/QuickActions'
+import SortableWidget from '../components/Dashboard/SortableWidget'
+import TodayStatsCards from '../components/Dashboard/TodayStatsCards'
+import { TRANSITION_ALL } from '../components/Dashboard/constants'
 
 // ── Helpers ──
 
@@ -58,239 +64,6 @@ function greeting(t: (key: string) => string): string {
   if (h < 14) return t('dashboard.greeting.noon')
   if (h < 18) return t('dashboard.greeting.afternoon')
   return t('dashboard.greeting.evening')
-}
-
-const CATEGORIES: ActivityCategory[] = [
-  '开发', '工作', '学习', '会议', '休息', '娱乐', '运动', '阅读', '其他',
-]
-
-// ── Shared inline style constants ──
-
-const CARD_GRADIENT_BG = 'linear-gradient(135deg, #ffffff 0%, #fef8f0 100%)'
-const TRANSITION_ALL = 'all 200ms cubic-bezier(0.4, 0, 0.2, 1)'
-
-// ─── Sortable Widget Wrapper ───
-
-function SortableWidget({
-  id,
-  children,
-  isOverlay = false,
-}: {
-  id: string
-  children: React.ReactNode
-  isOverlay?: boolean
-}) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id })
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.3 : 1,
-    cursor: isDragging ? 'grabbing' : 'grab',
-    position: isOverlay ? 'fixed' as const : undefined,
-    zIndex: isOverlay ? 999 : undefined,
-    boxShadow: isDragging
-      ? '0 12px 32px rgba(0,0,0,0.15)'
-      : undefined,
-  }
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={`relative group rounded-2xl ${isDragging ? 'z-10' : ''}`}
-      {...attributes}
-      {...listeners}
-    >
-      {children}
-      {/* Drag handle indicator */}
-      <div
-        className="absolute top-2 right-2 opacity-0 group-hover:opacity-40 transition-opacity px-2 py-1 rounded-full bg-black/5 text-black dark:bg-white/10 dark:text-white"
-        style={{ fontSize: '10px' }}
-      >
-        ⋮⋮
-      </div>
-    </div>
-  )
-}
-
-// ── Circular progress ring with glow ──
-
-function ProgressRing({
-  value,
-  size = 88,
-  stroke = 7,
-  color,
-  onClick,
-  children,
-}: {
-  value: number
-  size?: number
-  stroke?: number
-  color: string
-  onClick?: () => void
-  children?: React.ReactNode
-}) {
-  const r = (size - stroke) / 2
-  const c = 2 * Math.PI * r
-  const clamped = Math.max(0, Math.min(100, value))
-  const offset = c - (clamped / 100) * c
-  return (
-    <div
-      className={`relative inline-flex items-center justify-center ${onClick ? 'cursor-pointer' : ''}`}
-      style={{ width: size, height: size }}
-      onClick={onClick}
-      role={onClick ? 'button' : undefined}
-      tabIndex={onClick ? 0 : undefined}
-      onKeyDown={onClick ? (e) => { if (e.key === 'Enter') onClick() } : undefined}
-    >
-      {/* Glow behind progress */}
-      <div
-        className="absolute inset-0 rounded-full blur-xl opacity-30"
-        style={{ background: color }}
-      />
-      <svg width={size} height={size} className="-rotate-90 relative z-10">
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          fill="none"
-          stroke="var(--color-border-subtle)"
-          strokeWidth={stroke}
-          opacity={0.15}
-        />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          fill="none"
-          stroke={color}
-          strokeWidth={stroke}
-          strokeDasharray={c}
-          strokeDashoffset={offset}
-          strokeLinecap="round"
-          className="transition-all duration-700 ease-out"
-          style={{ filter: `drop-shadow(0 2px 6px ${color}40)` }}
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
-        {children}
-      </div>
-    </div>
-  )
-}
-
-// ── Edit Activity Modal ──
-
-function EditActivityModal({
-  activity,
-  onClose,
-  onSave,
-  onDelete,
-}: {
-  activity: Activity
-  onClose: () => void
-  onSave: (id: string, updates: Partial<Activity>) => void
-  onDelete: (id: string) => void
-}) {
-  const { t } = useTranslation()
-  const [name, setName] = useState(activity.name)
-  const [category, setCategory] = useState<ActivityCategory>(activity.category)
-  const [startTime, setStartTime] = useState(activity.startTime.slice(0, 16))
-  const [endTime, setEndTime] = useState(activity.endTime.slice(0, 16))
-  const [confirmDelete, setConfirmDelete] = useState(false)
-
-  const handleSave = () => {
-    const start = new Date(startTime)
-    const end = new Date(endTime)
-    const duration = Math.round((end.getTime() - start.getTime()) / 60000)
-    onSave(activity.id, {
-      name,
-      category,
-      startTime: startTime + ':00',
-      endTime: endTime + ':00',
-      duration: Math.max(1, duration),
-    })
-    onClose()
-  }
-
-  return (
-    <Modal
-      isOpen
-      onClose={onClose}
-      title={t('dashboard.editActivity')}
-      footer={
-        <>
-          {confirmDelete ? (
-            <>
-              <span className="text-sm text-red-500 mr-auto">{t('dashboard.confirmDelete')}</span>
-              <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(false)}>{t('common.cancel')}</Button>
-              <Button variant="danger" size="sm" onClick={() => { onDelete(activity.id); onClose() }}>{t('common.delete')}</Button>
-            </>
-          ) : (
-            <>
-              <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(true)}>
-                {t('common.delete')}
-              </Button>
-              <div className="flex-1" />
-              <Button variant="secondary" size="sm" onClick={onClose}>{t('common.cancel')}</Button>
-              <Button size="sm" onClick={handleSave}>{t('common.save')}</Button>
-            </>
-          )}
-        </>
-      }
-    >
-      <div className="space-y-4">
-        <Input label={t('dashboard.activityName')} value={name} onChange={setName} placeholder={t('dashboard.activityName')} />
-        <div>
-          <label className="block text-[10px] font-medium text-[var(--color-text-muted)] mb-2">{t('dashboard.category')}</label>
-          <div className="flex flex-wrap gap-1.5">
-            {CATEGORIES.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setCategory(cat)}
-                className={[
-                  'px-2.5 py-1 text-xs rounded-full border transition-all cursor-pointer',
-                  cat === category
-                    ? 'border-[var(--color-accent)] bg-[var(--color-accent-soft)] text-[var(--color-accent)] font-medium'
-                    : 'border-[var(--color-border-subtle)]/50 text-[var(--color-text-secondary)] hover:border-[var(--color-border-subtle)]',
-                ].join(' ')}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-[10px] font-medium text-[var(--color-text-muted)] mb-1">{t('dashboard.startTime')}</label>
-            <input
-              type="datetime-local"
-              value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
-              className="w-full bg-transparent border-b-2 border-[var(--color-border-subtle)]/50 focus:border-[var(--color-accent)] text-[var(--color-text-primary)] text-sm py-2 outline-none"
-            />
-          </div>
-          <div>
-            <label className="block text-[10px] font-medium text-[var(--color-text-muted)] mb-1">{t('dashboard.endTime')}</label>
-            <input
-              type="datetime-local"
-              value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
-              className="w-full bg-transparent border-b-2 border-[var(--color-border-subtle)]/50 focus:border-[var(--color-accent)] text-[var(--color-text-primary)] text-sm py-2 outline-none"
-            />
-          </div>
-        </div>
-      </div>
-    </Modal>
-  )
 }
 
 // ── Main Dashboard ──
@@ -388,13 +161,6 @@ export default function Dashboard() {
   const totalHours = Math.floor(dailyStats.totalMinutes / 60)
   const totalMins = dailyStats.totalMinutes % 60
   const goalPct = Math.min(100, (dailyStats.totalMinutes / dailyGoalMinutes) * 100)
-
-  const topCategory = useMemo(() => {
-    const entries = Object.entries(dailyStats.categories)
-    if (entries.length === 0) return null
-    entries.sort((a, b) => b[1] - a[1])
-    return entries[0]
-  }, [dailyStats])
 
   // Streak: consecutive days with > 60 min of activity
   const streak = useMemo(() => {
@@ -612,52 +378,6 @@ export default function Dashboard() {
     [checkinHabit, today],
   )
 
-  // ── AI Productivity Coach ──
-  const [aiPersonalizedInsights, setAiPersonalizedInsights] = useState<string>('')
-  const [generatingInsights, setGeneratingInsights] = useState(false)
-  const addToast = useAppStore((s) => s.addToast)
-
-  const generatePersonalizedInsights = useCallback(async () => {
-    setGeneratingInsights(true)
-    try {
-      // Collect daily data
-      const focusSessions = dataService.getFocusSessions(today)
-      const completedFocusSessions = focusSessions.filter(s => s.completed && s.type === 'work')
-      const totalFocusMinutes = completedFocusSessions.reduce((sum, s) => sum + s.duration, 0)
-
-      // Convert categories to array format
-      const byCategory = Object.entries(dailyStats.categories).map(([category, minutes]) => ({
-        category,
-        minutes,
-      }))
-
-      const dailyData = {
-        total_minutes: dailyStats.totalMinutes,
-        by_category: byCategory,
-        focus_sessions: completedFocusSessions.length,
-        total_focus_minutes: totalFocusMinutes,
-      }
-
-      const response = await fetch('/api/ai/daily-insights', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ daily_data: dailyData }),
-      })
-
-      const data = await response.json()
-      if (data.code === 200) {
-        setAiPersonalizedInsights(data.data.insights)
-        addToast('success', t('dashboard.insightsGenerated'))
-      } else {
-        addToast('error', t('dashboard.insightsFailed'))
-      }
-    } catch (e) {
-      if (import.meta.env.DEV) console.error('Failed to generate insights:', e)
-      addToast('error', t('dashboard.insightsFailed'))
-    } finally {
-      setGeneratingInsights(false)
-    }
-  }, [dailyStats, today, addToast, t])
 
   // ── Render ──
 
@@ -734,332 +454,47 @@ export default function Dashboard() {
                   case 'trackingBanner':
                     return trackingService.isTracking() ? (
                       <SortableWidget key="trackingBanner" id="trackingBanner">
-                        <div
-                          className="flex items-center gap-3 rounded-2xl px-5 py-3"
-                          style={{
-                            background: currentTracking
-                              ? `linear-gradient(135deg, ${CATEGORY_COLORS[currentTracking.category] || 'var(--color-accent)'}12, ${CATEGORY_COLORS[currentTracking.category] || 'var(--color-accent)'}06)`
-                              : 'var(--color-bg-surface-2)',
-                            border: `1px solid ${currentTracking ? `${CATEGORY_COLORS[currentTracking.category] || 'var(--color-accent)'}30` : 'var(--color-border-subtle)'}`,
-                          }}
-                        >
-                          <span className="relative flex h-3 w-3">
-                            <span
-                              className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
-                              style={{ background: currentTracking ? CATEGORY_COLORS[currentTracking.category] || 'var(--color-accent)' : 'var(--color-accent)' }}
-                            />
-                            <span
-                              className="relative inline-flex rounded-full h-3 w-3"
-                              style={{ background: currentTracking ? CATEGORY_COLORS[currentTracking.category] || 'var(--color-accent)' : 'var(--color-accent)' }}
-                            />
-                          </span>
-                          {currentTracking ? (
-                            <div className="flex-1 min-w-0">
-                              <span className="text-[13px] font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                                {t('dashboard.tracking')}: {currentTracking.name}
-                              </span>
-                              <span className="text-[12px] ml-2" style={{ color: 'var(--color-text-muted)' }}>
-                                {fmtTime(currentTracking.startTime)} {t('dashboard.started')} · {currentTracking.category}
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="text-[13px]" style={{ color: 'var(--color-text-muted)' }}>
-                              {t('dashboard.trackingWaiting')}
-                            </span>
-                          )}
-                          <button
-                            onClick={() => navigate('/timeline')}
-                            className="text-[11px] px-2.5 py-1 rounded-full"
-                            style={{
-                              background: 'var(--color-accent-soft)',
-                              color: 'var(--color-accent)',
-                            }}
-                          >
-                            {t('nav.timeline')}
-                          </button>
-                        </div>
+                        <ActiveTrackingCard
+                          currentTracking={currentTracking}
+                          onNavigateToTimeline={() => navigate('/timeline')}
+                          fmtTime={fmtTime}
+                        />
                       </SortableWidget>
                     ) : null;
 
                   case 'quickActions':
                     return (
                       <SortableWidget key="quickActions" id="quickActions">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <button
-                            onClick={() => navigate('/focus')}
-                            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-[13px] font-medium cursor-pointer"
-                            style={{
-                              background: 'var(--color-accent)',
-                              color: '#fff',
-                              boxShadow: '0 2px 8px var(--color-accent-soft)',
-                              transition: TRANSITION_ALL,
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.transform = 'translateY(-1px)'
-                              e.currentTarget.style.boxShadow = '0 4px 14px var(--color-accent-soft)'
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.transform = 'translateY(0)'
-                              e.currentTarget.style.boxShadow = '0 2px 8px var(--color-accent-soft)'
-                            }}
-                          >
-                            <span style={{ fontSize: '14px' }}>&#9654;</span>
-                            {t('dashboard.startFocus')}
-                          </button>
-
-                          <button
-                            onClick={() => setShowQuickTask((v) => !v)}
-                            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-[13px] font-medium cursor-pointer"
-                            style={{
-                              background: 'var(--color-accent-soft)',
-                              color: 'var(--color-accent)',
-                              border: '1px solid var(--color-accent)',
-                              transition: TRANSITION_ALL,
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.transform = 'translateY(-1px)'
-                              e.currentTarget.style.background = 'var(--color-accent)'
-                              e.currentTarget.style.color = '#fff'
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.transform = 'translateY(0)'
-                              e.currentTarget.style.background = 'var(--color-accent-soft)'
-                              e.currentTarget.style.color = 'var(--color-accent)'
-                            }}
-                          >
-                            <span style={{ fontSize: '14px' }}>+</span>
-                            {t('dashboard.addTask')}
-                          </button>
-
-                          <button
-                            onClick={() => habitsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
-                            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-[13px] font-medium cursor-pointer"
-                            style={{
-                              background: 'var(--color-bg-surface-2)',
-                              color: 'var(--color-text-secondary)',
-                              border: '1px solid var(--color-border-subtle)',
-                              transition: TRANSITION_ALL,
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.transform = 'translateY(-1px)'
-                              e.currentTarget.style.borderColor = 'var(--color-accent)'
-                              e.currentTarget.style.color = 'var(--color-accent)'
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.transform = 'translateY(0)'
-                              e.currentTarget.style.borderColor = 'var(--color-border-subtle)'
-                              e.currentTarget.style.color = 'var(--color-text-secondary)'
-                            }}
-                          >
-                            <span style={{ fontSize: '14px' }}>&#10003;</span>
-                            {t('habits.checkin')}
-                          </button>
-
-                          {/* Inline quick task input */}
-                          {showQuickTask && (
-                            <div
-                              className="flex items-center gap-2 ml-2 px-3 py-1.5 rounded-full"
-                              style={{
-                                background: 'var(--color-bg-surface-1)',
-                                border: '1px solid var(--color-accent)',
-                                boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-                              }}
-                            >
-                              <input
-                                autoFocus
-                                type="text"
-                                value={quickTaskTitle}
-                                onChange={(e) => setQuickTaskTitle(e.target.value)}
-                                onKeyDown={(e) => { if (e.key === 'Enter') handleQuickAddTask(); if (e.key === 'Escape') setShowQuickTask(false) }}
-                                placeholder={t('dashboard.quickTaskPlaceholder')}
-                                className="bg-transparent outline-none text-[13px] w-48"
-                                style={{ color: 'var(--color-text-primary)' }}
-                              />
-                              <button
-                                onClick={handleQuickAddTask}
-                                className="text-[11px] px-2.5 py-0.5 rounded-full font-medium cursor-pointer"
-                                style={{ background: 'var(--color-accent)', color: '#fff' }}
-                              >
-                                {t('common.add')}
-                              </button>
-                            </div>
-                          )}
-                        </div>
+                        <QuickActions
+                          onStartFocus={() => navigate('/focus')}
+                          onToggleQuickTask={() => setShowQuickTask((v) => !v)}
+                          onFocusCheckinHabits={() => habitsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+                          showQuickTask={showQuickTask}
+                          quickTaskTitle={quickTaskTitle}
+                          onQuickTaskTitleChange={setQuickTaskTitle}
+                          onAddQuickTask={handleQuickAddTask}
+                        />
                       </SortableWidget>
                     );
 
                   case 'statsRow':
                     return (
                       <SortableWidget key="statsRow" id="statsRow">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                          {/* Focus Quality Score */}
-                          <div
-                            className="flex items-center gap-4 rounded-2xl cursor-pointer"
-                            onClick={() => navigate('/focus')}
-                            style={{
-                              background: CARD_GRADIENT_BG,
-                              border: '1px solid var(--color-border-subtle)',
-                              boxShadow: 'var(--shadow-card)',
-                              padding: '20px 24px',
-                              transition: TRANSITION_ALL,
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.boxShadow = 'var(--shadow-card-hover)'
-                              e.currentTarget.style.transform = 'translateY(-2px)'
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.boxShadow = 'var(--shadow-card)'
-                              e.currentTarget.style.transform = 'translateY(0)'
-                            }}
-                          >
-                            <div
-                              className="flex items-center justify-center w-[88px] h-[88px] rounded-2xl relative"
-                              style={{ background: `${focusScoreColor}12` }}
-                            >
-                              <span
-                                className="tabular-nums font-extrabold"
-                                style={{
-                                  fontSize: '2rem',
-                                  lineHeight: 1,
-                                  backgroundImage: focusScoreGradient,
-                                  WebkitBackgroundClip: 'text',
-                                  WebkitTextFillColor: 'transparent',
-                                  backgroundClip: 'text',
-                                  filter: `drop-shadow(0 2px 8px ${focusScoreColor}40)`,
-                                }}
-                              >
-                                {focusQualityScore}
-                              </span>
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-xs font-medium" style={{ color: 'var(--color-text-muted)' }}>{t('dashboard.focusQuality')}</p>
-                              <div className="flex items-center gap-1.5 mt-1">
-                                <div
-                                  className="h-1.5 w-12 rounded-full overflow-hidden"
-                                  style={{ background: 'var(--color-border-subtle)', opacity: 0.3 }}
-                                >
-                                  <div
-                                    className="h-full rounded-full"
-                                    style={{
-                                      width: `${focusQualityScore}%`,
-                                      background: focusScoreGradient,
-                                      transition: 'width 700ms ease-out',
-                                    }}
-                                  />
-                                </div>
-                                <span className="text-[10px]" style={{ color: focusScoreColor }}>
-                                  {focusQualityScore > 70 ? t('dashboard.focusQualityExcellent') : focusQualityScore >= 40 ? t('dashboard.focusQualityAverage') : t('dashboard.focusQualityNeedsImprovement')}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Focus time */}
-                          <div
-                            className="flex items-center gap-4 rounded-2xl cursor-pointer"
-                            onClick={() => navigate('/focus')}
-                            style={{
-                              background: CARD_GRADIENT_BG,
-                              border: '1px solid var(--color-border-subtle)',
-                              boxShadow: 'var(--shadow-card)',
-                              padding: '20px 24px',
-                              transition: TRANSITION_ALL,
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.boxShadow = 'var(--shadow-card-hover)'
-                              e.currentTarget.style.transform = 'translateY(-2px)'
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.boxShadow = 'var(--shadow-card)'
-                              e.currentTarget.style.transform = 'translateY(0)'
-                            }}
-                          >
-                            <ProgressRing value={goalPct} color={accentColor} onClick={() => navigate('/focus')}>
-                              <span className="metric-value" style={{ fontSize: '1.25rem' }}>
-                                {totalHours}:{String(totalMins).padStart(2, '0')}
-                              </span>
-                            </ProgressRing>
-                            <div className="min-w-0">
-                              <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{t('focus.title')}</p>
-                              <p className="text-sm font-semibold mt-0.5" style={{ color: 'var(--color-text-primary)' }}>
-                                {Math.round(goalPct)}% {t('dashboard.goal')}
-                              </p>
-                              <p className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>
-                                {t('dashboard.target')}: {fmtDuration(dailyGoalMinutes)}
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* Activity count */}
-                          <div
-                            className="flex items-center gap-4 rounded-2xl"
-                            style={{
-                              background: CARD_GRADIENT_BG,
-                              border: '1px solid var(--color-border-subtle)',
-                              boxShadow: 'var(--shadow-card)',
-                              padding: '20px 24px',
-                              transition: TRANSITION_ALL,
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.boxShadow = 'var(--shadow-card-hover)'
-                              e.currentTarget.style.transform = 'translateY(-2px)'
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.boxShadow = 'var(--shadow-card)'
-                              e.currentTarget.style.transform = 'translateY(0)'
-                            }}
-                          >
-                            <div
-                              className="flex items-center justify-center w-[88px] h-[88px] rounded-2xl"
-                              style={{ background: 'var(--color-accent-soft)' }}
-                            >
-                              <span className="metric-value">{dailyStats.activityCount}</span>
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{t('dashboard.activityCount')}</p>
-                              {topCategory && (
-                                <Badge variant="accent" className="mt-1">
-                                  {topCategory[0]} {fmtDuration(topCategory[1])}
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Streak */}
-                          <div
-                            className="flex items-center gap-4 rounded-2xl"
-                            style={{
-                              background: CARD_GRADIENT_BG,
-                              border: '1px solid var(--color-border-subtle)',
-                              boxShadow: 'var(--shadow-card)',
-                              padding: '20px 24px',
-                              transition: TRANSITION_ALL,
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.boxShadow = 'var(--shadow-card-hover)'
-                              e.currentTarget.style.transform = 'translateY(-2px)'
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.boxShadow = 'var(--shadow-card)'
-                              e.currentTarget.style.transform = 'translateY(0)'
-                            }}
-                          >
-                            <div
-                              className="flex items-center justify-center w-[88px] h-[88px] rounded-2xl text-3xl"
-                              style={{ background: streak > 0 ? 'rgba(239,68,68,0.1)' : 'var(--color-bg-surface-2)' }}
-                            >
-                              <span role="img" aria-label="fire">🔥</span>
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{t('dashboard.currentStreak')}</p>
-                              <p className="mt-0.5 tabular-nums">
-                                <span className="metric-value" style={{ fontSize: '1.75rem' }}>{streak}</span>
-                                <span className="text-sm font-normal ml-1" style={{ color: 'var(--color-text-muted)' }}>{t('common.days')}</span>
-                              </p>
-                              <p className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>{t('dashboard.streakHint')}</p>
-                            </div>
-                          </div>
-                        </div>
+                        <TodayStatsCards
+                          focusQualityScore={focusQualityScore}
+                          focusScoreColor={focusScoreColor}
+                          focusScoreGradient={focusScoreGradient}
+                          dailyGoalMinutes={dailyGoalMinutes}
+                          goalPct={goalPct}
+                          totalHours={totalHours}
+                          totalMins={totalMins}
+                          accentColor={accentColor}
+                          dailyStats={{
+                            activityCount: dailyStats.activityCount,
+                            totalMinutes: dailyStats.totalMinutes,
+                          }}
+                          streak={streak}
+                        />
                       </SortableWidget>
                     );
 
@@ -1300,79 +735,7 @@ export default function Dashboard() {
                           </div>
 
                           {/* AI Productivity Coach - Personalized Insights */}
-                          <div
-                            className="rounded-2xl overflow-hidden mt-4"
-                            style={{
-                              background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 50%, #bbf7d0 100%)',
-                              border: '1px solid var(--color-border-subtle)',
-                              boxShadow: 'var(--shadow-card)',
-                            }}
-                          >
-                            <div className="px-5 pt-4 pb-3 flex items-center gap-2">
-                              <span className="text-base" style={{ filter: 'drop-shadow(0 0 4px rgba(34, 197, 94, 0.4))' }}>🤖</span>
-                              <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                                {t('dashboard.productivityCoach')}
-                              </h3>
-                            </div>
-
-                            <div className="px-5 pb-5">
-                              {!aiPersonalizedInsights && !generatingInsights && (
-                                <div className="text-center py-4">
-                                  <p className="text-sm text-[var(--color-text-muted)] mb-4">
-                                    {t('dashboard.coachDescription')}
-                                  </p>
-                                  <Button
-                                    variant="primary"
-                                    size="sm"
-                                    onClick={generatePersonalizedInsights}
-                                    loading={generatingInsights}
-                                  >
-                                    {t('dashboard.generateInsights')}
-                                  </Button>
-                                </div>
-                              )}
-
-                              {generatingInsights && (
-                                <div className="text-center py-6">
-                                  <div className="animate-pulse space-y-2">
-                                    <div className="h-4 bg-green-200 rounded w-3/4 mx-auto"></div>
-                                    <div className="h-4 bg-green-100 rounded w-full"></div>
-                                    <div className="h-4 bg-green-100 rounded w-5/6 mx-auto"></div>
-                                  </div>
-                                  <p className="text-sm text-[var(--color-text-muted)] mt-3">
-                                    {t('dashboard.generatingInsights')}
-                                  </p>
-                                </div>
-                              )}
-
-                              {aiPersonalizedInsights && !generatingInsights && (
-                                <div className="mt-2">
-                                  <div
-                                    className="p-4 rounded-xl"
-                                    style={{
-                                      background: 'rgba(255, 255, 255, 0.6)',
-                                      backdropFilter: 'blur(8px)',
-                                      border: '1px solid rgba(255, 255, 255, 0.5)',
-                                    }}
-                                  >
-                                    <p className="text-sm leading-relaxed text-[var(--color-text-secondary)] whitespace-pre-line">
-                                      {aiPersonalizedInsights}
-                                    </p>
-                                  </div>
-                                  <div className="mt-3 text-center">
-                                    <Button
-                                      variant="secondary"
-                                      size="sm"
-                                      onClick={generatePersonalizedInsights}
-                                      loading={generatingInsights}
-                                    >
-                                      {t('dashboard.regenerate')}
-                                    </Button>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          </div>
+                          <DailyInsightsCard dailyStats={{ date: today, ...dailyStats }} today={today} />
                         </div>
                     </SortableWidget>
                   );

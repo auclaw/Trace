@@ -71,7 +71,7 @@ src/
 │   ├── DailySummary.tsx       # 每日总结弹窗 (620行)
 │   ├── PetDialogue.tsx        # 多邻国式宠物对话系统 (290行)
 │   ├── PetMiniWidget.tsx      # 宠物迷你浮动挂件 (354行)
-│   ├── PetShop.tsx            # 宠物商店弹窗（保留基础，商店延后 P3
+│   ├── PetShop.tsx            # 宠物商店弹窗（保留基础，商店延后 P3）
 │   ├── FocusStatusIndicator.tsx # 右上角全局专注状态指示器
 │   ├── FocusStartedModal.tsx  # 专注开始弹窗
 │   ├── FocusCompletedModal.tsx # 专注完成庆祝弹窗
@@ -85,7 +85,7 @@ src/
 │   ├── Habits.tsx             # 习惯追踪 (支持打卡，支持多次打卡提醒 → 811行)
 │   ├── Statistics.tsx         # 统计 ✓ 已拆分三个 tab 为子组件 (378行)
 │   ├── VirtualPet.tsx         # 虚拟宠物 (CSS 像素风, 可取名, 成长系统) (874行)
-│   ├── Settings.tsx           # 设置 (隐私级别/追踪规则/主题/模块/通知/语言) ✓ 未拆分 (2292行 → 需要拆分)
+│   ├── Settings.tsx           # 设置 (隐私级别/追踪规则/主题/模块/通知/语言) ✓ 已拆分 (2292 → 1777行)
 │   └── Team.tsx             # 团队模块 ✓ 代码保留但 UI 隐藏，延后 P4
 ```
 
@@ -135,7 +135,7 @@ src/
 
 ---
 
-## 🎯 V1.0 P0 - 最高优先级（必须完成才能上线
+## 🎯 V1.0 P0 - 最高优先级（必须完成才能上线）
 
 > V1.0 **只聚焦核心场景：** **自动时间追踪 + 手动修改**
 
@@ -152,14 +152,16 @@ src/
 
 ---
 
-## 🟠 P1 - 短期优化 (V1.0 之后
+## 🟠 P1 - 短期优化 (V1.0 之后)
 
 | Task | 优先级 | 描述 |
 |------|----------|------|
-| **3-1** | 高 | 拆分大文件：Dashboard.tsx (2021行) → 拆分 widgets 为独立组件；Settings.tsx (2292行) → 按 section 拆分；FocusMode.tsx (1133行) → 拆分计时器/设置/统计 | ✅ **已完成** - Dashboard and Settings split:
-  - Dashboard: 2021 → ~1400 lines, 7 new components in `src/components/Dashboard/`
-  - Settings: 2292 → 1777 lines, 4 new components in `src/components/Settings/`
-  - FocusMode remains 1133 lines (acceptable, under 1500) |
+| **3-1** | 高 | 拆分大文件 (Dashboard.tsx/Settings.tsx/FocusMode.tsx) | ✅ **已完成** |
+
+**拆分结果:**
+- Dashboard: 2021 → ~1400 lines, 7 new components in `src/components/Dashboard/`
+- Settings: 2292 → 1777 lines, 4 new components in `src/components/Settings/`
+- FocusMode: remains 1133 lines (acceptable, under 1500, no split needed)
 | **3-2** | 高 | 响应式适配，至少保证 1024px+ 桌面端正常显示 | ✅ 已完成 - already responsive |
 | **3-3** | 中 | CSV 导出活动数据导出（PDF 可以后做） | ✅ 已完成 - Settings already has full CSV/PDF export with custom date range |
 | **3-4** | 中 | 隐私政策页面 | ✅ **已完成** - 独立隐私政策页面已创建，Settings 添加链接，中英文翻译齐全 |
@@ -214,9 +216,9 @@ src/
 
 ## 商业模式注意事项
 
-**V1.0 交付范围总结
+**V1.0 交付范围总结**
 
-**只承诺：
+**只承诺：**
 - ✅ 原生 macOS/Windows 自动追踪窗口活动
 - ✅ 本地 SQLite 存储所有数据，用户掌控数据
 - ✅ 时间线可视化，可以手动修改/合并/拆分
@@ -227,11 +229,15 @@ src/
 - ✅ 虚拟宠物基础成长，游戏化激励
 - ✅ 专注模式 / 分心拦截
 
-**V1.0 **不**包含：
+**V1.0 不包含：**
 - ❌ 团队协作 / 多用户
 - ❌ 计费 / 发票
 - ❌ 日历同步
 - ❌ 第三方集成
+
+**分发方式：**
+- V1.0 initial release: Direct DMG download from official website (not App Store)
+- App icon and DMG background design needed for release
 
 ---
 
