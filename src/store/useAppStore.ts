@@ -31,6 +31,7 @@ const LS = {
   MODULES: 'merize-active-modules',
   FIRST_LAUNCH: 'merize-first-launch-done',
   FOCUS_SETTINGS: 'merize-focus-settings',
+  DASHBOARD_WIDGETS: 'merize-dashboard-widget-order',
 }
 
 function loadJSON<T>(key: string, fallback: T): T {
@@ -90,6 +91,7 @@ export interface AppState {
   addTask: (task: Omit<Task, 'id'>) => Task
   updateTask: (id: string, updates: Partial<Task>) => void
   deleteTask: (id: string) => void
+  reorderTasks: (newOrder: Task[]) => void
 
   // Habits
   habits: Habit[]
@@ -143,6 +145,10 @@ export interface AppState {
   // Daily stats helpers
   dailyGoalMinutes: number
   setDailyGoalMinutes: (minutes: number) => void
+
+  // Dashboard customizable widget order
+  dashboardWidgetOrder: string[]
+  setDashboardWidgetOrder: (order: string[]) => void
 }
 
 // ─── Store ───
@@ -227,6 +233,11 @@ export const useAppStore = create<AppState>()((set, get) => ({
     dataService.deleteTask(id)
     set((s) => ({ tasks: s.tasks.filter((t) => t.id !== id) }))
     get().addToast('info', '任务已删除')
+  },
+
+  reorderTasks: (newOrder: Task[]) => {
+    dataService.saveTasks(newOrder)
+    set({ tasks: newOrder })
   },
 
   // ── Habits ──
@@ -474,6 +485,21 @@ export const useAppStore = create<AppState>()((set, get) => ({
   setDailyGoalMinutes: (minutes) => {
     localStorage.setItem('merize-daily-goal', JSON.stringify(minutes))
     set({ dailyGoalMinutes: minutes })
+  },
+
+  // ── Dashboard customizable widget order ──
+  dashboardWidgetOrder: loadJSON<string[]>(LS.DASHBOARD_WIDGETS, [
+    'trackingBanner',
+    'quickActions',
+    'statsRow',
+    'planComparison',
+    'mainTimeline',
+    'sidebarWidgets',
+    'categoryBreakdown',
+  ]),
+  setDashboardWidgetOrder: (order) => {
+    localStorage.setItem(LS.DASHBOARD_WIDGETS, JSON.stringify(order))
+    set({ dashboardWidgetOrder: order })
   },
 
   // ── Init ──

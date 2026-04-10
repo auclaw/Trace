@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../store/useAppStore'
 import useTheme from '../hooks/useTheme'
 import { Button, Modal, Input, Progress } from '../components/ui'
@@ -6,15 +7,15 @@ import PetShop from '../components/PetShop'
 
 // ─── Constants ───
 
-const IDLE_MESSAGES = [
-  '今天天气真好呢～',
-  '主人在忙什么呀？',
-  '我打个盹儿...zzZ',
-  '好想出去玩～',
-  '专注的主人最帅啦！',
-  '要不要休息一下？',
-  '我最喜欢主人了！',
-  '喵～喵～',
+const IDLE_MESSAGE_KEYS = [
+  'pet.idle.1',
+  'pet.idle.2',
+  'pet.idle.3',
+  'pet.idle.4',
+  'pet.idle.5',
+  'pet.idle.6',
+  'pet.idle.7',
+  'pet.idle.8',
 ]
 
 const FEED_COST = 5
@@ -348,19 +349,21 @@ function hungerColor(v: number): string {
 
 // ─── Dialogue logic ───
 
-function getDialogue(hunger: number, mood: number, _name: string, anim: PetAnim | null, idleIdx: number): string {
-  if (anim === 'eating') return '谢谢！好好吃～'
-  if (anim === 'happy') return '今天效率好高！我好开心～'
-  if (hunger < 25) return '肚子好饿...能给我点吃的吗？'
-  if (mood < 25) return '你好像很久没休息了...要不要休息一下？'
-  if (anim === 'sleeping') return 'zzZ... zzZ...'
+function getDialogue(hunger: number, mood: number, _name: string, anim: PetAnim | null, idleIdx: number, t: (key: string) => string): string {
+  if (anim === 'eating') return t('pet.dialogue.eating')
+  if (anim === 'happy') return t('pet.dialogue.happy')
+  if (hunger < 25) return t('pet.dialogue.hungry')
+  if (mood < 25) return t('pet.dialogue.tired')
+  if (anim === 'sleeping') return t('pet.dialogue.sleeping')
   // idle rotation
-  return IDLE_MESSAGES[idleIdx % IDLE_MESSAGES.length]
+  const key = IDLE_MESSAGE_KEYS[idleIdx % IDLE_MESSAGE_KEYS.length]
+  return t(key)
 }
 
 // ─── Main Component ───
 
 export default function VirtualPet() {
+  const { t } = useTranslation()
   const { isDark } = useTheme()
   const pet = useAppStore((s) => s.pet)
   const loadPet = useAppStore((s) => s.loadPet)
@@ -440,16 +443,16 @@ export default function VirtualPet() {
   const xpToNext = pet.level * 100
 
   const dialogue = useMemo(
-    () => getDialogue(pet.hunger, pet.mood, pet.name, anim, idleIdx),
-    [pet.hunger, pet.mood, pet.name, anim, idleIdx],
+    () => getDialogue(pet.hunger, pet.mood, pet.name, anim, idleIdx, t),
+    [pet.hunger, pet.mood, pet.name, anim, idleIdx, t],
   )
 
   // Welcome message on first render
   const [welcomeShown, setWelcomeShown] = useState(false)
   const displayText = useMemo(() => {
-    if (!welcomeShown) return `欢迎回来，${pet.name}的主人！今天要一起努力哦～`
+    if (!welcomeShown) return t('pet.dialogue.welcome', { name: pet.name })
     return dialogue
-  }, [welcomeShown, pet.name, dialogue])
+  }, [welcomeShown, pet.name, dialogue, t])
 
   useEffect(() => {
     const t = setTimeout(() => setWelcomeShown(true), 5000)
@@ -466,10 +469,10 @@ export default function VirtualPet() {
       {/* Header */}
       <div>
         <h2 className="text-2xl font-bold text-[var(--color-text-primary)] mb-1">
-          效率宠物
+          {t('pet.title')}
         </h2>
         <p className="text-sm text-[var(--color-text-muted)]">
-          专注涨经验，喂食保饱食，和你的效率宠物一起成长
+          {t('pet.description')}
         </p>
       </div>
 
@@ -502,7 +505,7 @@ export default function VirtualPet() {
               cursor: 'pointer',
             }}
             onClick={handleTouch}
-            title="摸一摸宠物"
+            title={t('pet.petHint')}
           >
             {/* Soft glow */}
             <div
@@ -555,12 +558,12 @@ export default function VirtualPet() {
               </span>
             </span>
           </div>
-          <p className="text-xs text-[var(--color-text-muted)] mb-6">点击名字可重命名 | 点击宠物可摸摸</p>
+          <p className="text-xs text-[var(--color-text-muted)] mb-6">{t('pet.renameHint')}</p>
 
           {/* ═══ Stat Bars ═══ */}
           <div className="w-full max-w-md space-y-3 mb-6">
             <StatBar
-              label="饱食度"
+              label={t('pet.hunger')}
               icon="🍖"
               value={pet.hunger}
               max={100}
@@ -568,7 +571,7 @@ export default function VirtualPet() {
               bgTint={isDark ? 'var(--color-bg-surface-2)' : 'var(--color-success-soft)'}
             />
             <StatBar
-              label="心情"
+              label={t('pet.mood')}
               icon="💕"
               value={pet.mood}
               max={100}
@@ -576,7 +579,7 @@ export default function VirtualPet() {
               bgTint={isDark ? 'var(--color-bg-surface-2)' : 'rgba(236,72,153,0.06)'}
             />
             <StatBar
-              label="体力"
+              label={t('pet.xp energy')}
               icon="⚡"
               value={energy}
               max={100}
@@ -584,7 +587,7 @@ export default function VirtualPet() {
               bgTint={isDark ? 'var(--color-bg-surface-2)' : 'rgba(139,92,246,0.06)'}
             />
             <StatBar
-              label="升级进度"
+              label={t('pet.levelUp')}
               icon="✨"
               value={pet.xp}
               max={xpToNext}
@@ -603,7 +606,7 @@ export default function VirtualPet() {
               icon={<span className="text-lg">🍎</span>}
               className="shadow-[var(--shadow-accent)]"
             >
-              喂食 (-{FEED_COST}币)
+              {t('pet.feed', { cost: FEED_COST })}
             </Button>
             <Button
               variant="secondary"
@@ -612,7 +615,7 @@ export default function VirtualPet() {
               disabled={pet.mood >= 100 || energy < 8}
               icon={<span className="text-lg">🎾</span>}
             >
-              玩耍 (-8体力)
+              {t('pet.interact', { cost: 8 })}
             </Button>
             <Button
               variant="secondary"
@@ -620,7 +623,7 @@ export default function VirtualPet() {
               onClick={handleTouch}
               icon={<span className="text-lg">🤚</span>}
             >
-              摸摸
+              {t('pet.pet')}
             </Button>
             <Button
               variant="secondary"
@@ -628,7 +631,7 @@ export default function VirtualPet() {
               onClick={() => setShopOpen(true)}
               icon={<span className="text-lg">🛒</span>}
             >
-              商店
+              {t('pet.shop')}
             </Button>
             {/* Coin badge */}
             <div
@@ -672,15 +675,15 @@ export default function VirtualPet() {
             }}
           >
             <h4 className="font-semibold text-[var(--color-text-primary)] mb-4 text-sm flex items-center gap-2">
-              📊 统计信息
+              📊 {t('pet.statsTitle')}
             </h4>
             <div className="space-y-3 text-sm">
               {[
-                ['等级', <span className="metric-value" style={{ fontSize: '1.1rem' }}>{pet.level}</span>],
-                ['经验', <span className="text-[var(--color-text-primary)] font-semibold tabular-nums">{pet.xp} XP</span>],
-                ['金币', <span className="font-semibold tabular-nums" style={{ background: 'var(--color-gold-gradient)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{pet.coins}</span>],
-                ['类型', <span className="text-[var(--color-text-primary)] font-medium">{pet.type === 'cat' ? '🐱 猫咪' : pet.type === 'bird' ? '🐦 蓝鸟' : pet.type === 'duck' ? '🐤 黄鸭' : pet.type === 'rabbit' ? '🐰 白兔' : pet.type === 'panda' ? '🐼 熊猫' : '🐱 猫咪'}</span>],
-                ['体力', <span className="text-[var(--color-text-primary)] font-semibold tabular-nums">{energy}/100</span>],
+                [t('pet.level'), <span className="metric-value" style={{ fontSize: '1.1rem' }}>{pet.level}</span>],
+                [t('pet.xp'), <span className="text-[var(--color-text-primary)] font-semibold tabular-nums">{pet.xp} {t('pet.xpUnit')}</span>],
+                [t('pet.coins'), <span className="font-semibold tabular-nums" style={{ background: 'var(--color-gold-gradient)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{pet.coins}</span>],
+                [t('pet.type'), <span className="text-[var(--color-text-primary)] font-medium">{pet.type === 'cat' ? '🐱 ' + t('pet.types.cat') : pet.type === 'bird' ? '🐦 ' + t('pet.types.bird') : pet.type === 'duck' ? '🐤 ' + t('pet.types.duck') : pet.type === 'rabbit' ? '🐰 ' + t('pet.types.rabbit') : pet.type === 'panda' ? '🐼 ' + t('pet.types.panda') : '🐱 ' + t('pet.types.cat')}</span>],
+                [t('pet.energy'), <span className="text-[var(--color-text-primary)] font-semibold tabular-nums">{energy}/100</span>],
               ].map(([lbl, val], i) => (
                 <div key={i}>
                   {i > 0 && <div style={{ height: 1, background: 'var(--color-border-subtle)', marginBottom: 12 }} />}
@@ -704,17 +707,17 @@ export default function VirtualPet() {
             }}
           >
             <h4 className="font-semibold text-[var(--color-text-primary)] mb-4 text-sm flex items-center gap-2">
-              📖 成长规则
+              📖 {t('pet.rulesTitle')}
             </h4>
             <ul className="text-xs space-y-3 text-[var(--color-text-muted)] leading-relaxed">
               {[
-                { icon: '📈', bg: 'var(--color-accent-soft)', text: '每完成一轮专注 → +专注分钟数 XP' },
-                { icon: '💰', bg: 'rgba(255,213,79,0.15)', text: '每 5 分钟专注 → +1 金币' },
-                { icon: '🍎', bg: 'var(--color-success-soft)', text: `喂食消耗 ${FEED_COST} 金币 → +15 饱食 +5 心情` },
-                { icon: '🎾', bg: 'var(--color-info-soft)', text: '玩耍消耗 8 体力 → +10 心情' },
-                { icon: '🤚', bg: 'rgba(236,72,153,0.08)', text: '摸摸免费 → +3 心情' },
-                { icon: '⬆️', bg: 'var(--color-warning-soft)', text: '升级需要 等级 x 100 XP' },
-                { icon: '😴', bg: 'rgba(139,92,246,0.08)', text: '体力每小时自动恢复 10 点' },
+                { icon: '📈', bg: 'var(--color-accent-soft)', text: t('pet.rules.rule1') },
+                { icon: '💰', bg: 'rgba(255,213,79,0.15)', text: t('pet.rules.rule2') },
+                { icon: '🍎', bg: 'var(--color-success-soft)', text: t('pet.rules.rule3', { cost: FEED_COST }) },
+                { icon: '🎾', bg: 'var(--color-info-soft)', text: t('pet.rules.rule4') },
+                { icon: '🤚', bg: 'rgba(236,72,153,0.08)', text: t('pet.rules.rule5') },
+                { icon: '⬆️', bg: 'var(--color-warning-soft)', text: t('pet.rules.rule6') },
+                { icon: '😴', bg: 'rgba(139,92,246,0.08)', text: t('pet.rules.rule7') },
               ].map((r, i) => (
                 <li key={i} className="flex gap-2.5 items-start">
                   <span
@@ -744,7 +747,7 @@ export default function VirtualPet() {
           localStorage.setItem('merize-pet-named', '1')
           setNamingOpen(false)
         }}
-        title="给你的新宠物起个名字吧！"
+        title={t('pet.namingTitle')}
         size="sm"
         footer={
           <>
@@ -756,7 +759,7 @@ export default function VirtualPet() {
                 setNamingOpen(false)
               }}
             >
-              先用默认名
+              {t('pet.useDefault')}
             </Button>
             <Button
               variant="primary"
@@ -764,7 +767,7 @@ export default function VirtualPet() {
               onClick={handleNameSave}
               disabled={!nameInput.trim()}
             >
-              确定
+              {t('common.confirm')}
             </Button>
           </>
         }
@@ -774,13 +777,13 @@ export default function VirtualPet() {
             <PixelCat hunger={80} mood={80} anim="happy" />
           </div>
           <p className="text-sm text-[var(--color-text-muted)] mb-4">
-            一只可爱的像素猫咪来到了你身边！给它起个名字吧～
+            {t('pet.namingDesc')}
           </p>
           <Input
-            label="宠物名字"
+            label={t('pet.petNameLabel')}
             value={nameInput}
             onChange={setNameInput}
-            placeholder="例如：小橘、团子、咪咪..."
+            placeholder={t('pet.namePlaceholder')}
           />
         </div>
       </Modal>
@@ -789,12 +792,12 @@ export default function VirtualPet() {
       <Modal
         isOpen={renameOpen}
         onClose={() => setRenameOpen(false)}
-        title="重命名宠物"
+        title={t('pet.renameTitle')}
         size="sm"
         footer={
           <>
             <Button variant="ghost" size="sm" onClick={() => setRenameOpen(false)}>
-              取消
+              {t('common.cancel')}
             </Button>
             <Button
               variant="primary"
@@ -802,17 +805,17 @@ export default function VirtualPet() {
               onClick={handleNameSave}
               disabled={!nameInput.trim() || nameInput.trim() === pet.name}
             >
-              保存
+              {t('common.save')}
             </Button>
           </>
         }
       >
         <div style={{ padding: '0.5rem 0' }}>
           <Input
-            label="宠物名字"
+            label={t('pet.petNameLabel')}
             value={nameInput}
             onChange={setNameInput}
-            placeholder="给宠物起个名字吧"
+            placeholder={t('pet.renamePlaceholder')}
           />
         </div>
       </Modal>
@@ -826,6 +829,7 @@ export default function VirtualPet() {
 // ─── Mini Widget (for embedding in other pages) ───
 
 export function PetMiniWidget() {
+  const { t } = useTranslation()
   const pet = useAppStore((s) => s.pet)
   const loadPet = useAppStore((s) => s.loadPet)
 
@@ -834,12 +838,12 @@ export function PetMiniWidget() {
     injectKeyframes()
   }, [loadPet])
 
-  const idleMsg = IDLE_MESSAGES[Math.floor(Date.now() / 30000) % IDLE_MESSAGES.length]
+  const idleKey = IDLE_MESSAGE_KEYS[Math.floor(Date.now() / 30000) % IDLE_MESSAGE_KEYS.length]
   const msg = pet.hunger < 25
-    ? '好饿...'
+    ? t('pet.dialogue.hungryMini')
     : pet.mood < 25
-    ? '不开心...'
-    : idleMsg
+    ? t('pet.dialogue.unhappyMini')
+    : t(idleKey)
 
   return (
     <div

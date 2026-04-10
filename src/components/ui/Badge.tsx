@@ -9,9 +9,9 @@ interface BadgeProps {
 
 const variantStyles: Record<string, string> = {
   default: 'bg-[var(--color-bg-surface-2)] text-[var(--color-text-secondary)]',
-  success: 'bg-[var(--color-success)]/15 text-[var(--color-success)]',
-  warning: 'bg-orange-500/15 text-orange-500',
-  danger: 'bg-red-500/15 text-red-500',
+  success: 'bg-[var(--color-success-soft)] text-[var(--color-success)]',
+  warning: 'bg-[var(--color-warning-soft)] text-[var(--color-warning)]',
+  danger: 'bg-[var(--color-danger-soft)] text-[var(--color-danger)]',
   accent: 'bg-[var(--color-accent-soft)] text-[var(--color-accent)]',
 };
 

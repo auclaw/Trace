@@ -1,5 +1,7 @@
+import { useTranslation } from 'react-i18next'
 import { Modal } from './ui'
 import { useAppStore } from '../store/useAppStore'
+import type { AppState } from '../store/useAppStore'
 
 /**
  * Popup shown when the user achieves their daily focus goal.
@@ -18,11 +20,20 @@ export default function DailyGoalAchievedModal({
   totalMinutes,
   goalMinutes,
 }: DailyGoalAchievedModalProps) {
-  const pet = useAppStore((s) => s.pet)
+  const { t } = useTranslation()
+  const pet = useAppStore((s: AppState) => s.pet)
 
   const percentage = Math.round((totalMinutes / goalMinutes) * 100)
   const hours = Math.floor(totalMinutes / 60)
   const mins = totalMinutes % 60
+  const goalHours = Math.floor(goalMinutes / 60)
+
+  const formatTime = (h: number, m: number) => {
+    let result = ''
+    if (h > 0) result += `${h} ${t('common.hours')}`
+    if (m > 0) result += `${result ? ' ' : ''}${m} ${t('common.minutes')}`
+    return result
+  }
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="sm">
@@ -36,13 +47,13 @@ export default function DailyGoalAchievedModal({
             className="text-lg font-bold"
             style={{ color: 'var(--color-text-primary)' }}
           >
-            每日目标达成！
+            {t('popups.dailyGoalAchieved')}
           </h2>
           <p
             className="text-sm mt-1"
             style={{ color: 'var(--color-text-secondary)' }}
           >
-            你今天的努力得到了回报
+            {t('popups.dailyGoalAchievedHint')}
           </p>
         </div>
 
@@ -86,15 +97,15 @@ export default function DailyGoalAchievedModal({
           style={{ background: 'var(--color-bg-surface-2)' }}
         >
           <div className="flex justify-between items-center text-sm">
-            <span style={{ color: 'var(--color-text-secondary)' }}>今日工作时间</span>
+            <span style={{ color: 'var(--color-text-secondary)' }}>{t('dashboard.today')} {t('focus.totalFocusTime')}</span>
             <span className="font-bold" style={{ color: 'var(--color-text-primary)' }}>
-              {hours > 0 ? `${hours}小时` : ''}{mins > 0 ? `${mins}分钟` : ''}
+              {formatTime(hours, mins)}
             </span>
           </div>
           <div className="flex justify-between items-center text-sm mt-2">
-            <span style={{ color: 'var(--color-text-secondary)' }}>每日目标</span>
+            <span style={{ color: 'var(--color-text-secondary)' }}>{t('settings.dailyGoal')}</span>
             <span className="font-bold" style={{ color: 'var(--color-text-primary)' }}>
-              {Math.floor(goalMinutes / 60)}小时
+              {goalHours} {t('common.hours')}
             </span>
           </div>
         </div>
@@ -107,10 +118,10 @@ export default function DailyGoalAchievedModal({
           <span className="text-2xl">🐱</span>
           <div className="text-left">
             <p className="text-sm font-medium" style={{ color: 'var(--color-accent)' }}>
-              {pet.name} 为你骄傲！
+              {pet.name} {t('popups.proudOfYou')}
             </p>
             <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-              奖励金币 +10
+              {t('popups.rewardCoins')} +10
             </p>
           </div>
         </div>
@@ -124,7 +135,7 @@ export default function DailyGoalAchievedModal({
             boxShadow: '0 2px 8px var(--color-accent-soft)',
           }}
         >
-          太棒了！
+          {t('popups.great')}
         </button>
       </div>
     </Modal>

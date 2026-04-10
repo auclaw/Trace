@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo } from 'react'
 import { useAppStore } from '../store/useAppStore'
+import type { AppState } from '../store/useAppStore'
 import { Button, Modal } from './ui'
 
 // ─── Types & Data ───
@@ -82,11 +83,11 @@ interface PetShopProps {
 
 export default function PetShop({ isOpen, onClose }: PetShopProps) {
   const [tab, setTab] = useState<ShopTab>('food')
-  const pet = useAppStore((s) => s.pet)
-  const updatePetStats = useAppStore((s) => s.updatePetStats)
-  const setPetType = useAppStore((s) => s.setPetType)
-  const setPetDecoration = useAppStore((s) => s.setPetDecoration)
-  const addToast = useAppStore((s) => s.addToast)
+  const pet = useAppStore((s: AppState) => s.pet)
+  const updatePetStats = useAppStore((s: AppState) => s.updatePetStats)
+  const setPetType = useAppStore((s: AppState) => s.setPetType)
+  const setPetDecoration = useAppStore((s: AppState) => s.setPetDecoration)
+  const addToast = useAppStore((s: AppState) => s.addToast)
 
   const [ownedDecorations, setOwnedDecorations] = useState<string[]>(() =>
     loadOwned(LS_DECORATIONS, [])

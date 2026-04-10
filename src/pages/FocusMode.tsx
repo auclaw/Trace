@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Button, Badge, Input, Modal, EmptyState } from '../components/ui'
 import { useAppStore } from '../store/useAppStore'
 import useTheme from '../hooks/useTheme'
@@ -28,10 +29,10 @@ function formatTime(iso: string): string {
 // ── Constants ──
 
 const STATE_LABELS: Record<string, string> = {
-  idle: '准备就绪',
-  working: '专注中',
-  break: '休息中',
-  longBreak: '长休息',
+  idle: 'focus.ready',
+  working: 'focus.working',
+  break: 'focus.break',
+  longBreak: 'focus.longBreak',
 }
 
 const RING_RADIUS = 90
@@ -50,10 +51,10 @@ const MOTIVATIONAL_MSGS = [
 ]
 
 const AMBIENT_SOUNDS = [
-  { id: 'none', label: '无声', icon: '🔇' },
-  { id: 'white-noise', label: '白噪音', icon: '📻' },
-  { id: 'rain', label: '雨声', icon: '🌧️' },
-  { id: 'cafe', label: '咖啡厅', icon: '☕' },
+  { id: 'none', labelKey: 'focus.none', icon: '🔇' },
+  { id: 'white-noise', labelKey: 'focus.whiteNoise', icon: '📻' },
+  { id: 'rain', labelKey: 'focus.rain', icon: '🌧️' },
+  { id: 'cafe', labelKey: 'focus.cafe', icon: '☕' },
 ] as const
 
 const LS_AMBIENT_KEY = 'merize-ambient-sound'
@@ -126,10 +127,10 @@ function defaultSites(): BlockedSite[] {
   ]
 }
 
-const SCHEDULE_OPTIONS: { value: ScheduleMode; label: string; desc: string }[] = [
-  { value: 'focus', label: '专注时屏蔽', desc: '仅在专注模式激活期间屏蔽' },
-  { value: 'always', label: '始终屏蔽', desc: '无论是否在专注模式都会屏蔽' },
-  { value: 'custom', label: '自定义时间', desc: '设定每日自动屏蔽时间段（桌面端）' },
+const SCHEDULE_OPTIONS: { value: ScheduleMode; labelKey: string; descKey: string }[] = [
+  { value: 'focus', labelKey: 'focus.focusOnly', descKey: 'focus.focusOnlyDesc' },
+  { value: 'always', labelKey: 'focus.always', descKey: 'focus.alwaysDesc' },
+  { value: 'custom', labelKey: 'focus.custom', descKey: 'focus.customDesc' },
 ]
 
 // ══════════════════════════════════════════════════
@@ -137,6 +138,7 @@ const SCHEDULE_OPTIONS: { value: ScheduleMode; label: string; desc: string }[] =
 // ══════════════════════════════════════════════════
 
 export default function FocusMode() {
+  const { t } = useTranslation()
   const { accentColor } = useTheme()
 
   // ── Store ──
@@ -367,13 +369,13 @@ export default function FocusMode() {
             className={`focus-tab ${activeTab === 'timer' ? 'active' : ''}`}
             onClick={() => setActiveTab('timer')}
           >
-            专注计时器
+            {t('focus.timer')}
           </button>
           <button
             className={`focus-tab ${activeTab === 'shield' ? 'active' : ''}`}
             onClick={() => setActiveTab('shield')}
           >
-            专注屏蔽
+            {t('focus.shield')}
             {isBlocking && (
               <span
                 className="inline-block ml-1.5 w-2 h-2 rounded-full"
@@ -404,18 +406,18 @@ export default function FocusMode() {
               >
                 <span style={{ fontSize: 24 }}>🧘</span>
                 <p className="text-[14px] font-semibold text-[var(--color-text-primary)] mt-1">
-                  休息中...
+                  {t('focus.break')}...
                 </p>
                 <p className="text-2xl font-bold tabular-nums text-[var(--color-text-primary)] mt-1">
                   {formatMM_SS(breakTimeLeft)}
                 </p>
-                <p className="text-[12px] text-[var(--color-text-muted)] mt-1">放松一下，闭目养神</p>
+                <p className="text-[12px] text-[var(--color-text-muted)] mt-1">{t('focus.breakHint')}</p>
                 <button
                   onClick={() => { setBreakTimerActive(false); setBreakTimeLeft(5 * 60); startFocus() }}
                   className="mt-3 px-4 py-1.5 rounded-full text-[12px] font-medium transition-all"
                   style={{ background: 'var(--color-bg-surface-2)', color: 'var(--color-text-secondary)', border: '1px solid var(--color-border-subtle)' }}
                 >
-                  跳过休息，继续专注
+                  {t('focus.skipBreak')}
                 </button>
               </div>
             )}
@@ -466,7 +468,7 @@ export default function FocusMode() {
                     className="mt-2 text-[var(--color-text-muted)]"
                     style={{ fontSize: 11, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.18em' }}
                   >
-                    {STATE_LABELS[focusState]}
+                    {t(STATE_LABELS[focusState])}
                   </span>
                   {/* Session dots */}
                   <div className="flex items-center gap-1.5 mt-3">
@@ -489,24 +491,24 @@ export default function FocusMode() {
             <div className="flex items-center gap-3 mb-6">
               {!isActive && (
                 <Button size="lg" onClick={startFocus} className="!h-14 !px-10 !text-base !rounded-full focus-btn-start">
-                  开始专注
+                  {t('focus.start')}
                 </Button>
               )}
               {isActive && !isBreak && (
-                <Button size="md" variant="secondary" onClick={pauseFocus} className="active:!scale-95">暂停</Button>
+                <Button size="md" variant="secondary" onClick={pauseFocus} className="active:!scale-95">{t('focus.pause')}</Button>
               )}
               {isBreak && (
-                <Button size="md" variant="ghost" onClick={skipBreak} className="active:!scale-95">跳过休息</Button>
+                <Button size="md" variant="ghost" onClick={skipBreak} className="active:!scale-95">{t('focus.skipBreak')}</Button>
               )}
               {isActive && (
-                <Button size="md" variant="secondary" onClick={resetFocus} className="active:!scale-95">重置</Button>
+                <Button size="md" variant="secondary" onClick={resetFocus} className="active:!scale-95">{t('focus.reset')}</Button>
               )}
             </div>
 
             {/* ── Ambient sounds ── */}
             <div className="flex items-center gap-2 mb-5">
               <span className="text-[10px] text-[var(--color-text-muted)] uppercase mr-1" style={{ letterSpacing: '0.1em' }}>
-                环境音
+                {t('focus.ambientSound')}
               </span>
               {AMBIENT_SOUNDS.map((s) => (
                 <button
@@ -514,7 +516,7 @@ export default function FocusMode() {
                   className={`ambient-chip ${ambientSound === s.id ? 'active' : ''}`}
                   onClick={() => handleAmbientChange(ambientSound === s.id ? null : s.id)}
                 >
-                  {s.icon} {s.label}
+                  {s.icon} {t(s.labelKey)}
                   {ambientSound === s.id && s.id !== 'none' && ' ♪'}
                 </button>
               ))}
@@ -526,7 +528,7 @@ export default function FocusMode() {
               className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors mb-5 cursor-pointer"
               style={{ letterSpacing: '0.08em', textTransform: 'uppercase' }}
             >
-              {showSettings ? '收起设置' : '调整设置'}
+              {showSettings ? t('focus.collapseSettings') : t('focus.expandSettings')}
             </button>
 
             {/* ── Settings Panel ── */}
@@ -539,11 +541,12 @@ export default function FocusMode() {
                   boxShadow: 'var(--shadow-lg, 0 8px 30px rgba(0,0,0,0.12))',
                 }}
               >
+                <h3 className="text-sm font-semibold mb-3">{t('focus.settings')}</h3>
                 <div className="grid grid-cols-2 gap-x-5 gap-y-4">
-                  <SliderSetting label="工作时长" value={focusSettings.workMinutes} min={15} max={60} step={5} unit="分钟" onChange={(v) => updateFocusSettings({ workMinutes: v })} />
-                  <SliderSetting label="休息时长" value={focusSettings.breakMinutes} min={3} max={15} step={1} unit="分钟" onChange={(v) => updateFocusSettings({ breakMinutes: v })} />
-                  <SliderSetting label="长休息时长" value={focusSettings.longBreakMinutes} min={10} max={30} step={5} unit="分钟" onChange={(v) => updateFocusSettings({ longBreakMinutes: v })} />
-                  <SliderSetting label="长休息间隔" value={focusSettings.longBreakInterval} min={2} max={8} step={1} unit="轮" onChange={(v) => updateFocusSettings({ longBreakInterval: v })} />
+                  <SliderSetting label={t('focus.workMinutes')} value={focusSettings.workMinutes} min={15} max={60} step={5} unit={t('common.minutes')} onChange={(v) => updateFocusSettings({ workMinutes: v })} />
+                  <SliderSetting label={t('focus.breakMinutes')} value={focusSettings.breakMinutes} min={3} max={15} step={1} unit={t('common.minutes')} onChange={(v) => updateFocusSettings({ breakMinutes: v })} />
+                  <SliderSetting label={t('focus.longBreakMinutes')} value={focusSettings.longBreakMinutes} min={10} max={30} step={5} unit={t('common.minutes')} onChange={(v) => updateFocusSettings({ longBreakMinutes: v })} />
+                  <SliderSetting label={t('focus.longBreakInterval')} value={focusSettings.longBreakInterval} min={2} max={8} step={1} unit={t('focus.sessions')} onChange={(v) => updateFocusSettings({ longBreakInterval: v })} />
                 </div>
               </div>
             )}
@@ -553,12 +556,12 @@ export default function FocusMode() {
               <div className="flex items-center gap-6 mb-4 text-center">
                 <div>
                   <span className="text-2xl font-bold text-[var(--color-text-primary)]">{todaySessions.length}</span>
-                  <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5 uppercase" style={{ letterSpacing: '0.1em' }}>完成番茄</p>
+                  <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5 uppercase" style={{ letterSpacing: '0.1em' }}>{t('focus.completedSessions')}</p>
                 </div>
                 <div style={{ width: 1, height: 28, background: 'var(--color-border-subtle)' }} />
                 <div>
                   <span className="text-2xl font-bold text-[var(--color-text-primary)]">{totalFocusToday}</span>
-                  <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5 uppercase" style={{ letterSpacing: '0.1em' }}>专注分钟</p>
+                  <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5 uppercase" style={{ letterSpacing: '0.1em' }}>{t('focus.totalFocusTime')}</p>
                 </div>
               </div>
             )}
@@ -570,7 +573,7 @@ export default function FocusMode() {
                   className="text-[var(--color-text-muted)] mb-2"
                   style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.14em' }}
                 >
-                  今日记录
+                  {t('focus.todaysSessions')}
                 </h3>
                 <div className="flex gap-2 overflow-x-auto pb-2 focus-hide-scrollbar">
                   {todaySessions.map((s) => (
@@ -584,7 +587,7 @@ export default function FocusMode() {
                       }}
                     >
                       <span className="text-[10px] text-[var(--color-text-muted)]">{formatTime(s.startTime)}</span>
-                      <span className="text-xs font-semibold text-[var(--color-text-primary)] mt-0.5">{s.duration}分钟</span>
+                      <span className="text-xs font-semibold text-[var(--color-text-primary)] mt-0.5">{s.duration}{t('common.minutes')}</span>
                     </div>
                   ))}
                 </div>
@@ -593,8 +596,8 @@ export default function FocusMode() {
               !isActive && (
                 <EmptyState
                   icon="🍅"
-                  title="今天还没有专注记录"
-                  description="点击「开始专注」来记录你的第一个番茄钟"
+                  title={t('focus.noFocusToday')}
+                  description={t('focus.noFocusTodayHint')}
                   className="w-full max-w-md"
                 />
               )
@@ -605,16 +608,16 @@ export default function FocusMode() {
             {/* ── Header ── */}
             <div className="flex items-start justify-between">
               <div>
-                <h2 className="text-2xl font-bold text-[var(--color-text-primary)] mb-1">专注屏蔽</h2>
+                <h2 className="text-2xl font-bold text-[var(--color-text-primary)] mb-1">{t('focus.shield')}</h2>
                 <p className="text-sm text-[var(--color-text-muted)]">
-                  专注时自动屏蔽分心网站，帮你进入并保持心流状态
+                  {t('focus.shieldDescription')}
                 </p>
               </div>
               <button className="fb-add-btn" onClick={() => setAddOpen(true)}>
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                   <path d="M7 1v12M1 7h12" />
                 </svg>
-                添加
+                {t('focus.addSite')}
               </button>
             </div>
 
@@ -636,10 +639,10 @@ export default function FocusMode() {
                   </div>
                   <div>
                     <p className="text-base font-semibold text-[var(--color-text-primary)]">
-                      {isBlocking ? '屏蔽中' : '未激活'}
+                      {isBlocking ? t('focus.blocking') : t('focus.inactive')}
                     </p>
                     <p className="text-sm text-[var(--color-text-muted)]">
-                      {isBlocking ? `正在屏蔽 ${enabledCount} 个网站` : '开始专注后自动激活屏蔽'}
+                      {isBlocking ? t('focus.blockingCount', { count: enabledCount }) : t('focus.activateOnFocusStart')}
                     </p>
                   </div>
                 </div>
@@ -647,15 +650,15 @@ export default function FocusMode() {
                   <div className="flex gap-4" style={{ marginRight: 8 }}>
                     <div className="text-center">
                       <span className="fb-metric-value text-xl">{enabledCount}</span>
-                      <p className="text-xs text-[var(--color-text-muted)] mt-0.5">已启用</p>
+                      <p className="text-xs text-[var(--color-text-muted)] mt-0.5">{t('focus.enabled')}</p>
                     </div>
                     <div className="text-center">
                       <span className="fb-metric-value text-xl">{todaySessions.length}</span>
-                      <p className="text-xs text-[var(--color-text-muted)] mt-0.5">今日屏蔽</p>
+                      <p className="text-xs text-[var(--color-text-muted)] mt-0.5">{t('focus.blockedToday')}</p>
                     </div>
                     <div className="text-center">
                       <span className="fb-metric-value text-xl">{totalFocusToday}</span>
-                      <p className="text-xs text-[var(--color-text-muted)] mt-0.5">节省分钟</p>
+                      <p className="text-xs text-[var(--color-text-muted)] mt-0.5">{t('focus.minutesSaved')}</p>
                     </div>
                   </div>
                   <Badge variant={isBlocking ? 'success' : 'default'} size="md">
@@ -669,9 +672,9 @@ export default function FocusMode() {
             <div className="fb-warm-card p-5">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
-                  屏蔽列表
+                  {t('focus.blockedSites')}
                   <span className="ml-2 text-xs font-normal text-[var(--color-text-muted)]">
-                    {enabledCount}/{sites.length} 已启用
+                    {enabledCount}/{sites.length} {t('focus.enabled').toLowerCase()}
                   </span>
                 </h3>
               </div>
@@ -679,11 +682,11 @@ export default function FocusMode() {
               {sites.length === 0 ? (
                 <div className="py-10 text-center">
                   <div className="text-5xl mb-3" style={{ filter: 'drop-shadow(0 4px 8px rgba(44, 24, 16, 0.1))' }}>🛡️</div>
-                  <h4 className="text-base font-semibold text-[var(--color-text-primary)] mb-1">暂无屏蔽规则</h4>
+                  <h4 className="text-base font-semibold text-[var(--color-text-primary)] mb-1">{t('focus.noBlockRules')}</h4>
                   <p className="text-sm text-[var(--color-text-muted)] mb-4">
-                    添加让你分心的网站，专注模式下会自动屏蔽它们。
+                    {t('focus.noBlockRulesHint')}
                   </p>
-                  <button className="fb-add-btn" onClick={() => setAddOpen(true)}>添加网站</button>
+                  <button className="fb-add-btn" onClick={() => setAddOpen(true)}>{t('focus.addSite')}</button>
                 </div>
               ) : (
                 <div>
@@ -738,7 +741,7 @@ export default function FocusMode() {
 
             {/* ── Schedule ── */}
             <div className="fb-warm-card p-5">
-              <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-4">屏蔽时机</h3>
+              <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-4">{t('focus.scheduleMode')}</h3>
               <div className="space-y-2">
                 {SCHEDULE_OPTIONS.map((opt) => {
                   const selected = schedule === opt.value
@@ -755,8 +758,8 @@ export default function FocusMode() {
                         <div className="fb-radio-inner" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-[var(--color-text-primary)]">{opt.label}</p>
-                        <p className="text-xs text-[var(--color-text-muted)]">{opt.desc}</p>
+                        <p className="text-sm font-medium text-[var(--color-text-primary)]">{t(opt.labelKey)}</p>
+                        <p className="text-xs text-[var(--color-text-muted)]">{t(opt.descKey)}</p>
                       </div>
                     </button>
                   )
@@ -773,7 +776,7 @@ export default function FocusMode() {
               }}
             >
               <p className="text-xs text-[var(--color-text-muted)]">
-                网站屏蔽功能在桌面端应用中通过系统级 DNS 拦截实现。Web 演示版仅展示配置界面。
+                {t('focus.desktopNote')}
               </p>
             </div>
           </div>
@@ -784,27 +787,27 @@ export default function FocusMode() {
       <Modal
         isOpen={addOpen}
         onClose={() => { setAddOpen(false); setNewDomain('') }}
-        title="添加屏蔽网站"
+        title={t('focus.addBlockedSite')}
         size="sm"
         footer={
           <>
             <Button variant="ghost" size="sm" onClick={() => { setAddOpen(false); setNewDomain('') }}>
-              取消
+              {t('common.cancel')}
             </Button>
             <Button variant="primary" size="sm" onClick={handleAdd} disabled={!newDomain.trim()}>
-              添加
+              {t('common.add')}
             </Button>
           </>
         }
       >
         <Input
-          label="网站域名"
+          label={t('focus.domain')}
           value={newDomain}
           onChange={setNewDomain}
-          placeholder="例如：weibo.com"
+          placeholder={t('focus.domainPlaceholder')}
         />
         <p className="text-xs text-[var(--color-text-muted)] mt-2">
-          不需要输入 http:// 或 www.，会自动清理。
+          {t('focus.domainHint')}
         </p>
       </Modal>
 
@@ -812,7 +815,7 @@ export default function FocusMode() {
       <Modal
         isOpen={showBreakReminderModal || showUrgentBreakReminderModal}
         onClose={handleContinueFocus}
-        title={showUrgentBreakReminderModal ? '⚠️ 紧急休息提醒' : '☕ 休息一下吧！'}
+        title={showUrgentBreakReminderModal ? t('focus.urgentBreakReminder') : t('focus.breakReminder')}
         size="sm"
       >
         <div className="text-center py-2">
@@ -833,7 +836,7 @@ export default function FocusMode() {
             className="text-base font-semibold mb-2"
             style={{ color: 'var(--color-text-primary)' }}
           >
-            休息一下吧！你已经专注了 {Math.floor(continuousFocusSeconds / 60)} 分钟
+            {t('focus.breakReminderText', { minutes: Math.floor(continuousFocusSeconds / 60) })}
           </p>
 
           {/* Pet dialogue integration */}
@@ -856,7 +859,7 @@ export default function FocusMode() {
                 color: 'var(--color-error, #ef4444)',
               }}
             >
-              长时间不休息会降低专注力和效率，强烈建议休息！
+              {t('focus.urgentBreakWarning')}
             </p>
           )}
 
@@ -867,7 +870,7 @@ export default function FocusMode() {
               onClick={handleTakeBreak}
               className="!w-full !rounded-xl"
             >
-              🧘 休息5分钟
+              🧘 {t('focus.takeBreak', { minutes: 5 })}
             </Button>
             <Button
               variant="secondary"
@@ -875,7 +878,7 @@ export default function FocusMode() {
               onClick={handleContinueFocus}
               className="!w-full !rounded-xl"
             >
-              💪 继续专注
+              💪 {t('focus.continueWorking')}
             </Button>
             <Button
               variant="ghost"
@@ -883,7 +886,7 @@ export default function FocusMode() {
               onClick={handleEndSession}
               className="!w-full !rounded-xl"
             >
-              结束专注
+              {t('focus.endSession')}
             </Button>
           </div>
         </div>

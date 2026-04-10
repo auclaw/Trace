@@ -1,14 +1,15 @@
 import { useState } from 'react'
 import { useAppStore } from '../store/useAppStore'
+import type { AppState } from '../store/useAppStore'
 import { colorThemeConfigs } from '../config/themes'
 import type { ColorTheme } from '../config/themes'
 
 const THEME_KEYS = Object.keys(colorThemeConfigs) as ColorTheme[]
 
 export default function ThemeSelector() {
-  const currentColorTheme = useAppStore((s) => s.colorTheme)
-  const setColorTheme = useAppStore((s) => s.setColorTheme)
-  const completeFirstLaunch = useAppStore((s) => s.completeFirstLaunch)
+  const currentColorTheme = useAppStore((s: AppState) => s.colorTheme)
+  const setColorTheme = useAppStore((s: AppState) => s.setColorTheme)
+  const completeFirstLaunch = useAppStore((s: AppState) => s.completeFirstLaunch)
   const [selected, setSelected] = useState<ColorTheme>(currentColorTheme)
 
   const handleSelect = (theme: ColorTheme) => {

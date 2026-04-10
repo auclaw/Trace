@@ -1,7 +1,18 @@
 import React, { useMemo } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import {
+  LayoutDashboard,
+  Clock,
+  ClipboardList,
+  Target,
+  CheckCircle2,
+  LineChart,
+  Cat,
+  Settings,
+} from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
+import type { AppState, Activity } from '../store/useAppStore'
 
 interface NavItem {
   key: string
@@ -13,32 +24,30 @@ interface NavItem {
 
 const ALL_NAV_ITEMS: NavItem[] = [
   { key: 'dashboard', i18nKey: 'nav.dashboard', path: '/', end: true,
-    icon: <span className="text-[16px] leading-none">📊</span> },
+    icon: <LayoutDashboard size={16} strokeWidth={2} /> },
   { key: 'timeline', i18nKey: 'nav.timeline', path: '/timeline',
-    icon: <span className="text-[16px] leading-none">⏱️</span> },
+    icon: <Clock size={16} strokeWidth={2} /> },
   { key: 'planner', i18nKey: 'nav.planner', path: '/planner',
-    icon: <span className="text-[16px] leading-none">📋</span> },
+    icon: <ClipboardList size={16} strokeWidth={2} /> },
   { key: 'focus', i18nKey: 'nav.focus', path: '/focus',
-    icon: <span className="text-[16px] leading-none">🎯</span> },
+    icon: <Target size={16} strokeWidth={2} /> },
   { key: 'habits', i18nKey: 'nav.habits', path: '/habits',
-    icon: <span className="text-[16px] leading-none">✅</span> },
+    icon: <CheckCircle2 size={16} strokeWidth={2} /> },
   { key: 'statistics', i18nKey: 'nav.statistics', path: '/statistics',
-    icon: <span className="text-[16px] leading-none">📈</span> },
+    icon: <LineChart size={16} strokeWidth={2} /> },
   { key: 'pet', i18nKey: 'nav.pet', path: '/pet',
-    icon: <span className="text-[16px] leading-none">🐱</span> },
-  { key: 'team', i18nKey: 'nav.team', path: '/team',
-    icon: <span className="text-[16px] leading-none">👥</span> },
+    icon: <Cat size={16} strokeWidth={2} /> },
   { key: 'settings', i18nKey: 'nav.settings', path: '/settings',
-    icon: <span className="text-[16px] leading-none">⚙️</span> },
+    icon: <Settings size={16} strokeWidth={2} /> },
 ]
 
 /* ── Sidebar ── */
 export default function Sidebar() {
   const { t } = useTranslation()
-  const activeModules = useAppStore((s) => s.activeModules)
-  const sidebarCollapsed = useAppStore((s) => s.sidebarCollapsed)
-  const toggleSidebar = useAppStore((s) => s.toggleSidebar)
-  const activities = useAppStore((s) => s.activities)
+  const activeModules = useAppStore((s: AppState) => s.activeModules)
+  const sidebarCollapsed = useAppStore((s: AppState) => s.sidebarCollapsed)
+  const toggleSidebar = useAppStore((s: AppState) => s.toggleSidebar)
+  const activities = useAppStore((s: AppState) => s.activities)
   const location = useLocation()
 
   const visibleItems = useMemo(
@@ -47,7 +56,7 @@ export default function Sidebar() {
   )
 
   const todayMinutes = useMemo(
-    () => activities.reduce((sum, a) => sum + (a.duration || 0), 0),
+    () => activities.reduce((sum: number, a: Activity) => sum + (a.duration || 0), 0),
     [activities],
   )
 

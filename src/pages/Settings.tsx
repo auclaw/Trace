@@ -1,9 +1,12 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { changeLanguage, getCurrentLanguage } from '../i18n'
 import { useAppStore } from '../store/useAppStore'
 import useTheme from '../hooks/useTheme'
 import dataService from '../services/dataService'
 import { trackingService } from '../services/trackingService'
+import { getSettings, saveSettings } from '../utils/api'
+import type { Settings as AiSettings } from '../utils/tracking'
 import type { PrivacyLevel, TrackingRule } from '../services/trackingService'
 import type { ActivityCategory } from '../services/dataService'
 import { Card, Button, Badge } from '../components/ui'
@@ -16,14 +19,14 @@ import type { ColorTheme, BackgroundSkin } from '../config/themes'
 
 /* ── Module display names ── */
 const MODULE_LABELS: Record<string, string> = {
-  dashboard: '仪表盘',
-  timeline: '时间线',
-  planner: '计划',
-  focus: '专注',
-  habits: '习惯',
-  statistics: '统计',
-  pet: '宠物',
-  settings: '设置',
+  dashboard: 'nav.dashboard',
+  timeline: 'nav.timeline',
+  planner: 'nav.planner',
+  focus: 'nav.focus',
+  habits: 'nav.habits',
+  statistics: 'nav.statistics',
+  pet: 'nav.pet',
+  settings: 'nav.settings',
 }
 
 /* ── Fade-in animation keyframes (injected once) ── */
@@ -226,6 +229,7 @@ function NumberField({
    ══════════════════════════════════════════════════ */
 
 export default function Settings() {
+  const { t } = useTranslation()
   const { isDark, colorTheme, backgroundSkin } = useTheme()
 
   const setTheme = useAppStore((s) => s.setTheme)
@@ -240,6 +244,39 @@ export default function Settings() {
   const addToast = useAppStore((s) => s.addToast)
 
   const [exporting, setExporting] = useState(false)
+  const [aiSettings, setAiSettings] = useState<AiSettings>({
+    aiApiKey: '',
+    aiProvider: 'ernie',
+    autoStartOnBoot: true,
+    ignoredApplications: [],
+  })
+  const [savingAiSettings, setSavingAiSettings] = useState(false)
+
+  // Load AI settings on mount
+  useEffect(() => {
+    const loadAiSettings = async () => {
+      try {
+        const settings = await getSettings()
+        setAiSettings(settings)
+      } catch (e) {
+        if (import.meta.env.DEV) console.error('Failed to load settings:', e)
+      }
+    }
+    loadAiSettings()
+  }, [])
+
+  const handleSaveAiSettings = async () => {
+    setSavingAiSettings(true)
+    try {
+      await saveSettings(aiSettings)
+      addToast('success', t('settings.aiSettingsSaved'))
+    } catch (e) {
+      if (import.meta.env.DEV) console.error('Failed to save AI settings:', e)
+      addToast('error', t('settings.aiSettingsSaveFailed'))
+    } finally {
+      setSavingAiSettings(false)
+    }
+  }
 
   /* ── Privacy level ── */
   const [privacyLevel, setPrivacyLevel] = useState<PrivacyLevel>(
@@ -460,13 +497,13 @@ export default function Settings() {
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
-      addToast('success', 'JSON 导出成功')
+      addToast('success', t('settings.exportJSON') + ' ' + t('common.success'))
     } catch {
-      addToast('error', '导出失败')
+      addToast('error', t('settings.exportJSON') + ' ' + t('common.error'))
     } finally {
       setExporting(false)
     }
-  }, [addToast])
+  }, [addToast, t])
 
   /* ── Export CSV ── */
   const exportCSV = useCallback(() => {
@@ -495,13 +532,113 @@ export default function Settings() {
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
-      addToast('success', 'CSV 导出成功')
+      addToast('success', t('settings.exportCSV') + ' ' + t('common.success'))
     } catch {
-      addToast('error', '导出失败')
+      addToast('error', t('settings.exportCSV') + ' ' + t('common.error'))
     } finally {
       setExporting(false)
     }
-  }, [addToast])
+  }, [addToast, t])
+
+  /* ── Export PDF ── */
+  const exportPDF = useCallback(() => {
+    setExporting(true)
+    try {
+      import('jspdf').then(({ jsPDF }) => {
+        const activities = dataService.getActivities()
+        const today = new Date().toISOString().slice(0, 10)
+
+        // Calculate statistics
+        const totalMinutes = activities.reduce((sum, a) => sum + a.duration, 0)
+        const categoryTotals: Record<string, number> = {}
+        activities.forEach((a) => {
+          if (a.category) {
+            categoryTotals[a.category] = (categoryTotals[a.category] || 0) + a.duration
+          }
+        })
+
+        const doc = new jsPDF()
+        const pageWidth = doc.internal.pageSize.getWidth()
+        const pageHeight = doc.internal.pageSize.getHeight()
+        const margin = 14
+
+        // Title
+        doc.setFontSize(18)
+        doc.setFont('helvetica', 'bold')
+        doc.text(t('settings.exportPDFTitle'), margin, 20)
+
+        doc.setFontSize(10)
+        doc.setFont('helvetica', 'normal')
+        doc.text(`${t('common.date')}: ${today}`, margin, 28)
+        doc.text(`${t('statistics.totalHours')}: ${(totalMinutes / 60).toFixed(1)}h`, margin, 34)
+        doc.text(`${t('dashboard.activityCount')}: ${activities.length}`, margin, 40)
+
+        let yPos = 50
+
+        // Category summary
+        if (Object.keys(categoryTotals).length > 0) {
+          doc.setFontSize(12)
+          doc.setFont('helvetica', 'bold')
+          doc.text(t('statistics.categoryBreakdown'), margin, yPos)
+          yPos += 8
+
+          Object.entries(categoryTotals)
+            .sort((a, b) => b[1] - a[1])
+            .forEach(([cat, mins]) => {
+              if (yPos > pageHeight - 20) {
+                doc.addPage()
+                yPos = margin
+              }
+              doc.setFontSize(9)
+              doc.setFont('helvetica', 'normal')
+              const hours = (mins / 60).toFixed(1)
+              doc.text(`${cat}: ${hours}h (${mins} ${t('common.minutes')})`, margin + 2, yPos)
+              yPos += 6
+            })
+
+          yPos += 10
+        }
+
+        // Activity list
+        if (activities.length > 0) {
+          doc.setFontSize(12)
+          doc.setFont('helvetica', 'bold')
+          doc.text(`${t('dashboard.activityCount')}:`, margin, yPos)
+          yPos += 8
+
+          activities
+            .sort((a, b) => a.startTime.localeCompare(b.startTime))
+            .forEach((a) => {
+              if (yPos > pageHeight - 10) {
+                doc.addPage()
+                yPos = margin
+              }
+              doc.setFontSize(8)
+              const startTime = a.startTime.slice(11, 16)
+              const endTime = a.endTime ? a.endTime.slice(11, 16) : ''
+              const duration = `${a.duration.toFixed(0)}${t('common.min')}`
+              const name = a.name.length > 40 ? a.name.slice(0, 37) + '...' : a.name
+              const line = `${startTime}-${endTime} | ${a.category || t('common.unknown')} | ${name} (${duration})`
+              doc.text(line, margin + 2, yPos)
+              yPos += 5
+            })
+        }
+
+        // Footer
+        const footerText = `Merize - https://github.com/auclaw/merize`
+        doc.setFontSize(8)
+        doc.setTextColor(128, 128, 128)
+        doc.text(footerText, pageWidth / 2, pageHeight - 10, { align: 'center' })
+
+        doc.save(`merize-report-${today}.pdf`)
+        addToast('success', t('settings.exportPDF') + ' ' + t('common.success'))
+        setExporting(false)
+      })
+    } catch {
+      addToast('error', t('settings.exportPDF') + ' ' + t('common.error'))
+      setExporting(false)
+    }
+  }, [addToast, t])
 
   /* ── Reset demo data ── */
   const handleReset = useCallback(() => {
@@ -535,19 +672,19 @@ export default function Settings() {
             className="text-3xl font-extrabold tracking-tight"
             style={{ color: 'var(--color-text-primary)' }}
           >
-            设置
+            {t('settings.title')}
           </h2>
         </div>
         <p
           className="text-sm ml-[22px]"
           style={{ color: 'var(--color-text-muted)' }}
         >
-          配置外观、功能模块与数据管理
+          {t('settings.description')}
         </p>
       </div>
 
       {/* ─── 1. Appearance ─── */}
-      <Section title="外观设置" index={1}>
+      <Section title={t('settings.sections.appearance')} index={1}>
         {/* Theme toggle */}
         <div
           className="flex items-center justify-between"
@@ -565,13 +702,13 @@ export default function Settings() {
                 className="text-sm font-semibold"
                 style={{ color: 'var(--color-text-primary)' }}
               >
-                {isDark ? '深色模式' : '浅色模式'}
+                {isDark ? t('settings.darkMode') : t('settings.lightMode')}
               </p>
               <p
                 className="text-xs"
                 style={{ color: 'var(--color-text-muted)' }}
               >
-                切换明暗主题
+                {t('settings.themeToggleHint')}
               </p>
             </div>
           </div>
@@ -587,7 +724,7 @@ export default function Settings() {
             className="text-xs mb-3 font-medium"
             style={{ color: 'var(--color-text-muted)' }}
           >
-            主题配色
+            {t('settings.colorTheme')}
           </p>
           <div className="grid grid-cols-5 gap-4">
             {(Object.entries(colorThemeConfigs) as [ColorTheme, (typeof colorThemeConfigs)[ColorTheme]][]).map(
@@ -656,7 +793,7 @@ export default function Settings() {
             className="text-xs mb-3 font-medium"
             style={{ color: 'var(--color-text-muted)' }}
           >
-            背景风格
+            {t('settings.backgroundSkin')}
           </p>
           <div className="space-y-2">
             {(Object.entries(backgroundSkinConfigs) as [BackgroundSkin, (typeof backgroundSkinConfigs)[BackgroundSkin]][]).map(
@@ -724,7 +861,7 @@ export default function Settings() {
                     </div>
                     {selected && (
                       <Badge variant="accent" size="sm" className="ml-auto shrink-0">
-                        当前
+                        {t('common.current')}
                       </Badge>
                     )}
                   </button>
@@ -736,12 +873,12 @@ export default function Settings() {
       </Section>
 
       {/* ─── 2. Feature Modules ─── */}
-      <Section title="功能模块" index={2}>
+      <Section title={t('settings.sections.modules')} index={2}>
         <p
           className="text-xs"
           style={{ color: 'var(--color-text-muted)' }}
         >
-          选择哪些模块显示在侧边栏中
+          {t('settings.moduleVisibility')}
         </p>
         <div
           style={{
@@ -768,7 +905,7 @@ export default function Settings() {
                 className="text-sm font-medium"
                 style={{ color: 'var(--color-text-secondary)' }}
               >
-                {MODULE_LABELS[mod] || mod}
+                {t(MODULE_LABELS[mod] || mod)}
               </span>
               <Toggle
                 checked={activeModules.includes(mod)}
@@ -780,68 +917,68 @@ export default function Settings() {
       </Section>
 
       {/* ─── 3. Focus Settings ─── */}
-      <Section title="专注设置" index={3}>
+      <Section title={t('settings.sections.focus')} index={3}>
         <div className="space-y-4">
           <NumberField
-            label="工作时长"
+            label={t('focus.workMinutes')}
             value={focusSettings.workMinutes}
             onChange={(v) => updateFocusSettings({ workMinutes: v })}
             min={5}
             max={120}
-            suffix="分钟"
+            suffix={t('common.minutes')}
           />
           <NumberField
-            label="短休息时长"
+            label={t('focus.breakMinutes')}
             value={focusSettings.breakMinutes}
             onChange={(v) => updateFocusSettings({ breakMinutes: v })}
             min={1}
             max={30}
-            suffix="分钟"
+            suffix={t('common.minutes')}
           />
           <NumberField
-            label="长休息时长"
+            label={t('focus.longBreakMinutes')}
             value={focusSettings.longBreakMinutes}
             onChange={(v) => updateFocusSettings({ longBreakMinutes: v })}
             min={5}
             max={60}
-            suffix="分钟"
+            suffix={t('common.minutes')}
           />
           <NumberField
-            label="长休息间隔"
+            label={t('focus.longBreakInterval')}
             value={focusSettings.longBreakInterval}
             onChange={(v) => updateFocusSettings({ longBreakInterval: v })}
             min={2}
             max={10}
-            suffix="轮"
+            suffix={t('settings.sessions')}
           />
         </div>
       </Section>
 
       {/* ─── 4. Daily Goal ─── */}
-      <Section title="每日目标" index={4}>
+      <Section title={t('settings.dailyGoal')} index={4}>
         <NumberField
-          label="每日专注目标"
+          label={t('settings.dailyGoalLabel')}
           value={dailyGoalMinutes}
           onChange={setDailyGoalMinutes}
           min={30}
           max={960}
-          suffix="分钟"
+          suffix={t('common.minutes')}
         />
         <p
           className="text-xs"
           style={{ color: 'var(--color-text-muted)' }}
         >
-          相当于 {(dailyGoalMinutes / 60).toFixed(1)} 小时
+          {t('settings.dailyGoalHint', { hours: (dailyGoalMinutes / 60).toFixed(1) })}
         </p>
       </Section>
 
       {/* ─── 5. Privacy Level ─── */}
-      <Section title="隐私级别设置" index={5}>
+      <Section title={t('settings.sections.privacyLevel')} index={5}>
         <p
           className="text-xs"
           style={{ color: 'var(--color-text-muted)' }}
         >
-          控制自动追踪时收集的信息粒度
+          {t('settings.privacyLevelDescription')}
         </p>
         <div className="space-y-2">
           {([
@@ -916,12 +1053,12 @@ export default function Settings() {
       </Section>
 
       {/* ─── 6. Tracking Rules ─── */}
-      <Section title="追踪规则管理" index={6}>
+      <Section title={t('settings.trackingRules')} index={6}>
         <p
           className="text-xs"
           style={{ color: 'var(--color-text-muted)' }}
         >
-          自定义关键词到分类的映射规则，优先级越高越先匹配
+          {t('settings.trackingRulesDescription')}
         </p>
 
         {/* Rules list */}
@@ -943,7 +1080,7 @@ export default function Settings() {
                 fontSize: 13,
               }}
             >
-              暂无规则
+              {t('common.noData')}
             </div>
           ) : (
             trackingRules.map((rule, i) => (
@@ -980,7 +1117,7 @@ export default function Settings() {
                 </div>
                 <button
                   onClick={() => handleDeleteRule(rule.id)}
-                  title="删除规则"
+                  title={t('settings.deleteRule')}
                   style={{
                     background: 'none',
                     border: 'none',
@@ -1021,7 +1158,7 @@ export default function Settings() {
                 type="text"
                 value={newRuleKeyword}
                 onChange={(e) => setNewRuleKeyword(e.target.value)}
-                placeholder="应用名或关键词..."
+                placeholder={t('settings.trackingKeywordPlaceholder')}
                 style={{
                   flex: 1,
                   padding: '8px 12px',
@@ -1067,7 +1204,7 @@ export default function Settings() {
             </div>
             <div className="flex gap-2">
               <Button variant="primary" size="sm" onClick={handleAddRule}>
-                确认添加
+                {t('common.confirm')}
               </Button>
               <Button
                 variant="secondary"
@@ -1077,7 +1214,7 @@ export default function Settings() {
                   setNewRuleKeyword('')
                 }}
               >
-                取消
+                {t('common.cancel')}
               </Button>
             </div>
           </div>
@@ -1087,18 +1224,18 @@ export default function Settings() {
             size="sm"
             onClick={() => setShowRuleForm(true)}
           >
-            + 添加规则
+            + {t('settings.addRule')}
           </Button>
         )}
       </Section>
 
       {/* ─── 7b. Language Settings ─── */}
-      <Section title="语言 / Language" index={7}>
+      <Section title={t('settings.sections.language')} index={7}>
         <p
           className="text-xs"
           style={{ color: 'var(--color-text-muted)' }}
         >
-          切换界面语言 / Switch interface language
+          {t('settings.languageDescription')}
         </p>
 
         <div className="flex gap-3">
@@ -1140,13 +1277,137 @@ export default function Settings() {
         </div>
       </Section>
 
-      {/* ─── 8. Notification Settings ─── */}
-      <Section title="通知设置" index={8}>
+      {/* ─── 7c. AI Classification Settings ─── */}
+      <Section title={t('settings.sections.ai')} index={7.5}>
         <p
           className="text-xs"
           style={{ color: 'var(--color-text-muted)' }}
         >
-          管理各类提醒的开关与间隔
+          {t('settings.aiDescription')}
+        </p>
+
+        {/* API Key Input */}
+        <div className="space-y-3 mt-4">
+          <div>
+            <label
+              className="block text-xs mb-2 font-medium"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
+              {t('settings.aiApiKey')}
+            </label>
+            <input
+              type="password"
+              value={aiSettings.aiApiKey}
+              onChange={(e) => setAiSettings({ ...aiSettings, aiApiKey: e.target.value })}
+              placeholder={t('settings.aiApiKeyPlaceholder')}
+              style={{
+                width: '100%',
+                padding: '10px 14px',
+                fontSize: 14,
+                borderRadius: 'var(--radius-md)',
+                backgroundColor: 'var(--color-bg-surface-2)',
+                color: 'var(--color-text-primary)',
+                border: '1.5px solid var(--color-border-subtle)',
+                outline: 'none',
+                transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = 'var(--color-accent)'
+                e.currentTarget.style.boxShadow = '0 0 0 3px var(--color-accent-soft)'
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = 'var(--color-border-subtle)'
+                e.currentTarget.style.boxShadow = 'none'
+              }}
+            />
+          </div>
+
+          {/* AI Provider Selection */}
+          <div>
+            <label
+              className="block text-xs mb-2 font-medium"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
+              {t('settings.aiProvider')}
+            </label>
+            <div className="flex gap-3 flex-wrap">
+              {([
+                { code: 'ernie' as const, name: '文心一言 (百度)', description: 'Baidu Ernie' },
+                { code: 'doubao' as const, name: '豆包 (字节跳动)', description: 'ByteDance Doubao' },
+                { code: 'qwen' as const, name: '通义千问 (阿里)', description: 'Alibaba Qwen' },
+                { code: 'glm' as const, name: '智谱清言 (智谱)', description: 'Zhipu GLM' },
+                { code: 'openai' as const, name: 'OpenAI', description: 'GPT-3.5 / GPT-4' },
+                { code: 'claude' as const, name: 'Claude (Anthropic)', description: 'Claude 3 / Claude 3.5' },
+                { code: 'gemini' as const, name: 'Gemini (Google)', description: 'Google Gemini' },
+                { code: 'deepseek' as const, name: 'DeepSeek', description: 'DeepSeek AI' },
+                { code: 'xai' as const, name: 'XAI', description: 'Elon Musk xAI' },
+              ]).map((provider) => {
+                const isActive = aiSettings.aiProvider === provider.code
+                return (
+                  <button
+                    key={provider.code}
+                    onClick={() => setAiSettings({ ...aiSettings, aiProvider: provider.code })}
+                    className="flex-1 flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-150"
+                    style={{
+                      background: isActive ? 'var(--color-accent-soft)' : 'var(--color-bg-surface-2)',
+                      border: `2px solid ${isActive ? 'var(--color-accent)' : 'transparent'}`,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p
+                        className="text-sm font-semibold"
+                        style={{ color: isActive ? 'var(--color-accent)' : 'var(--color-text-primary)' }}
+                      >
+                        {provider.name}
+                      </p>
+                      <p
+                        className="text-xs mt-0.5"
+                        style={{ color: 'var(--color-text-muted)' }}
+                      >
+                        {provider.description}
+                      </p>
+                    </div>
+                    {isActive && (
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="ml-auto shrink-0">
+                        <circle cx="8" cy="8" r="8" fill="var(--color-accent)" />
+                        <path d="M5 8l2 2 4-4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+            <p
+              className="text-xs mt-2"
+              style={{ color: 'var(--color-text-muted)' }}
+            >
+              {t('settings.aiProviderHint')}
+            </p>
+          </div>
+
+          {/* Save Button */}
+          <div className="pt-2">
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleSaveAiSettings}
+              loading={savingAiSettings}
+              className="w-full"
+            >
+              {t('settings.saveAiSettings')}
+            </Button>
+          </div>
+        </div>
+      </Section>
+
+      {/* ─── 8. Notification Settings ─── */}
+      <Section title={t('settings.notifications')} index={8}>
+        <p
+          className="text-xs"
+          style={{ color: 'var(--color-text-muted)' }}
+        >
+          {t('settings.notificationsDescription')}
         </p>
 
         <div
@@ -1170,13 +1431,13 @@ export default function Settings() {
                 className="text-sm font-medium"
                 style={{ color: 'var(--color-text-primary)' }}
               >
-                习惯提醒
+                {t('settings.habitReminder')}
               </p>
               <p
                 className="text-xs mt-0.5"
                 style={{ color: 'var(--color-text-muted)' }}
               >
-                在设定时间提醒完成每日习惯
+                {t('settings.habitReminderHint')}
               </p>
             </div>
             <Toggle
@@ -1198,13 +1459,13 @@ export default function Settings() {
                 className="text-sm font-medium"
                 style={{ color: 'var(--color-text-primary)' }}
               >
-                休息提醒
+                {t('settings.breakReminder')}
               </p>
               <p
                 className="text-xs mt-0.5"
                 style={{ color: 'var(--color-text-muted)' }}
               >
-                长时间工作后提醒起身休息
+                {t('settings.breakReminderHint')}
               </p>
             </div>
             <Toggle
@@ -1226,13 +1487,13 @@ export default function Settings() {
                 className="text-sm font-medium"
                 style={{ color: 'var(--color-text-primary)' }}
               >
-                专注结束提醒
+                {t('settings.focusEndReminder')}
               </p>
               <p
                 className="text-xs mt-0.5"
                 style={{ color: 'var(--color-text-muted)' }}
               >
-                专注计时结束时发出提醒
+                {t('settings.focusEndReminderHint')}
               </p>
             </div>
             <Toggle
@@ -1245,31 +1506,31 @@ export default function Settings() {
         {/* Interval pickers */}
         <div className="space-y-3">
           <NumberField
-            label="习惯提醒间隔"
+            label={t('settings.habitInterval')}
             value={notifSettings.habitInterval}
             onChange={(v) => updateNotif({ habitInterval: v })}
             min={5}
             max={120}
-            suffix="分钟"
+            suffix={t('common.minutes')}
           />
           <NumberField
-            label="休息提醒间隔"
+            label={t('settings.breakInterval')}
             value={notifSettings.breakInterval}
             onChange={(v) => updateNotif({ breakInterval: v })}
             min={5}
             max={120}
-            suffix="分钟"
+            suffix={t('common.minutes')}
           />
         </div>
       </Section>
 
       {/* ─── 8. Data Management ─── */}
-      <Section title="数据管理" index={8}>
+      <Section title={t('settings.sections.data')} index={8}>
         <p
           className="text-xs"
           style={{ color: 'var(--color-text-muted)' }}
         >
-          导出或重置本地数据，所有数据仅保存在浏览器中
+          {t('settings.dataDescription')}
         </p>
 
         {/* Export buttons */}
@@ -1281,7 +1542,7 @@ export default function Settings() {
             loading={exporting}
             className="flex-1"
           >
-            导出 JSON
+            {t('settings.exportJSON')}
           </Button>
           <Button
             variant="secondary"
@@ -1290,7 +1551,16 @@ export default function Settings() {
             loading={exporting}
             className="flex-1"
           >
-            导出 CSV
+            {t('settings.exportCSV')}
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={exportPDF}
+            loading={exporting}
+            className="flex-1"
+          >
+            {t('settings.exportPDF')}
           </Button>
         </div>
 
@@ -1303,7 +1573,7 @@ export default function Settings() {
             loading={exporting}
             className="flex-1"
           >
-            导出日报 (PDF)
+            {t('settings.exportDaily')}
           </Button>
           <Button
             variant="secondary"
@@ -1312,7 +1582,7 @@ export default function Settings() {
             loading={exporting}
             className="flex-1"
           >
-            导出周报
+            {t('settings.exportWeekly')}
           </Button>
         </div>
 
@@ -1330,7 +1600,7 @@ export default function Settings() {
             className="text-xs font-semibold mb-3"
             style={{ color: 'rgb(200,60,60)', letterSpacing: '0.04em' }}
           >
-            ⚠ 危险区域
+            ⚠ {t('settings.dangerZone')}
           </p>
           <Button
             variant="danger"
@@ -1338,27 +1608,27 @@ export default function Settings() {
             onClick={handleReset}
             fullWidth
           >
-            重置演示数据
+            {t('settings.resetData')}
           </Button>
         </div>
       </Section>
 
       {/* ─── 9. About ─── */}
-      <Section title="关于" index={9}>
+      <Section title={t('settings.sections.about')} index={9}>
         <div className="space-y-3 text-sm" style={{ color: 'var(--color-text-muted)' }}>
           <div className="flex items-center gap-2">
-            <span style={{ color: 'var(--color-text-secondary)' }}>版本</span>
+            <span style={{ color: 'var(--color-text-secondary)' }}>{t('settings.version')}</span>
             <Badge variant="accent" size="sm">v2.0.0-beta</Badge>
           </div>
           <div className="flex items-center gap-2">
-            <span style={{ color: 'var(--color-text-secondary)' }}>构建分支</span>
+            <span style={{ color: 'var(--color-text-secondary)' }}>{t('settings.branch')}</span>
             <Badge variant="default" size="sm">redesign/v2</Badge>
           </div>
           <p style={{ color: 'var(--color-text-secondary)' }}>
-            Merize — 让每一分钟都有意义的效率工具
+            Merize — {t('settings.tagline')}
           </p>
           <p className="text-xs">
-            数据完全存储在本地浏览器中，不会上传到任何服务器。
+            {t('settings.dataLocalHint')}
           </p>
           <div
             style={{
@@ -1372,14 +1642,14 @@ export default function Settings() {
               className="text-xs font-medium mb-2"
               style={{ color: 'var(--color-text-secondary)' }}
             >
-              相关链接
+              {t('settings.links')}
             </p>
             <div className="flex gap-3">
               <a
                 href="#docs"
                 onClick={(e) => {
                   e.preventDefault()
-                  addToast('info', '文档页面即将上线')
+                  addToast('info', t('settings.comingSoon'))
                 }}
                 className="text-xs font-medium"
                 style={{
@@ -1388,13 +1658,13 @@ export default function Settings() {
                   cursor: 'pointer',
                 }}
               >
-                使用文档
+                {t('settings.documentation')}
               </a>
               <a
                 href="#changelog"
                 onClick={(e) => {
                   e.preventDefault()
-                  addToast('info', '更新日志即将上线')
+                  addToast('info', t('settings.comingSoon'))
                 }}
                 className="text-xs font-medium"
                 style={{
@@ -1403,13 +1673,13 @@ export default function Settings() {
                   cursor: 'pointer',
                 }}
               >
-                更新日志
+                {t('settings.changelog')}
               </a>
               <a
                 href="#feedback"
                 onClick={(e) => {
                   e.preventDefault()
-                  addToast('info', '反馈通道即将上线')
+                  addToast('info', t('settings.comingSoon'))
                 }}
                 className="text-xs font-medium"
                 style={{
@@ -1418,7 +1688,7 @@ export default function Settings() {
                   cursor: 'pointer',
                 }}
               >
-                意见反馈
+                {t('settings.feedback')}
               </a>
             </div>
           </div>

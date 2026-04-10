@@ -44,7 +44,7 @@ import type { FeatureFlagKey } from './feature-flags'
 
 export interface Settings {
   aiApiKey: string
-  aiProvider: 'ernie' | 'doubao'
+  aiProvider: 'ernie' | 'doubao' | 'qwen' | 'glm' | 'openai' | 'claude' | 'gemini' | 'deepseek' | 'xai'
   autoStartOnBoot: boolean
   ignoredApplications: string[]
   // Feature flags

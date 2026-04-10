@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { Card, Modal, Button, Input } from '../components/ui'
+import { useTranslation } from 'react-i18next'
+import { Card, Modal, Button, Input, EmptyState } from '../components/ui'
 import { useAppStore } from '../store/useAppStore'
 import useTheme from '../hooks/useTheme'
 import type { Habit, HabitCategory } from '../services/dataService'
@@ -17,12 +18,12 @@ const COLOR_OPTIONS = [
   '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4',
 ]
 
-const CATEGORY_OPTIONS: { value: HabitCategory; label: string }[] = [
-  { value: 'health', label: '健康' },
-  { value: 'learning', label: '学习' },
-  { value: 'fitness', label: '健身' },
-  { value: 'mindfulness', label: '正念' },
-  { value: 'other', label: '其他' },
+const CATEGORY_OPTIONS: { value: HabitCategory; labelKey: string }[] = [
+  { value: 'health', labelKey: 'habits.categories.health' },
+  { value: 'learning', labelKey: 'habits.categories.learning' },
+  { value: 'fitness', labelKey: 'habits.categories.fitness' },
+  { value: 'mindfulness', labelKey: 'habits.categories.mindfulness' },
+  { value: 'other', labelKey: 'habits.categories.other' },
 ]
 
 const REMINDER_OPTIONS = [
@@ -31,31 +32,31 @@ const REMINDER_OPTIONS = [
   '17:00', '18:00', '19:00', '20:00', '21:00', '22:00',
 ]
 
-const ENCOURAGEMENTS = [
-  '太棒了！继续保持！💪',
-  '你的小猫咪为你骄傲！🐱',
-  '你真是太厉害了！✨',
-  '坚持就是胜利！🏆',
-  '每一步都算数！🌟',
-  '好习惯正在养成中～🌱',
-]
-
-function getEncouragement(habit: Habit, today: string): string {
+function getEncouragement(habit: Habit, today: string, t: (key: string, options?: Record<string, unknown>) => string): string {
   const todayCount = habit.checkins[today] || 0
   const isMulti = habit.targetCount > 1
   const target = isMulti ? habit.targetCount : (habit.targetMinutes || 1)
   const remaining = target - todayCount
 
   if (habit.streak >= 7) {
-    return `已经连续${habit.streak}天了，别断了哦～🔥`
+    return t('habits.encouragementStreak', { streak: habit.streak })
   }
   if (isMulti && remaining === 1) {
-    return '再来一次就完成目标啦！🎯'
+    return t('habits.encouragementOneMore')
   }
   if (isMulti && remaining <= 0) {
-    return '今日目标已达成！你太棒了！🎉'
+    return t('habits.encouragementDone')
   }
-  return ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)]
+
+  const encouragements = [
+    t('habits.encouragement1'),
+    t('habits.encouragement2'),
+    t('habits.encouragement3'),
+    t('habits.encouragement4'),
+    t('habits.encouragement5'),
+    t('habits.encouragement6'),
+  ]
+  return encouragements[Math.floor(Math.random() * encouragements.length)]
 }
 
 function todayStr(): string {
@@ -186,6 +187,7 @@ function EncouragementBubble({ message, visible }: { message: string; visible: b
 // ── HabitHeatmap ──
 
 function HabitHeatmap({ habit }: { habit: Habit }) {
+  const { t } = useTranslation()
   const isMulti = habit.targetCount > 1
 
   const cells = useMemo(() => {
@@ -229,7 +231,7 @@ function HabitHeatmap({ habit }: { habit: Habit }) {
         </div>
         <div>
           <h3 className="text-sm font-bold text-[var(--color-text-primary)]">{habit.name}</h3>
-          <p className="text-[11px] text-[var(--color-text-muted)]">30天打卡热力图</p>
+          <p className="text-[11px] text-[var(--color-text-muted)]">{t('habits.heatmapTitle')}</p>
         </div>
       </div>
       <div className="grid grid-cols-10 gap-2">
@@ -249,7 +251,7 @@ function HabitHeatmap({ habit }: { habit: Habit }) {
         })}
       </div>
       <div className="flex items-center gap-2 mt-3 text-[10px] text-[var(--color-text-muted)]">
-        <span>少</span>
+        <span>{t('habits.few')}</span>
         <div className="flex gap-1">
           {[0, 0.1, 0.3, 0.5, 0.8, 1.0].map((o) => (
             <div key={o} style={{
@@ -260,7 +262,7 @@ function HabitHeatmap({ habit }: { habit: Habit }) {
             }} />
           ))}
         </div>
-        <span>多</span>
+        <span>{t('habits.many')}</span>
       </div>
     </div>
   )
@@ -269,6 +271,7 @@ function HabitHeatmap({ habit }: { habit: Habit }) {
 // ── Main Component ──
 
 export default function Habits() {
+  const { t } = useTranslation()
   const { isDark: _ } = useTheme()
   void _
 
@@ -362,20 +365,20 @@ export default function Habits() {
 
     if (isMulti) {
       if (currentVal >= habit.targetCount) {
-        addToast('info', '今日目标已完成！')
+        addToast('info', t('habits.targetAlreadyCompleted'))
         return
       }
       checkinHabit(habit.id, today, 1)
-      const msg = getEncouragement(habit, today)
+      const msg = getEncouragement(habit, today, t)
       showEncouragement(habit.id, msg)
     } else if (habit.targetMinutes === 0) {
       // Boolean habit (e.g., 早起)
       if (currentVal > 0) {
-        addToast('info', '今天已经打卡了！')
+        addToast('info', t('habits.alreadyCheckedIn'))
         return
       }
       checkinHabit(habit.id, today, 1)
-      const msg = getEncouragement(habit, today)
+      const msg = getEncouragement(habit, today, t)
       showEncouragement(habit.id, msg)
     } else {
       // Minutes-based: open checkin modal
@@ -395,7 +398,7 @@ export default function Habits() {
     const mins = parseInt(checkinMinutes) || 0
     if (mins <= 0) return
     checkinHabit(checkinTarget.id, today, mins)
-    const msg = getEncouragement(checkinTarget, today)
+    const msg = getEncouragement(checkinTarget, today, t)
     addToast('success', msg)
     setShowCheckinModal(false)
   }
@@ -487,14 +490,12 @@ export default function Habits() {
 
       {/* Habits Grid */}
       {habits.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20">
-          <div className="text-7xl mb-6" style={{ filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.08))' }}>🎯</div>
-          <h2 className="text-xl font-bold text-[var(--color-text-primary)] mb-2">开始追踪你的习惯</h2>
-          <p className="text-sm text-[var(--color-text-muted)] mb-6 max-w-xs text-center">
-            添加你想要养成的习惯，每天打卡追踪进度，一步步成为更好的自己
-          </p>
-          <Button onClick={openAddModal}>开始追踪第一个习惯</Button>
-        </div>
+        <EmptyState
+          icon="🎯"
+          title={t('habits.emptyTitle')}
+          description={t('habits.emptyDescription')}
+          action={<Button onClick={openAddModal}>{t('habits.addFirstHabit')}</Button>}
+        />
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 mb-8" style={{ gap: 20 }}>
@@ -687,7 +688,7 @@ export default function Habits() {
                 <button key={cat.value} type="button"
                   className={`habit-quick-pill${formCategory === cat.value ? ' active' : ''}`}
                   onClick={() => setFormCategory(cat.value)}>
-                  {cat.label}
+                  {t(cat.labelKey)}
                 </button>
               ))}
             </div>

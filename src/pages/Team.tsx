@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Card, Button, Badge, Modal, EmptyState } from '../components/ui'
 import Input from '../components/ui/Input'
 import Progress from '../components/ui/Progress'
@@ -39,11 +40,11 @@ type SubTab = 'dashboard' | 'focus' | 'weekly' | 'admin'
 // ── Constants ──
 
 const STORAGE_KEY = 'merize-team-data'
-const SUB_TABS: { key: SubTab; label: string; icon: string }[] = [
-  { key: 'dashboard', label: '总览', icon: '📊' },
-  { key: 'focus', label: '专注', icon: '🎯' },
-  { key: 'weekly', label: '周报', icon: '📝' },
-  { key: 'admin', label: '管理', icon: '⚙️' },
+const SUB_TABS: { key: SubTab; labelKey: string; icon: string }[] = [
+  { key: 'dashboard', labelKey: 'team.tabs.dashboard', icon: '📊' },
+  { key: 'focus', labelKey: 'team.tabs.focus', icon: '🎯' },
+  { key: 'weekly', labelKey: 'team.tabs.weekly', icon: '📝' },
+  { key: 'admin', labelKey: 'team.tabs.admin', icon: '⚙️' },
 ]
 
 const DEFAULT_MEMBERS: TeamMember[] = [
@@ -91,14 +92,14 @@ function saveTeamData(data: TeamData) {
 
 // ── Helpers ──
 
-const STATUS_CONFIG: Record<string, { label: string; variant: 'success' | 'accent' | 'warning' | 'default' }> = {
-  online: { label: '在线', variant: 'success' },
-  focusing: { label: '专注中', variant: 'accent' },
-  away: { label: '离开', variant: 'warning' },
-  offline: { label: '离线', variant: 'default' },
+const STATUS_CONFIG: Record<string, { labelKey: string; variant: 'success' | 'accent' | 'warning' | 'default' }> = {
+  online: { labelKey: 'team.status.online', variant: 'success' },
+  focusing: { labelKey: 'team.status.focusing', variant: 'accent' },
+  away: { labelKey: 'team.status.away', variant: 'warning' },
+  offline: { labelKey: 'team.status.offline', variant: 'default' },
 }
 
-const ROLE_LABELS: Record<string, string> = { admin: '管理员', lead: '组长', member: '成员' }
+const ROLE_LABELS: Record<string, string> = { admin: 'team.roles.admin', lead: 'team.roles.lead', member: 'team.roles.member' }
 
 // ── Sub-components (placeholder comments filled below) ──
 // DashboardTab, FocusTab, WeeklyTab, AdminTab
@@ -106,6 +107,7 @@ const ROLE_LABELS: Record<string, string> = { admin: '管理员', lead: '组长'
 // ── Main Component ──
 
 export default function Team() {
+  const { t } = useTranslation()
   const [tab, setTab] = useState<SubTab>('dashboard')
   const [data, setData] = useState<TeamData>(loadTeamData)
 
@@ -122,7 +124,7 @@ export default function Team() {
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">👥 {data.teamName}</h1>
-        <p className="text-sm text-[var(--color-text-muted)] mt-1">{data.members.length} 位成员 · 协作共进</p>
+        <p className="text-sm text-[var(--color-text-muted)] mt-1">{data.members.length} {t('team.totalMembers')}</p>
       </div>
 
       {/* Sub-tab nav */}
@@ -130,18 +132,18 @@ export default function Team() {
         className="flex gap-1 p-1 rounded-xl mb-6 w-fit"
         style={{ background: 'var(--color-bg-surface-2)', border: '1px solid var(--color-border-subtle)' }}
       >
-        {SUB_TABS.map(t => (
+        {SUB_TABS.map(tabInfo => (
           <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
+            key={tabInfo.key}
+            onClick={() => setTab(tabInfo.key)}
             className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer"
             style={{
-              background: tab === t.key ? 'var(--color-accent-soft)' : 'transparent',
-              color: tab === t.key ? 'var(--color-accent)' : 'var(--color-text-secondary)',
-              boxShadow: tab === t.key ? '0 1px 4px rgba(44,24,16,0.08)' : 'none',
+              background: tab === tabInfo.key ? 'var(--color-accent-soft)' : 'transparent',
+              color: tab === tabInfo.key ? 'var(--color-accent)' : 'var(--color-text-secondary)',
+              boxShadow: tab === tabInfo.key ? '0 1px 4px rgba(44,24,16,0.08)' : 'none',
             }}
           >
-            {t.icon} {t.label}
+            {tabInfo.icon} {t(tabInfo.labelKey)}
           </button>
         ))}
       </div>
@@ -158,6 +160,7 @@ export default function Team() {
 // ── Dashboard Tab ──
 
 function DashboardTab({ members }: { members: TeamMember[] }) {
+  const { t } = useTranslation()
   const activeCount = members.filter(m => m.status === 'online' || m.status === 'focusing').length
   const totalHours = members.reduce((s, m) => s + m.weeklyHours, 0)
   const avgEfficiency = Math.round(members.reduce((s, m) => s + m.focusScore, 0) / members.length)
@@ -165,10 +168,10 @@ function DashboardTab({ members }: { members: TeamMember[] }) {
   const sorted = useMemo(() => [...members].sort((a, b) => b.focusScore - a.focusScore), [members])
 
   const stats = [
-    { label: '总成员', value: members.length, icon: '👥' },
-    { label: '当前活跃', value: activeCount, icon: '🟢' },
-    { label: '本周总时长', value: `${totalHours}h`, icon: '⏱️' },
-    { label: '平均效率', value: `${avgEfficiency}%`, icon: '⚡' },
+    { label: t('team.stats.totalMembers'), value: members.length, icon: '👥' },
+    { label: t('team.stats.activeNow'), value: activeCount, icon: '🟢' },
+    { label: t('team.stats.weeklyHours'), value: `${totalHours}h`, icon: '⏱️' },
+    { label: t('team.stats.avgEfficiency'), value: `${avgEfficiency}%`, icon: '⚡' },
   ]
 
   return (
@@ -191,18 +194,18 @@ function DashboardTab({ members }: { members: TeamMember[] }) {
       {/* Team pet progress */}
       <Card padding="sm">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-[var(--color-text-primary)]">🐾 团队宠物成长</span>
+          <span className="text-sm font-medium text-[var(--color-text-primary)]">🐾 {t('team.teamPet')}</span>
           <span className="text-xs text-[var(--color-text-muted)]">{petProgress}%</span>
         </div>
         <Progress value={petProgress} showLabel={false} />
-        <p className="text-xs text-[var(--color-text-muted)] mt-2">团队累计专注 {totalHours}h，继续加油！</p>
+        <p className="text-xs text-[var(--color-text-muted)] mt-2">{t('team.teamPetHint', { totalHours: totalHours })}</p>
       </Card>
 
       {/* Leaderboard + Member list */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Leaderboard */}
         <Card padding="sm">
-          <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-3">🏆 效率排行</h3>
+          <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-3">🏆 {t('team.leaderboard')}</h3>
           <div className="space-y-2">
             {sorted.slice(0, 5).map((m, i) => (
               <div key={m.id} className="flex items-center gap-3 py-1.5">
@@ -219,7 +222,7 @@ function DashboardTab({ members }: { members: TeamMember[] }) {
 
         {/* Members */}
         <Card padding="sm">
-          <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-3">👤 成员列表</h3>
+          <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-3">👤 {t('team.memberList')}</h3>
           <div className="space-y-2">
             {members.map(m => {
               const sc = STATUS_CONFIG[m.status]
@@ -228,9 +231,9 @@ function DashboardTab({ members }: { members: TeamMember[] }) {
                   <span className="text-lg">{m.emoji}</span>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-[var(--color-text-primary)] truncate">{m.name}</div>
-                    <div className="text-[11px] text-[var(--color-text-muted)]">{ROLE_LABELS[m.role]} · {m.weeklyHours}h/周</div>
+                    <div className="text-[11px] text-[var(--color-text-muted)]">{t(ROLE_LABELS[m.role])} · {m.weeklyHours}{t('common.hours')}/{t('team.week')}</div>
                   </div>
-                  <Badge variant={sc.variant} size="sm">{sc.label}</Badge>
+                  <Badge variant={sc.variant} size="sm">{t(sc.labelKey)}</Badge>
                 </div>
               )
             })}
@@ -244,6 +247,7 @@ function DashboardTab({ members }: { members: TeamMember[] }) {
 // ── Focus Tab ──
 
 function FocusTab({ members, sessions, onUpdate }: { members: TeamMember[]; sessions: FocusSession[]; onUpdate: (s: FocusSession[]) => void }) {
+  const { t } = useTranslation()
   const [timer, setTimer] = useState(0)
   const [active, setActive] = useState(false)
 
@@ -288,28 +292,28 @@ function FocusTab({ members, sessions, onUpdate }: { members: TeamMember[]; sess
             {fmtTimer(timer)}
           </div>
           <p className="text-sm text-[var(--color-text-muted)] mb-4">
-            {active ? '团队同步专注中...' : '开启团队专注，一起高效工作'}
+            {active ? t('team.focus.active') : t('team.focus.idle')}
           </p>
           {active ? (
-            <Button variant="danger" size="md" onClick={stopFocus}>结束专注</Button>
+            <Button variant="danger" size="md" onClick={stopFocus}>{t('team.focus.end')}</Button>
           ) : (
-            <Button variant="primary" size="md" onClick={startTeamFocus}>🎯 开始团队专注</Button>
+            <Button variant="primary" size="md" onClick={startTeamFocus}>🎯 {t('team.focus.startTeamFocus')}</Button>
           )}
         </div>
       </Card>
 
       {/* Member status grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <StatusGroup label="🔥 专注中" members={focusingMembers} />
-        <StatusGroup label="🟢 在线" members={onlineMembers} />
-        <StatusGroup label="💤 离开/离线" members={awayMembers} />
+        <StatusGroup label={`🔥 ${t('team.statusGroups.focusing')}`} members={focusingMembers} />
+        <StatusGroup label={`🟢 ${t('team.statusGroups.online')}`} members={onlineMembers} />
+        <StatusGroup label={`💤 ${t('team.statusGroups.awayOffline')}`} members={awayMembers} />
       </div>
 
       {/* Active sessions */}
       <Card padding="sm">
-        <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-3">📋 进行中的专注</h3>
+        <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-3">📋 {t('team.focus.activeSessions')}</h3>
         {sessions.length === 0 ? (
-          <EmptyState icon="🎯" title="暂无进行中的专注" description="点击上方按钮开始团队专注" />
+          <EmptyState icon="🎯" title={t('team.focus.noActiveSessions')} description={t('team.focus.noActiveSessionsHint')} />
         ) : (
           <div className="space-y-2">
             {sessions.map(s => {
@@ -319,8 +323,8 @@ function FocusTab({ members, sessions, onUpdate }: { members: TeamMember[]; sess
                 <div key={s.id} className="flex items-center gap-3 py-2 px-3 rounded-lg" style={{ background: 'var(--color-bg-surface-2)' }}>
                   <span className="text-lg">{m?.emoji ?? '👤'}</span>
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-[var(--color-text-primary)]">{m?.name ?? '未知'}</div>
-                    <div className="text-[11px] text-[var(--color-text-muted)]">{s.type === 'sync' ? '同步' : s.type === 'deep' ? '深度' : '独立'} · {elapsed}分钟</div>
+                    <div className="text-sm font-medium text-[var(--color-text-primary)]">{m?.name ?? t('common.unknown')}</div>
+                    <div className="text-[11px] text-[var(--color-text-muted)]">{s.type === 'sync' ? t('team.focus.type.sync') : s.type === 'deep' ? t('team.focus.type.deep') : t('team.focus.type.solo')} · {elapsed}{t('common.minutes')}</div>
                   </div>
                   <Badge variant="accent" size="sm">{s.duration}min</Badge>
                 </div>
@@ -334,11 +338,12 @@ function FocusTab({ members, sessions, onUpdate }: { members: TeamMember[]; sess
 }
 
 function StatusGroup({ label, members }: { label: string; members: TeamMember[] }) {
+  const { t } = useTranslation()
   return (
     <Card padding="sm">
       <h4 className="text-xs font-semibold text-[var(--color-text-secondary)] mb-2">{label}</h4>
       {members.length === 0 ? (
-        <p className="text-xs text-[var(--color-text-muted)] py-2">无</p>
+        <p className="text-xs text-[var(--color-text-muted)] py-2">{t('common.none')}</p>
       ) : (
         <div className="flex flex-wrap gap-2">
           {members.map(m => (
@@ -356,6 +361,7 @@ function StatusGroup({ label, members }: { label: string; members: TeamMember[] 
 // ── Weekly Tab ──
 
 function WeeklyTab({ members, reports, onUpdate }: { members: TeamMember[]; reports: WeeklyReport[]; onUpdate: (r: WeeklyReport[]) => void }) {
+  const { t } = useTranslation()
   const [summary, setSummary] = useState('')
   const [hours, setHours] = useState('')
 
@@ -383,10 +389,10 @@ function WeeklyTab({ members, reports, onUpdate }: { members: TeamMember[]; repo
     onUpdate(reports.map(r => r.id === id ? { ...r, status } : r))
   }
 
-  const STATUS_BADGE: Record<string, { label: string; variant: 'success' | 'warning' | 'danger' }> = {
-    pending: { label: '待审核', variant: 'warning' },
-    approved: { label: '已通过', variant: 'success' },
-    rejected: { label: '已驳回', variant: 'danger' },
+  const STATUS_BADGE: Record<string, { labelKey: string; variant: 'success' | 'warning' | 'danger' }> = {
+    pending: { labelKey: 'team.weekly.status.pending', variant: 'warning' },
+    approved: { labelKey: 'team.weekly.status.approved', variant: 'success' },
+    rejected: { labelKey: 'team.weekly.status.rejected', variant: 'danger' },
   }
 
   return (
@@ -394,40 +400,40 @@ function WeeklyTab({ members, reports, onUpdate }: { members: TeamMember[]; repo
       {/* Week summary */}
       <Card padding="sm">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">📅 本周概览 (W15)</h3>
-          <Badge variant="accent" size="md">{thisWeek.length} 份周报</Badge>
+          <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">📅 {t('team.weekly.weekOverview', { week: 'W15' })}</h3>
+          <Badge variant="accent" size="md">{thisWeek.length} {t('team.weekly.reportsCount')}</Badge>
         </div>
         <div className="grid grid-cols-3 gap-4 mt-3">
           <div className="text-center">
             <div className="text-lg font-bold text-[var(--color-text-primary)]">{thisWeek.length}</div>
-            <div className="text-[11px] text-[var(--color-text-muted)]">已提交</div>
+            <div className="text-[11px] text-[var(--color-text-muted)]">{t('team.weekly.submitted')}</div>
           </div>
           <div className="text-center">
             <div className="text-lg font-bold text-[var(--color-text-primary)]">{totalWeekHours}h</div>
-            <div className="text-[11px] text-[var(--color-text-muted)]">累计时长</div>
+            <div className="text-[11px] text-[var(--color-text-muted)]">{t('team.weekly.totalHours')}</div>
           </div>
           <div className="text-center">
             <div className="text-lg font-bold text-[var(--color-text-primary)]">{thisWeek.filter(r => r.status === 'approved').length}</div>
-            <div className="text-[11px] text-[var(--color-text-muted)]">已审核</div>
+            <div className="text-[11px] text-[var(--color-text-muted)]">{t('team.weekly.approved')}</div>
           </div>
         </div>
       </Card>
 
       {/* Submission form */}
       <Card padding="sm">
-        <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-3">✍️ 提交周报</h3>
+        <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-3">✍️ {t('team.weekly.submitReport')}</h3>
         <div className="space-y-3">
-          <Input label="本周工作总结" value={summary} onChange={setSummary} placeholder="描述你本周完成的主要工作..." multiline rows={3} />
-          <Input label="工作时长 (小时)" value={hours} onChange={setHours} placeholder="例如: 40" type="number" />
-          <Button variant="primary" size="sm" onClick={submit} disabled={!summary.trim()}>提交周报</Button>
+          <Input label={t('team.weekly.summaryLabel')} value={summary} onChange={setSummary} placeholder={t('team.weekly.summaryPlaceholder')} multiline rows={3} />
+          <Input label={t('team.weekly.hoursLabel')} value={hours} onChange={setHours} placeholder={t('team.weekly.hoursPlaceholder')} type="number" />
+          <Button variant="primary" size="sm" onClick={submit} disabled={!summary.trim()}>{t('team.weekly.submit')}</Button>
         </div>
       </Card>
 
       {/* Reports list */}
       <Card padding="sm">
-        <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-3">📋 周报记录</h3>
+        <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-3">📋 {t('team.weekly.reportList')}</h3>
         {reports.length === 0 ? (
-          <EmptyState icon="📝" title="暂无周报" description="提交你的第一份周报吧" />
+          <EmptyState icon="📝" title={t('team.weekly.noReports')} description={t('team.weekly.noReportsHint')} />
         ) : (
           <div className="space-y-3">
             {reports.map(r => {
@@ -438,18 +444,18 @@ function WeeklyTab({ members, reports, onUpdate }: { members: TeamMember[]; repo
                   <div className="flex items-center justify-between mb-1.5">
                     <div className="flex items-center gap-2">
                       <span className="text-base">{m?.emoji ?? '👤'}</span>
-                      <span className="text-sm font-medium text-[var(--color-text-primary)]">{m?.name ?? '未知'}</span>
+                      <span className="text-sm font-medium text-[var(--color-text-primary)]">{m?.name ?? t('common.unknown')}</span>
                       <span className="text-[11px] text-[var(--color-text-muted)]">{r.week}</span>
                     </div>
-                    <Badge variant={sb.variant} size="sm">{sb.label}</Badge>
+                    <Badge variant={sb.variant} size="sm">{t(sb.labelKey)}</Badge>
                   </div>
                   <p className="text-sm text-[var(--color-text-secondary)] mb-2">{r.summary}</p>
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] text-[var(--color-text-muted)]">{r.hours}h · {r.submittedAt}</span>
+                    <span className="text-[11px] text-[var(--color-text-muted)]">{r.hours}{t('common.hours')} · {r.submittedAt}</span>
                     {r.status === 'pending' && (
                       <div className="flex gap-2">
-                        <Button variant="primary" size="sm" onClick={() => handleApproval(r.id, 'approved')}>通过</Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleApproval(r.id, 'rejected')}>驳回</Button>
+                        <Button variant="primary" size="sm" onClick={() => handleApproval(r.id, 'approved')}>{t('team.weekly.approve')}</Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleApproval(r.id, 'rejected')}>{t('team.weekly.reject')}</Button>
                       </div>
                     )}
                   </div>
@@ -466,6 +472,7 @@ function WeeklyTab({ members, reports, onUpdate }: { members: TeamMember[]; repo
 // ── Admin Tab ──
 
 function AdminTab({ data, onUpdate }: { data: TeamData; onUpdate: (partial: Partial<TeamData>) => void }) {
+  const { t } = useTranslation()
   const [showAdd, setShowAdd] = useState(false)
   const [newName, setNewName] = useState('')
   const [newEmoji, setNewEmoji] = useState('🧑')
@@ -504,11 +511,11 @@ function AdminTab({ data, onUpdate }: { data: TeamData; onUpdate: (partial: Part
     <div className="space-y-6">
       {/* Team settings */}
       <Card padding="sm">
-        <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-3">🏢 团队设置</h3>
+        <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-3">🏢 {t('team.admin.teamSettings')}</h3>
         <div className="space-y-3">
-          <Input label="团队名称" value={teamName} onChange={setTeamName} placeholder="输入团队名称" />
+          <Input label={t('team.admin.teamName')} value={teamName} onChange={setTeamName} placeholder={t('team.admin.teamNamePlaceholder')} />
           <div>
-            <label className="text-[10px] font-medium text-[var(--color-text-muted)] block mb-1">隐私级别</label>
+            <label className="text-[10px] font-medium text-[var(--color-text-muted)] block mb-1">{t('team.admin.privacyLevel')}</label>
             <div className="flex gap-2">
               {(['public', 'private'] as const).map(p => (
                 <button
@@ -521,20 +528,20 @@ function AdminTab({ data, onUpdate }: { data: TeamData; onUpdate: (partial: Part
                     border: `1px solid ${privacy === p ? 'var(--color-accent)' : 'var(--color-border-subtle)'}`,
                   }}
                 >
-                  {p === 'public' ? '🌐 公开' : '🔒 私有'}
+                  {p === 'public' ? `🌐 ${t('team.admin.privacyPublic')}` : `🔒 ${t('team.admin.privacyPrivate')}`}
                 </button>
               ))}
             </div>
           </div>
-          <Button variant="primary" size="sm" onClick={saveSettings}>保存设置</Button>
+          <Button variant="primary" size="sm" onClick={saveSettings}>{t('common.save')}</Button>
         </div>
       </Card>
 
       {/* Member management */}
       <Card padding="sm">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">👤 成员管理</h3>
-          <Button variant="secondary" size="sm" onClick={() => setShowAdd(true)}>+ 添加成员</Button>
+          <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">👤 {t('team.admin.memberManagement')}</h3>
+          <Button variant="secondary" size="sm" onClick={() => setShowAdd(true)}>+ {t('team.admin.addMember')}</Button>
         </div>
         <div className="space-y-2">
           {data.members.map(m => (
@@ -542,16 +549,16 @@ function AdminTab({ data, onUpdate }: { data: TeamData; onUpdate: (partial: Part
               <span className="text-lg">{m.emoji}</span>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-[var(--color-text-primary)]">{m.name}</div>
-                <div className="text-[11px] text-[var(--color-text-muted)]">{ROLE_LABELS[m.role]} · 加入于 {m.joinedAt}</div>
+                <div className="text-[11px] text-[var(--color-text-muted)]">{t(ROLE_LABELS[m.role])} · {t('team.admin.joinedAt')} {m.joinedAt}</div>
               </div>
               <Badge variant={m.role === 'admin' ? 'accent' : m.role === 'lead' ? 'warning' : 'default'} size="sm">
-                {ROLE_LABELS[m.role]}
+                {t(ROLE_LABELS[m.role])}
               </Badge>
               {m.role !== 'admin' && (
                 <button
                   onClick={() => removeMember(m.id)}
                   className="text-xs text-[var(--color-text-muted)] hover:text-red-500 transition-colors cursor-pointer px-1"
-                  title="移除成员"
+                  title={t('team.admin.removeMember')}
                 >
                   ✕
                 </button>
@@ -563,21 +570,21 @@ function AdminTab({ data, onUpdate }: { data: TeamData; onUpdate: (partial: Part
 
       {/* Permission info */}
       <Card padding="sm">
-        <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-3">🔑 权限说明</h3>
+        <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-3">🔑 {t('team.admin.permissionsTitle')}</h3>
         <div className="space-y-2 text-sm text-[var(--color-text-secondary)]">
-          <div className="flex gap-2"><Badge variant="accent" size="sm">管理员</Badge> 全部权限，包括团队设置和成员管理</div>
-          <div className="flex gap-2"><Badge variant="warning" size="sm">组长</Badge> 审批周报，管理专注会话</div>
-          <div className="flex gap-2"><Badge variant="default" size="sm">成员</Badge> 提交周报，参与团队专注</div>
+          <div className="flex gap-2"><Badge variant="accent" size="sm">{t('team.roles.admin')}</Badge> {t('team.admin.permissions.admin')}</div>
+          <div className="flex gap-2"><Badge variant="warning" size="sm">{t('team.roles.lead')}</Badge> {t('team.admin.permissions.lead')}</div>
+          <div className="flex gap-2"><Badge variant="default" size="sm">{t('team.roles.member')}</Badge> {t('team.admin.permissions.member')}</div>
         </div>
       </Card>
 
       {/* Add member modal */}
-      <Modal isOpen={showAdd} onClose={() => setShowAdd(false)} title="添加成员" size="sm">
+      <Modal isOpen={showAdd} onClose={() => setShowAdd(false)} title={t('team.admin.addMember')} size="sm">
         <div className="space-y-3">
-          <Input label="姓名" value={newName} onChange={setNewName} placeholder="输入成员姓名" />
-          <Input label="头像 Emoji" value={newEmoji} onChange={setNewEmoji} placeholder="例如: 🧑" />
+          <Input label={t('team.admin.name')} value={newName} onChange={setNewName} placeholder={t('team.admin.namePlaceholder')} />
+          <Input label={t('team.admin.avatarEmoji')} value={newEmoji} onChange={setNewEmoji} placeholder={t('team.admin.avatarPlaceholder')} />
           <div>
-            <label className="text-[10px] font-medium text-[var(--color-text-muted)] block mb-1">角色</label>
+            <label className="text-[10px] font-medium text-[var(--color-text-muted)] block mb-1">{t('team.admin.role')}</label>
             <div className="flex gap-2">
               {(['member', 'lead', 'admin'] as const).map(r => (
                 <button
@@ -590,14 +597,14 @@ function AdminTab({ data, onUpdate }: { data: TeamData; onUpdate: (partial: Part
                     border: `1px solid ${newRole === r ? 'var(--color-accent)' : 'var(--color-border-subtle)'}`,
                   }}
                 >
-                  {ROLE_LABELS[r]}
+                  {t(ROLE_LABELS[r])}
                 </button>
               ))}
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-2">
-            <Button variant="ghost" size="sm" onClick={() => setShowAdd(false)}>取消</Button>
-            <Button variant="primary" size="sm" onClick={addMember} disabled={!newName.trim()}>添加</Button>
+            <Button variant="ghost" size="sm" onClick={() => setShowAdd(false)}>{t('common.cancel')}</Button>
+            <Button variant="primary" size="sm" onClick={addMember} disabled={!newName.trim()}>{t('team.admin.add')}</Button>
           </div>
         </div>
       </Modal>

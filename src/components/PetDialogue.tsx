@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAppStore } from '../store/useAppStore'
+import type { AppState } from '../store/useAppStore'
 
 // ─── Pre-defined Message Triggers ───
 
@@ -113,7 +114,7 @@ export function PetDialogue({
   autoHide = 5000,
   visible = true,
 }: PetDialogueProps) {
-  const storePet = useAppStore((s) => s.pet)
+  const storePet = useAppStore((s: AppState) => s.pet)
   const resolvedName = petName ?? storePet?.name ?? '小橘'
   const [dismissing, setDismissing] = useState(false)
   const timerRef = useRef<ReturnType<typeof setTimeout>>()

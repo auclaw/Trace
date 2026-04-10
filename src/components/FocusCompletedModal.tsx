@@ -1,6 +1,9 @@
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
+import { Clock, RefreshCw, Sparkles, Coins, Cat } from 'lucide-react'
 import { Modal } from './ui'
 import { useAppStore } from '../store/useAppStore'
+import type { AppState } from '../store/useAppStore'
 
 /**
  * Focus session completed celebration popup.
@@ -24,13 +27,14 @@ export default function FocusCompletedModal({
   xpGained,
   coinsGained,
 }: FocusCompletedModalProps) {
-  const pet = useAppStore((s) => s.pet)
+  const { t } = useTranslation()
+  const pet = useAppStore((s: AppState) => s.pet)
 
   const encouragement = useMemo(() => {
-    if (totalSessions >= 4) return '太厉害了！你完成了一整组专注！'
-    if (totalSessions >= 2) return '保持节奏，你做得很好！'
-    return '第一个专注已完成，继续加油！'
-  }, [totalSessions])
+    if (totalSessions >= 4) return t('popups.encouragement4')
+    if (totalSessions >= 2) return t('popups.encouragement2')
+    return t('popups.encouragement1')
+  }, [totalSessions, t])
 
   const focusGoal = useMemo(() => {
     try {
@@ -54,7 +58,7 @@ export default function FocusCompletedModal({
             className="text-lg font-bold"
             style={{ color: 'var(--color-text-primary)' }}
           >
-            专注完成！
+            {t('popups.focusCompleted')}
           </h2>
           <p
             className="text-sm mt-1"
@@ -73,17 +77,17 @@ export default function FocusCompletedModal({
               color: 'var(--color-accent)',
             }}
           >
-            <span className="opacity-70">目标：</span>
+            <span className="opacity-70">{t('popups.goal')}：</span>
             <span className="font-medium">{focusGoal}</span>
           </div>
         )}
 
         {/* Stats grid */}
         <div className="grid grid-cols-2 gap-3">
-          <StatCard icon="⏱️" label="专注时长" value={`${sessionMinutes} 分钟`} />
-          <StatCard icon="🔄" label="今日会话" value={`第 ${totalSessions} 次`} />
-          <StatCard icon="✨" label="获得经验" value={`+${xpGained} XP`} accent />
-          <StatCard icon="🪙" label="获得金币" value={`+${coinsGained}`} accent />
+          <StatCard icon={<Clock size={20} />} label={t('focus.timer')} value={`${sessionMinutes} ${t('common.minutes')}`} />
+          <StatCard icon={<RefreshCw size={20} />} label={t('focus.todaysSessions')} value={`${totalSessions}`} />
+          <StatCard icon={<Sparkles size={20} />} label={t('pet.xp')} value={`+${xpGained} ${t('pet.xpUnit')}`} accent />
+          <StatCard icon={<Coins size={20} />} label={t('pet.coins')} value={`+${coinsGained}`} accent />
         </div>
 
         {/* Pet status */}
@@ -91,11 +95,11 @@ export default function FocusCompletedModal({
           className="flex items-center justify-center gap-2 text-sm"
           style={{ color: 'var(--color-text-secondary)' }}
         >
-          <span>🐱</span>
-          <span>{pet.name} 等级 {pet.level}</span>
+          <span style={{ color: 'var(--color-accent)' }}><Cat size={18} /></span>
+          <span>{pet.name} {t('pet.level')} {pet.level}</span>
           <span className="opacity-50">·</span>
           <span style={{ color: 'var(--color-accent)' }}>
-            {pet.xp}/{pet.level * 100} XP
+            {pet.xp}/{pet.level * 100} {t('pet.xpUnit')}
           </span>
         </div>
 
@@ -109,7 +113,7 @@ export default function FocusCompletedModal({
               boxShadow: '0 2px 8px var(--color-accent-soft)',
             }}
           >
-            继续
+            {t('popups.continue')}
           </button>
         </div>
       </div>
@@ -123,7 +127,7 @@ function StatCard({
   value,
   accent,
 }: {
-  icon: string
+  icon: React.ReactNode
   label: string
   value: string
   accent?: boolean
@@ -135,7 +139,7 @@ function StatCard({
         background: accent ? 'var(--color-accent-soft)' : 'var(--color-bg-surface-2)',
       }}
     >
-      <div className="text-lg mb-0.5">{icon}</div>
+      <div className="mb-1" style={{ color: accent ? 'var(--color-accent)' : 'var(--color-text-muted)' }}>{icon}</div>
       <div
         className="text-[11px] mb-0.5"
         style={{ color: 'var(--color-text-muted)' }}

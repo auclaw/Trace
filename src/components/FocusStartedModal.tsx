@@ -1,8 +1,9 @@
 import { useState, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Modal } from './ui'
 
 /**
- * Rize-style "Your focus session started" popup.
+ * "Your focus session started" popup.
  * Shows when a focus session begins. Allows user to set a goal and add tags.
  */
 
@@ -19,6 +20,7 @@ const SUGGESTED_TAGS = {
 }
 
 export default function FocusStartedModal({ isOpen, onClose, onViewSession }: FocusStartedModalProps) {
+  const { t } = useTranslation()
   const [goal, setGoal] = useState('')
   const [projectTag, setProjectTag] = useState('')
   const [clientTag, setClientTag] = useState('')
@@ -64,30 +66,8 @@ export default function FocusStartedModal({ isOpen, onClose, onViewSession }: Fo
               MERIZE
             </span>
             <span className="text-xs" style={{ color: 'var(--color-accent)' }}>
-              ⚡ 效率教练
+              ⚡ {t('focus.productivityCoach')}
             </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-[var(--color-bg-surface-2)] transition-colors"
-              style={{ color: 'var(--color-text-muted)' }}
-              title="音效"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-                <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
-              </svg>
-            </button>
-            <button
-              className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-[var(--color-bg-surface-2)] transition-colors"
-              style={{ color: 'var(--color-text-muted)' }}
-              title="计时器"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                <circle cx="12" cy="12" r="10" />
-                <polyline points="12 6 12 12 16 14" />
-              </svg>
-            </button>
           </div>
         </div>
 
@@ -97,13 +77,13 @@ export default function FocusStartedModal({ isOpen, onClose, onViewSession }: Fo
             className="text-xl font-bold"
             style={{ color: 'var(--color-text-primary)' }}
           >
-            专注会话已开始
+            {t('popups.focusStarted')}
           </h2>
           <p
             className="text-sm mt-1"
             style={{ color: 'var(--color-text-secondary)' }}
           >
-            写下你的目标有助于保持专注，减少分心。
+            {t('popups.focusStartedHint')}
           </p>
         </div>
 
@@ -112,7 +92,7 @@ export default function FocusStartedModal({ isOpen, onClose, onViewSession }: Fo
           <textarea
             value={goal}
             onChange={(e) => setGoal(e.target.value)}
-            placeholder="为这次专注设定一个目标..."
+            placeholder={t('popups.focusGoalPlaceholder')}
             rows={3}
             className="w-full rounded-xl px-4 py-3 text-sm resize-none outline-none transition-all duration-150"
             style={{
@@ -136,7 +116,7 @@ export default function FocusStartedModal({ isOpen, onClose, onViewSession }: Fo
           <TagInput
             value={projectTag}
             onChange={setProjectTag}
-            placeholder="添加项目标签..."
+            placeholder={t('popups.addProjectTag')}
             suggestions={SUGGESTED_TAGS.project}
             showSuggestions={showProjectSuggestions}
             onFocus={() => setShowProjectSuggestions(true)}
@@ -145,7 +125,7 @@ export default function FocusStartedModal({ isOpen, onClose, onViewSession }: Fo
           <TagInput
             value={clientTag}
             onChange={setClientTag}
-            placeholder="添加客户标签..."
+            placeholder={t('popups.addClientTag')}
             suggestions={SUGGESTED_TAGS.client}
             showSuggestions={showClientSuggestions}
             onFocus={() => setShowClientSuggestions(true)}
@@ -154,7 +134,7 @@ export default function FocusStartedModal({ isOpen, onClose, onViewSession }: Fo
           <TagInput
             value={taskTag}
             onChange={setTaskTag}
-            placeholder="添加任务标签..."
+            placeholder={t('popups.addTaskTag')}
             suggestions={SUGGESTED_TAGS.task}
             showSuggestions={showTaskSuggestions}
             onFocus={() => setShowTaskSuggestions(true)}
@@ -172,7 +152,7 @@ export default function FocusStartedModal({ isOpen, onClose, onViewSession }: Fo
               boxShadow: '0 2px 8px var(--color-accent-soft)',
             }}
           >
-            查看会话
+            {t('popups.viewSession')}
           </button>
           <button
             onClick={handleDismiss}
@@ -181,7 +161,7 @@ export default function FocusStartedModal({ isOpen, onClose, onViewSession }: Fo
             onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-text-primary)' }}
             onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-secondary)' }}
           >
-            关闭
+            {t('popups.dismiss')}
           </button>
         </div>
       </div>
@@ -228,7 +208,7 @@ function TagInput({
         />
         <svg
           width="16" height="16" viewBox="0 0 24 24" fill="none"
-          stroke="var(--color-text-muted)" strokeWidth="2" strokeLinecap="round"
+          stroke="var(--color-text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
           className="mr-3 shrink-0"
         >
           <polyline points="6 9 12 15 18 9" />

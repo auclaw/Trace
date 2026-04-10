@@ -63,7 +63,7 @@ export async function loadFeatureFlags(): Promise<void> {
       featureFlagCache = { ...defaultFeatureFlags }
     }
   } catch (error) {
-    console.error('Failed to load feature flags:', error)
+    if (import.meta.env.DEV) console.error('Failed to load feature flags:', error)
     featureFlagCache = { ...defaultFeatureFlags }
   }
 }
@@ -83,7 +83,7 @@ export async function saveFeatureFlags(): Promise<void> {
     }
     await saveSettings(updatedSettings)
   } catch (error) {
-    console.error('Failed to save feature flags:', error)
+    if (import.meta.env.DEV) console.error('Failed to save feature flags:', error)
   }
 }
 

@@ -1,6 +1,9 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import dataService, { Activity, ActivityCategory, TimeBlock } from '../services/dataService'
 import { CATEGORY_COLORS } from '../config/themes'
+import { useToast } from '../components/ui/Toast'
+import EmptyState from '../components/ui/EmptyState'
 
 /* ── Helpers ── */
 function toDateStr(d: Date): string {
@@ -12,11 +15,11 @@ function fmtTime(iso: string): string {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
-function fmtDuration(mins: number): string {
-  if (mins < 60) return `${mins}分钟`
+function fmtDuration(mins: number, t: (key: string) => string): string {
+  if (mins < 60) return `${mins}${t('common.minutes')}`
   const h = Math.floor(mins / 60)
   const m = mins % 60
-  return m > 0 ? `${h}h ${m}m` : `${h}h`
+  return m > 0 ? `${h}${t('common.hours')} ${m}${t('common.minutes')}` : `${h}${t('common.hours')}`
 }
 
 function minutesSinceMidnight(iso: string): number {
@@ -25,17 +28,16 @@ function minutesSinceMidnight(iso: string): number {
 }
 
 const HOUR_HEIGHT = 72 // px per hour
-const PRIVACY_LEVELS = ['完全公开', '仅团队', '仅自己'] as const
 
 /* ── Granularity modes ── */
 const GRANULARITY_MIN = 1
 const GRANULARITY_MAX = 5
-const GRANULARITY_LABELS: Record<number, { label: string; desc: string }> = {
-  1: { label: '粗略', desc: '合并<30分钟活动' },
-  2: { label: '较粗', desc: '合并<15分钟活动' },
-  3: { label: '标准', desc: '默认显示' },
-  4: { label: '较细', desc: '含<5分钟活动' },
-  5: { label: '详细', desc: '显示所有活动' },
+const GRANULARITY_LABELS: Record<number, { labelKey: string; descKey: string }> = {
+  1: { labelKey: 'timeline.coarse', descKey: 'timeline.coarseDesc' },
+  2: { labelKey: 'timeline.coarseMedium', descKey: 'timeline.coarseMediumDesc' },
+  3: { labelKey: 'timeline.medium', descKey: 'timeline.mediumDesc' },
+  4: { labelKey: 'timeline.fineMedium', descKey: 'timeline.fineMediumDesc' },
+  5: { labelKey: 'timeline.fine', descKey: 'timeline.fineDesc' },
 }
 
 /* ── Work hours config ── */
@@ -53,6 +55,7 @@ function CategoryPicker({
   onSelect: (cat: ActivityCategory) => void
   onClose: () => void
 }) {
+  const { t } = useTranslation()
   const categories = Object.keys(CATEGORY_COLORS) as ActivityCategory[]
   return (
     <div
@@ -64,7 +67,7 @@ function CategoryPicker({
       }}
     >
       <div className="text-[11px] font-medium px-2 py-1 mb-1" style={{ color: 'var(--color-text-muted)' }}>
-        更改分类
+        {t('timeline.reclassify')}
       </div>
       {categories.map((cat) => (
         <button
@@ -107,6 +110,7 @@ function TimelineActivityBlock({
   onToggleSelect?: (id: string) => void
   isPersonalTime?: boolean
 }) {
+  const { t } = useTranslation()
   const [showPicker, setShowPicker] = useState(false)
   const color = CATEGORY_COLORS[activity.category] || '#94a3b8'
   const height = Math.max((activity.duration / 60) * HOUR_HEIGHT, 28)
@@ -143,10 +147,10 @@ function TimelineActivityBlock({
         {isPersonalTime && !batchMode && (
           <div
             className="flex items-center pl-1.5 flex-shrink-0"
-            title="个人时间"
+            title={t('timeline.personalTime')}
           >
             <span className="text-[9px] px-1 py-0.5 rounded" style={{ background: 'var(--color-bg-surface-2)', color: 'var(--color-text-muted)' }}>
-              个人
+              {t('timeline.personal')}
             </span>
           </div>
         )}
@@ -161,7 +165,7 @@ function TimelineActivityBlock({
                 className="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0"
                 style={{ background: 'var(--color-bg-surface-2)', color: 'var(--color-text-muted)' }}
               >
-                手动
+                {t('timeline.manual')}
               </span>
             )}
           </div>
@@ -171,7 +175,7 @@ function TimelineActivityBlock({
                 {fmtTime(activity.startTime)} - {fmtTime(activity.endTime)}
               </span>
               <span className="text-[11px] font-medium" style={{ color }}>
-                {fmtDuration(activity.duration)}
+                {fmtDuration(activity.duration, t)}
               </span>
               <span
                 className="text-[10px] px-1.5 py-0.5 rounded-full"
@@ -186,7 +190,7 @@ function TimelineActivityBlock({
           className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover/block:opacity-100 transition-opacity text-[11px] px-1.5 py-0.5 rounded"
           style={{ background: 'var(--color-bg-surface-2)', color: 'var(--color-text-muted)' }}
         >
-          点击修改
+          {t('timeline.clickToEdit')}
         </div>
       </div>
       {showPicker && (
@@ -209,6 +213,7 @@ function PlanActualCard({
   block: TimeBlock
   actual: Activity | undefined
 }) {
+  const { t } = useTranslation()
   const planColor = CATEGORY_COLORS[block.category] || '#94a3b8'
   const actualColor = actual ? (CATEGORY_COLORS[actual.category] || '#94a3b8') : '#94a3b8'
 
@@ -220,7 +225,7 @@ function PlanActualCard({
       {/* Plan side */}
       <div className="flex-1 min-w-0">
         <div className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--color-text-muted)' }}>
-          计划
+          {t('dashboard.planned')}
         </div>
         <div className="flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: planColor }} />
@@ -235,7 +240,7 @@ function PlanActualCard({
       {/* Actual side */}
       <div className="flex-1 min-w-0">
         <div className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--color-text-muted)' }}>
-          实际
+          {t('dashboard.actual')}
         </div>
         {actual ? (
           <>
@@ -248,7 +253,7 @@ function PlanActualCard({
             </span>
           </>
         ) : (
-          <span className="text-[12px] italic" style={{ color: 'var(--color-text-muted)' }}>暂无记录</span>
+          <span className="text-[12px] italic" style={{ color: 'var(--color-text-muted)' }}>{t('common.noData')}</span>
         )}
       </div>
     </div>
@@ -259,6 +264,8 @@ function PlanActualCard({
    MAIN COMPONENT
    ══════════════════════════════════════════════ */
 export default function Timeline() {
+  const { t } = useTranslation()
+  const { toast } = useToast()
   const today = toDateStr(new Date())
   const [activities, setActivities] = useState<Activity[]>([])
   const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>([])
@@ -267,6 +274,8 @@ export default function Timeline() {
   const [granularity, setGranularity] = useState<number>(3)
   const [batchMode, setBatchMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [showBatchCategoryPicker, setShowBatchCategoryPicker] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const timelineRef = useRef<HTMLDivElement>(null)
 
   // Load data
@@ -345,6 +354,30 @@ export default function Timeline() {
     setBatchMode(false)
   }, [])
 
+  // Batch operations
+  const handleBatchCategorize = useCallback((category: ActivityCategory) => {
+    selectedIds.forEach((id) => {
+      dataService.updateActivity(id, { category })
+    })
+    setActivities(dataService.getActivities(today))
+    const count = selectedIds.size
+    setSelectedIds(new Set())
+    setShowBatchCategoryPicker(false)
+    toast(t('timeline.categoryUpdated', { count }), 'success')
+  }, [selectedIds, today, toast, t])
+
+  const handleConfirmBatchDelete = useCallback(() => {
+    selectedIds.forEach((id) => {
+      dataService.deleteActivity(id)
+    })
+    setActivities(dataService.getActivities(today))
+    const count = selectedIds.size
+    setSelectedIds(new Set())
+    setBatchMode(false)
+    setShowDeleteConfirm(false)
+    toast(t('timeline.deleteCompleted', { count }), 'success')
+  }, [selectedIds, today, toast, t])
+
   // Current activity (simulated tracking)
   const currentActivity = useMemo(() => {
     const nowISO = now.toISOString().split('.')[0]
@@ -392,10 +425,10 @@ export default function Timeline() {
         <div className="flex items-center justify-between mb-1">
           <div>
             <h1 className="text-xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
-              ⏱️ 时间线
+              ⏱️ {t('timeline.title')}
             </h1>
             <p className="text-[13px] mt-1" style={{ color: 'var(--color-text-muted)' }}>
-              {today} — 活动追踪与回顾
+              {today} — {t('timeline.activity')} {t('timeline.tracking')}
             </p>
           </div>
           {/* Privacy toggle */}
@@ -409,7 +442,7 @@ export default function Timeline() {
             }}
           >
             <span>{['🌍', '👥', '🔒'][privacyLevel]}</span>
-            {PRIVACY_LEVELS[privacyLevel]}
+            {t(`timeline.${['basic', 'standard', 'detailed'][privacyLevel]}`)}
           </button>
         </div>
       </div>
@@ -420,9 +453,9 @@ export default function Timeline() {
         style={{ background: 'var(--color-bg-surface-1)', border: '1px solid var(--color-border-subtle)' }}
       >
         <div className="flex-1 min-w-0">
-          <div className="text-[11px] font-medium mb-1.5" style={{ color: 'var(--color-text-muted)' }}>活动粒度</div>
+          <div className="text-[11px] font-medium mb-1.5" style={{ color: 'var(--color-text-muted)' }}>{t('timeline.granularity')}</div>
           <div className="flex items-center gap-3">
-            <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--color-text-muted)', width: 24 }}>粗</span>
+            <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--color-text-muted)', width: 24 }}>{t('timeline.coarse')}</span>
             <input
               type="range"
               min={GRANULARITY_MIN}
@@ -436,7 +469,7 @@ export default function Timeline() {
                 height: 4,
               }}
             />
-            <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--color-text-muted)', width: 24 }}>细</span>
+            <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--color-text-muted)', width: 24 }}>{t('timeline.fine')}</span>
           </div>
           <div className="flex items-center justify-between mt-1">
             <span
@@ -446,10 +479,10 @@ export default function Timeline() {
                 color: 'var(--color-accent)',
               }}
             >
-              {GRANULARITY_LABELS[granularity]?.label}
+              {t(GRANULARITY_LABELS[granularity]?.labelKey)}
             </span>
             <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>
-              {GRANULARITY_LABELS[granularity]?.desc}
+              {t(GRANULARITY_LABELS[granularity]?.descKey)}
             </span>
           </div>
         </div>
@@ -464,7 +497,7 @@ export default function Timeline() {
             fontWeight: batchMode ? 600 : 400,
           }}
         >
-          {batchMode ? '退出批量' : '批量操作'}
+          {batchMode ? t('common.cancel') : t('timeline.batchActions')}
         </button>
       </div>
 
@@ -494,15 +527,15 @@ export default function Timeline() {
           {currentActivity ? (
             <div className="flex-1 min-w-0">
               <span className="text-[13px] font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                正在追踪: {currentActivity.name}
+                {t('dashboard.tracking')}: {currentActivity.name}
               </span>
               <span className="text-[12px] ml-2" style={{ color: 'var(--color-text-muted)' }}>
-                {fmtTime(currentActivity.startTime)} 开始 · {currentActivity.category}
+                {fmtTime(currentActivity.startTime)} {t('dashboard.started')} · {currentActivity.category}
               </span>
             </div>
           ) : (
             <span className="text-[13px]" style={{ color: 'var(--color-text-muted)' }}>
-              当前无活动追踪 — 空闲中
+              {t('timeline.idle')}
             </span>
           )}
         </div>
@@ -515,15 +548,15 @@ export default function Timeline() {
           className="rounded-[var(--radius-lg)] p-3"
           style={{ background: 'var(--color-bg-surface-1)', border: '1px solid var(--color-border-subtle)' }}
         >
-          <div className="text-[11px] font-medium mb-1" style={{ color: 'var(--color-text-muted)' }}>今日总计</div>
-          <div className="text-lg font-bold" style={{ color: 'var(--color-accent)' }}>{fmtDuration(totalMinutes)}</div>
+          <div className="text-[11px] font-medium mb-1" style={{ color: 'var(--color-text-muted)' }}>{t('timeline.total')}</div>
+          <div className="text-lg font-bold" style={{ color: 'var(--color-accent)' }}>{fmtDuration(totalMinutes, t)}</div>
         </div>
         {/* Activity count */}
         <div
           className="rounded-[var(--radius-lg)] p-3"
           style={{ background: 'var(--color-bg-surface-1)', border: '1px solid var(--color-border-subtle)' }}
         >
-          <div className="text-[11px] font-medium mb-1" style={{ color: 'var(--color-text-muted)' }}>活动数</div>
+          <div className="text-[11px] font-medium mb-1" style={{ color: 'var(--color-text-muted)' }}>{t('timeline.activity')}</div>
           <div className="text-lg font-bold" style={{ color: 'var(--color-text-primary)' }}>{activities.length}</div>
         </div>
         {/* Top category */}
@@ -531,7 +564,7 @@ export default function Timeline() {
           className="rounded-[var(--radius-lg)] p-3"
           style={{ background: 'var(--color-bg-surface-1)', border: '1px solid var(--color-border-subtle)' }}
         >
-          <div className="text-[11px] font-medium mb-1" style={{ color: 'var(--color-text-muted)' }}>最多类别</div>
+          <div className="text-[11px] font-medium mb-1" style={{ color: 'var(--color-text-muted)' }}>{t('timeline.topCategory')}</div>
           {categoryBreakdown.length > 0 ? (
             <div className="flex items-center gap-1.5">
               <span
@@ -542,7 +575,7 @@ export default function Timeline() {
                 {categoryBreakdown[0][0]}
               </span>
               <span className="text-[12px]" style={{ color: 'var(--color-text-muted)' }}>
-                {fmtDuration(categoryBreakdown[0][1])}
+                {fmtDuration(categoryBreakdown[0][1], t)}
               </span>
             </div>
           ) : (
@@ -554,7 +587,7 @@ export default function Timeline() {
           className="rounded-[var(--radius-lg)] p-3"
           style={{ background: 'var(--color-bg-surface-1)', border: '1px solid var(--color-border-subtle)' }}
         >
-          <div className="text-[11px] font-medium mb-1" style={{ color: 'var(--color-text-muted)' }}>上下文切换</div>
+          <div className="text-[11px] font-medium mb-1" style={{ color: 'var(--color-text-muted)' }}>{t('timeline.contextSwitch')}</div>
           <div className="flex items-center gap-2">
             <span
               className="text-lg font-bold"
@@ -567,7 +600,7 @@ export default function Timeline() {
               style={{ background: contextSwitches <= 5 ? 'var(--color-success, #22c55e)' : contextSwitches <= 12 ? 'var(--color-warning, #f59e0b)' : 'var(--color-error, #ef4444)' }}
             />
             <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>
-              {contextSwitches <= 5 ? '优秀' : contextSwitches <= 12 ? '一般' : '偏多'}
+              {contextSwitches <= 5 ? t('timeline.excellent') : contextSwitches <= 12 ? t('timeline.average') : t('timeline.high')}
             </span>
           </div>
         </div>
@@ -577,7 +610,7 @@ export default function Timeline() {
       {currentPlannedBlock && (
         <div className="mb-5">
           <div className="text-[12px] font-semibold mb-2" style={{ color: 'var(--color-text-secondary)' }}>
-            📅 当前时段 · 计划 vs 实际
+            📅 {t('timeline.currentPeriod')} · {t('dashboard.planned')} {t('common.vs')} {t('dashboard.actual')}
           </div>
           <PlanActualCard block={currentPlannedBlock} actual={matchingActual} />
         </div>
@@ -587,7 +620,7 @@ export default function Timeline() {
       {categoryBreakdown.length > 0 && (
         <div className="mb-5">
           <div className="text-[12px] font-semibold mb-2" style={{ color: 'var(--color-text-secondary)' }}>
-            分类分布
+            {t('timeline.categoryDistribution')}
           </div>
           <div className="flex h-3 rounded-full overflow-hidden" style={{ background: 'var(--color-bg-surface-2)' }}>
             {categoryBreakdown.map(([cat, mins]) => (
@@ -598,7 +631,7 @@ export default function Timeline() {
                   width: `${(mins / totalMinutes) * 100}%`,
                   background: CATEGORY_COLORS[cat] || '#94a3b8',
                 }}
-                title={`${cat}: ${fmtDuration(mins)}`}
+                title={`${cat}: ${fmtDuration(mins, t)}`}
               />
             ))}
           </div>
@@ -606,7 +639,7 @@ export default function Timeline() {
             {categoryBreakdown.map(([cat, mins]) => (
               <div key={cat} className="flex items-center gap-1 text-[11px]" style={{ color: 'var(--color-text-muted)' }}>
                 <span className="w-2 h-2 rounded-full" style={{ background: CATEGORY_COLORS[cat] || '#94a3b8' }} />
-                {cat} {fmtDuration(mins)}
+                {cat} {fmtDuration(mins, t)}
               </div>
             ))}
           </div>
@@ -615,99 +648,115 @@ export default function Timeline() {
 
       {/* ── Vertical timeline ── */}
       <div className="text-[12px] font-semibold mb-2" style={{ color: 'var(--color-text-secondary)' }}>
-        时间线
+        {t('timeline.title')}
       </div>
-      <div
-        ref={timelineRef}
-        className="relative overflow-y-auto rounded-[var(--radius-lg)]"
-        style={{
-          height: '520px',
-          background: 'var(--color-bg-surface-1)',
-          border: '1px solid var(--color-border-subtle)',
-        }}
-      >
-        <div className="relative" style={{ height: `${hours.length * HOUR_HEIGHT}px` }}>
-          {/* Work hours background shading (9:00-18:00) */}
-          {(() => {
-            const workStart = Math.max(WORK_HOUR_START - 6, 0)
-            const workEnd = Math.min(WORK_HOUR_END - 6, hours.length)
-            return (
-              <div
-                className="absolute left-[60px] right-0 pointer-events-none"
-                style={{
-                  top: `${workStart * HOUR_HEIGHT}px`,
-                  height: `${(workEnd - workStart) * HOUR_HEIGHT}px`,
-                  background: 'var(--color-accent-soft, rgba(99,102,241,0.04))',
-                  borderLeft: '2px solid var(--color-accent-soft, rgba(99,102,241,0.12))',
-                  zIndex: 1,
-                }}
-              >
-                <span
-                  className="absolute top-1 right-2 text-[9px] font-medium px-1.5 py-0.5 rounded"
-                  style={{ color: 'var(--color-text-muted)', background: 'var(--color-bg-surface-2)', opacity: 0.7 }}
-                >
-                  工作时间 {WORK_HOUR_START}:00-{WORK_HOUR_END}:00
-                </span>
-              </div>
-            )
-          })()}
-
-          {/* Hour gridlines */}
-          {hours.map((hour, i) => (
-            <div
-              key={hour}
-              className="absolute left-0 right-0 flex items-start"
-              style={{ top: `${i * HOUR_HEIGHT}px`, height: `${HOUR_HEIGHT}px` }}
-            >
-              <span
-                className="w-[60px] text-right pr-3 text-[11px] font-medium pt-0.5 select-none flex-shrink-0"
-                style={{ color: 'var(--color-text-muted)' }}
-              >
-                {String(hour).padStart(2, '0')}:00
-              </span>
-              <div className="flex-1 border-t" style={{ borderColor: 'var(--color-border-subtle)' }} />
-            </div>
-          ))}
-
-          {/* Activity blocks */}
-          {filteredActivities.map((activity) => {
-            const aHour = new Date(activity.startTime).getHours()
-            if (aHour < 6) return null
-            const adjustedTop = ((minutesSinceMidnight(activity.startTime) - 360) / 60) * HOUR_HEIGHT
-            const isPersonalTime = aHour < WORK_HOUR_START || aHour >= WORK_HOUR_END
-            return (
-              <TimelineActivityBlock
-                key={activity.id}
-                activity={activity}
-                adjustedTop={adjustedTop}
-                onCategoryChange={handleCategoryChange}
-                batchMode={batchMode}
-                isSelected={selectedIds.has(activity.id)}
-                onToggleSelect={handleToggleSelect}
-                isPersonalTime={isPersonalTime}
-              />
-            )
-          })}
-
-          {/* Now marker (adjusted for 6am base) */}
-          {now.getHours() >= 6 && (
-            <div
-              className="absolute left-0 right-0 z-30 pointer-events-none"
-              style={{ top: `${((now.getHours() * 60 + now.getMinutes() - 360) / 60) * HOUR_HEIGHT}px` }}
-            >
-              <div className="flex items-center">
-                <span
-                  className="text-[10px] font-bold px-1.5 py-0.5 rounded-full ml-1"
-                  style={{ background: 'var(--color-accent)', color: '#fff' }}
-                >
-                  NOW
-                </span>
-                <div className="flex-1 h-[2px]" style={{ background: 'var(--color-accent)' }} />
-              </div>
-            </div>
-          )}
+      {filteredActivities.length === 0 ? (
+        <div
+          className="rounded-[var(--radius-lg)]"
+          style={{
+            background: 'var(--color-bg-surface-1)',
+            border: '1px solid var(--color-border-subtle)',
+          }}
+        >
+          <EmptyState
+            icon="⏱️"
+            title={t('timeline.emptyTitle')}
+            description={t('timeline.emptyDescription')}
+          />
         </div>
-      </div>
+      ) : (
+        <div
+          ref={timelineRef}
+          className="relative overflow-y-auto rounded-[var(--radius-lg)]"
+          style={{
+            height: '520px',
+            background: 'var(--color-bg-surface-1)',
+            border: '1px solid var(--color-border-subtle)',
+          }}
+        >
+          <div className="relative" style={{ height: `${hours.length * HOUR_HEIGHT}px` }}>
+            {/* Work hours background shading (9:00-18:00) */}
+            {(() => {
+              const workStart = Math.max(WORK_HOUR_START - 6, 0)
+              const workEnd = Math.min(WORK_HOUR_END - 6, hours.length)
+              return (
+                <div
+                  className="absolute left-[60px] right-0 pointer-events-none"
+                  style={{
+                    top: `${workStart * HOUR_HEIGHT}px`,
+                    height: `${(workEnd - workStart) * HOUR_HEIGHT}px`,
+                    background: 'var(--color-accent-soft, rgba(99,102,241,0.04))',
+                    borderLeft: '2px solid var(--color-accent-soft, rgba(99,102,241,0.12))',
+                    zIndex: 1,
+                  }}
+                >
+                  <span
+                    className="absolute top-1 right-2 text-[9px] font-medium px-1.5 py-0.5 rounded"
+                    style={{ color: 'var(--color-text-muted)', background: 'var(--color-bg-surface-2)', opacity: 0.7 }}
+                  >
+                    {t('timeline.workHours')} {WORK_HOUR_START}:00-{WORK_HOUR_END}:00
+                  </span>
+                </div>
+              )
+            })()}
+
+            {/* Hour gridlines */}
+            {hours.map((hour, i) => (
+              <div
+                key={hour}
+                className="absolute left-0 right-0 flex items-start"
+                style={{ top: `${i * HOUR_HEIGHT}px`, height: `${HOUR_HEIGHT}px` }}
+              >
+                <span
+                  className="w-[60px] text-right pr-3 text-[11px] font-medium pt-0.5 select-none flex-shrink-0"
+                  style={{ color: 'var(--color-text-muted)' }}
+                >
+                  {String(hour).padStart(2, '0')}:00
+                </span>
+                <div className="flex-1 border-t" style={{ borderColor: 'var(--color-border-subtle)' }} />
+              </div>
+            ))}
+
+            {/* Activity blocks */}
+            {filteredActivities.map((activity) => {
+              const aHour = new Date(activity.startTime).getHours()
+              if (aHour < 6) return null
+              const adjustedTop = ((minutesSinceMidnight(activity.startTime) - 360) / 60) * HOUR_HEIGHT
+              const isPersonalTime = aHour < WORK_HOUR_START || aHour >= WORK_HOUR_END
+              return (
+                <TimelineActivityBlock
+                  key={activity.id}
+                  activity={activity}
+                  adjustedTop={adjustedTop}
+                  onCategoryChange={handleCategoryChange}
+                  batchMode={batchMode}
+                  isSelected={selectedIds.has(activity.id)}
+                  onToggleSelect={handleToggleSelect}
+                  isPersonalTime={isPersonalTime}
+                />
+              )
+            })}
+
+            {/* Now marker (adjusted for 6am base) */}
+            {now.getHours() >= 6 && (
+              <div
+                className="absolute left-0 right-0 z-30 pointer-events-none"
+                style={{ top: `${((now.getHours() * 60 + now.getMinutes() - 360) / 60) * HOUR_HEIGHT}px` }}
+              >
+                <div className="flex items-center">
+                  <span
+                    className="text-[10px] font-bold px-1.5 py-0.5 rounded-full ml-1"
+                    style={{ background: 'var(--color-accent)', color: '#fff' }}
+                  >
+                    NOW
+                  </span>
+                  <div className="flex-1 h-[2px]" style={{ background: 'var(--color-accent)' }} />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── Batch action floating bar ── */}
       {batchMode && (
@@ -721,7 +770,7 @@ export default function Timeline() {
           }}
         >
           <span className="text-[12px] font-medium" style={{ color: 'var(--color-text-muted)' }}>
-            已选 <span style={{ color: 'var(--color-accent)', fontWeight: 700 }}>{selectedIds.size}</span> 项
+            {t('timeline.selectedCount')} <span style={{ color: 'var(--color-accent)', fontWeight: 700 }}>{selectedIds.size}</span> {t('timeline.items')}
           </span>
           <div className="h-4 w-px" style={{ background: 'var(--color-border-subtle)' }} />
           <button
@@ -729,10 +778,10 @@ export default function Timeline() {
             className="px-3 py-1 rounded-full text-[12px] transition-colors"
             style={{ background: 'var(--color-bg-surface-2)', color: 'var(--color-text-secondary)' }}
           >
-            全选
+            {t('timeline.selectAll')}
           </button>
           <button
-            onClick={() => { /* batch categorize placeholder */ }}
+            onClick={() => setShowBatchCategoryPicker(true)}
             className="px-3 py-1 rounded-full text-[12px] font-medium transition-colors"
             style={{
               background: selectedIds.size > 0 ? 'var(--color-accent)' : 'var(--color-bg-surface-2)',
@@ -740,10 +789,10 @@ export default function Timeline() {
             }}
             disabled={selectedIds.size === 0}
           >
-            批量分类
+            {t('timeline.batchCategory')}
           </button>
           <button
-            onClick={() => { /* batch delete placeholder */ }}
+            onClick={() => setShowDeleteConfirm(true)}
             className="px-3 py-1 rounded-full text-[12px] font-medium transition-colors"
             style={{
               background: selectedIds.size > 0 ? 'var(--color-error, #ef4444)' : 'var(--color-bg-surface-2)',
@@ -751,15 +800,93 @@ export default function Timeline() {
             }}
             disabled={selectedIds.size === 0}
           >
-            批量删除
+            {t('timeline.batchDelete')}
           </button>
           <button
             onClick={handleBatchClear}
             className="px-3 py-1 rounded-full text-[12px] transition-colors"
             style={{ background: 'var(--color-bg-surface-2)', color: 'var(--color-text-secondary)' }}
           >
-            取消
+            {t('common.cancel')}
           </button>
+        </div>
+      )}
+
+      {/* Batch Category Picker Modal */}
+      {showBatchCategoryPicker && (
+        <div
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] flex items-center justify-center"
+          onClick={() => setShowBatchCategoryPicker(false)}
+        >
+          <div
+            className="bg-[var(--color-bg-surface-1)] border border-[var(--color-border-subtle)] rounded-[var(--radius-lg)] p-4 min-w-[220px] shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-[13px] font-semibold mb-3" style={{ color: 'var(--color-text-primary)' }}>
+              {t('timeline.batchCategorize')} · {t('timeline.selectedCount')} {selectedIds.size} {t('timeline.items')}
+            </div>
+            <div className="space-y-1">
+              {(Object.keys(CATEGORY_COLORS) as ActivityCategory[]).map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => handleBatchCategorize(cat)}
+                  className="flex items-center gap-2 w-full px-3 py-2 rounded-[var(--radius-sm)] text-left text-[13px] transition-colors hover:bg-[var(--color-bg-surface-2)]"
+                  style={{ color: 'var(--color-text-primary)' }}
+                >
+                  <span
+                    className="w-3 h-3 rounded-full flex-shrink-0"
+                    style={{ background: CATEGORY_COLORS[cat] || '#94a3b8' }}
+                  />
+                  {cat}
+                </button>
+              ))}
+            </div>
+            <div className="mt-3 pt-3 border-t border-[var(--color-border-subtle)]">
+              <button
+                onClick={() => setShowBatchCategoryPicker(false)}
+                className="w-full px-3 py-2 rounded-[var(--radius-sm)] text-[13px] bg-[var(--color-bg-surface-2)] transition-colors hover:bg-[var(--color-bg-surface-3)]"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
+                {t('common.cancel')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Batch Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] flex items-center justify-center"
+          onClick={() => setShowDeleteConfirm(false)}
+        >
+          <div
+            className="bg-[var(--color-bg-surface-1)] border border-[var(--color-border-subtle)] rounded-[var(--radius-lg)] p-4 min-w-[280px] shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-[13px] font-semibold mb-2" style={{ color: 'var(--color-text-primary)' }}>
+              {t('timeline.confirmDelete')}
+            </div>
+            <div className="text-[13px] mb-4" style={{ color: 'var(--color-text-secondary)' }}>
+              {t('timeline.deleteSelectedConfirm', { count: selectedIds.size })}
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-4 py-2 rounded-[var(--radius-sm)] text-[13px] bg-[var(--color-bg-surface-2)] transition-colors hover:bg-[var(--color-bg-surface-3)]"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                onClick={handleConfirmBatchDelete}
+                className="px-4 py-2 rounded-[var(--radius-sm)] text-[13px] font-medium transition-colors"
+                style={{ background: 'var(--color-error, #ef4444)', color: '#fff' }}
+              >
+                {t('common.confirm')}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

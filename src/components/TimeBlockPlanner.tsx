@@ -71,7 +71,7 @@ const TimeBlockPlanner: React.FC<TimeBlockPlannerProps> = ({ selectedDate, theme
       setTimeblocks(blocksData)
       setTasks(tasksData.filter(t => t.status !== 'completed'))
     } catch (err) {
-      console.error('加载时间块失败', err)
+      if (import.meta.env.DEV) console.error('加载时间块失败', err)
     } finally {
       setLoading(false)
     }
@@ -141,7 +141,7 @@ const TimeBlockPlanner: React.FC<TimeBlockPlannerProps> = ({ selectedDate, theme
       closeModal()
       await loadData()
     } catch (err) {
-      console.error('保存失败', err)
+      if (import.meta.env.DEV) console.error('保存失败', err)
       alert('保存失败')
     }
   }
@@ -152,7 +152,7 @@ const TimeBlockPlanner: React.FC<TimeBlockPlannerProps> = ({ selectedDate, theme
       await deleteTimeblock(id)
       await loadData()
     } catch (err) {
-      console.error('删除失败', err)
+      if (import.meta.env.DEV) console.error('删除失败', err)
       alert('删除失败')
     }
   }
@@ -162,7 +162,7 @@ const TimeBlockPlanner: React.FC<TimeBlockPlannerProps> = ({ selectedDate, theme
       await toggleTimeblockCompleted(block.id)
       await loadData()
     } catch (err) {
-      console.error('切换状态失败', err)
+      if (import.meta.env.DEV) console.error('切换状态失败', err)
     }
   }
 
@@ -198,7 +198,7 @@ const TimeBlockPlanner: React.FC<TimeBlockPlannerProps> = ({ selectedDate, theme
       await loadData()
       alert(`AI 已为你推荐 ${suggestions.length} 个时间块`)
     } catch (err) {
-      console.error('AI 建议失败', err)
+      if (import.meta.env.DEV) console.error('AI 建议失败', err)
       alert('AI 建议失败，请稍后重试')
     } finally {
       setSuggesting(false)

@@ -557,6 +557,11 @@ const dataService = {
     save(KEYS.tasks, all.filter(t => t.id !== id));
   },
 
+  saveTasks(tasks: Task[]): void {
+    ensureSeeded();
+    save(KEYS.tasks, tasks);
+  },
+
   // --- Habits ---
   getHabits(): Habit[] {
     ensureSeeded();
@@ -630,12 +635,39 @@ const dataService = {
   // --- Pet ---
   getPet(): Pet {
     ensureSeeded();
-    return load<Pet>(KEYS.pet, seedPet());
+    let pet = load<Pet>(KEYS.pet, seedPet());
+
+    // Natural decay: hunger and mood decrease over time
+    const now = new Date();
+    const lastFedDate = new Date(pet.lastFed);
+    const hoursSinceFed = (now.getTime() - lastFedDate.getTime()) / (1000 * 60 * 60);
+    const hungerDecay = Math.floor(hoursSinceFed * 2); // ~2 hunger points per hour
+
+    const lastInteractedDate = new Date(pet.lastInteracted);
+    const hoursSinceInteracted = (now.getTime() - lastInteractedDate.getTime()) / (1000 * 60 * 60);
+    const moodDecay = Math.floor(hoursSinceInteracted * 1); // ~1 mood point per hour
+
+    if (hungerDecay > 0 || moodDecay > 0) {
+      pet = {
+        ...pet,
+        hunger: Math.max(0, pet.hunger - hungerDecay),
+        mood: Math.max(0, pet.mood - moodDecay),
+      };
+      save(KEYS.pet, pet);
+    }
+
+    return pet;
   },
 
   updatePet(updates: Partial<Pet>): Pet {
     const pet = load<Pet>(KEYS.pet, seedPet());
-    const updated = { ...pet, ...updates };
+    const updated = {
+      ...pet,
+      ...updates,
+      // Update timestamps when changing hunger or mood
+      lastFed: 'hunger' in updates ? new Date().toISOString() : pet.lastFed,
+      lastInteracted: 'mood' in updates ? new Date().toISOString() : pet.lastInteracted,
+    };
     save(KEYS.pet, updated);
     return updated;
   },
@@ -689,10 +721,31 @@ const dataService = {
     const categories: Record<string, number> = {};
     let totalMinutes = 0;
 
+    // Calculate start and end of the target date in minutes
+    const [year, month, day] = date.split('-').map(Number);
+    const startOfDay = new Date(year, month - 1, day, 0, 0, 0);
+    const endOfDay = new Date(year, month - 1, day + 1, 0, 0, 0);
+    const startMs = startOfDay.getTime();
+    const endMs = endOfDay.getTime();
+
     for (const a of activities) {
-      totalMinutes += a.duration;
-      categories[a.category] = (categories[a.category] || 0) + a.duration;
+      // Calculate when activity start time
+      const activityStart = new Date(a.startTime).getTime();
+      const activityEnd = activityStart + a.duration * 60 * 1000;
+
+      // Clip to day boundary
+      const clippedStart = Math.max(activityStart, startMs);
+      const clippedEnd = Math.min(activityEnd, endMs);
+
+      // Calculate actual minutes on this day
+      const actualMinutes = Math.max(0, (clippedEnd - clippedStart) / (60 * 1000));
+
+      totalMinutes += actualMinutes;
+      categories[a.category] = (categories[a.category] || 0) + actualMinutes;
     }
+
+    // Cap total at 24h = 1440 minutes
+    totalMinutes = Math.min(totalMinutes, 24 * 60);
 
     return { totalMinutes, activityCount: activities.length, categories };
   },

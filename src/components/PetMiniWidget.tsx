@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAppStore } from '../store/useAppStore'
+import type { AppState } from '../store/useAppStore'
 import { IDLE_LONG } from './PetDialogue'
 
 // ─── Constants ───
@@ -73,7 +74,7 @@ export default function PetMiniWidget() {
   let storePetName = '小橘'
   let storePetLevel = 1
   try {
-    const pet = useAppStore((s) => s.pet)
+    const pet = useAppStore((s: AppState) => s.pet)
     if (pet) {
       storePetName = pet.name || '小橘'
       storePetLevel = pet.level || 1
@@ -85,7 +86,7 @@ export default function PetMiniWidget() {
   // Check focus mode if available
   let isFocusMode = false
   try {
-    const focusState = useAppStore((s) => s.focusState)
+    const focusState = useAppStore((s: AppState) => s.focusState)
     isFocusMode = focusState === 'working'
   } catch {
     // focusState might not exist

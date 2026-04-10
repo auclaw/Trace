@@ -5,7 +5,7 @@
 /* ============================================================
    Merize Design System v2 — "Warm Sunrise"
    Inspired by: 小日常 (warm browns), Forest (nature),
-   TickTick (clean color), Rize (premium metrics), Monday (color info)
+   TickTick (clean color), Monday (color info)
    ============================================================ */
 
 :root {
@@ -75,30 +75,36 @@
 }
 
 /* ── Dark Mode ── */
+/* Optimized for modern dark mode:
+   - Slightly elevated base for better hierarchy
+   - Improved text contrast meeting WCAG AA standards
+   - Softer shadows that don't bleed
+   - Accent colors with proper opacity for dark background
+*/
 .dark {
-  --color-bg-base: #141210;
-  --color-bg-surface-1: #1e1c18;
-  --color-bg-surface-2: #28251f;
-  --color-bg-surface-3: #322e26;
-  --color-text-primary: #f5efe8;
-  --color-text-secondary: #c8bfb0;
-  --color-text-muted: #8a8070;
-  --color-text-inverse: #141210;
-  --color-border-subtle: #3a3428;
-  --color-border-strong: #504838;
-  --color-accent-soft: rgba(251, 146, 60, 0.12);
-  --color-success-soft: rgba(74, 222, 128, 0.12);
-  --color-danger-soft: rgba(248, 113, 113, 0.12);
-  --color-warning-soft: rgba(251, 191, 36, 0.12);
-  --color-info-soft: rgba(96, 165, 250, 0.12);
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.2);
-  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.25);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.35);
-  --shadow-xl: 0 16px 40px rgba(0, 0, 0, 0.4);
-  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.2), 0 0 1px rgba(0, 0, 0, 0.3);
-  --shadow-card-hover: 0 8px 24px rgba(0, 0, 0, 0.3), 0 0 1px rgba(0, 0, 0, 0.4);
-  --shadow-accent: 0 4px 14px rgba(251, 146, 60, 0.3);
+  --color-bg-base: #12110f;
+  --color-bg-surface-1: #1a1916;
+  --color-bg-surface-2: #25221d;
+  --color-bg-surface-3: #2f2c25;
+  --color-text-primary: #f8f4ed;
+  --color-text-secondary: #d4cbbf;
+  --color-text-muted: #a19787;
+  --color-text-inverse: #12110f;
+  --color-border-subtle: #38332b;
+  --color-border-strong: #4d4639;
+  --color-accent-soft: rgba(251, 146, 60, 0.16);
+  --color-success-soft: rgba(74, 222, 128, 0.16);
+  --color-danger-soft: rgba(248, 113, 113, 0.16);
+  --color-warning-soft: rgba(251, 191, 36, 0.16);
+  --color-info-soft: rgba(96, 165, 250, 0.16);
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.40);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.50);
+  --shadow-xl: 0 16px 40px rgba(0, 0, 0, 0.55);
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.30), 0 0 1px rgba(255, 255, 255, 0.08);
+  --shadow-card-hover: 0 8px 24px rgba(0, 0, 0, 0.45), 0 0 1px rgba(255, 255, 255, 0.12);
+  --shadow-accent: 0 4px 14px rgba(251, 146, 60, 0.35);
 }
 
 /* ============================================================
@@ -289,7 +295,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* ============================================================
-   Stat metrics — large, bold, accent-colored (Rize-inspired)
+   Stat metrics — large, bold, accent-colored
    ============================================================ */
 
 .metric-value {

@@ -1,4 +1,15 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
+import {
+  Calendar,
+  ClipboardList,
+  Target,
+  CheckCircle2,
+  BarChart3,
+  Cat,
+  Sprout,
+  Shield,
+} from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import { colorThemeConfigs, DEFAULT_MODULES } from '../config/themes'
 import type { ColorTheme } from '../config/themes'
@@ -18,10 +29,10 @@ interface OnboardingState {
 const TOTAL_STEPS = 7
 const THEME_KEYS = Object.keys(colorThemeConfigs) as ColorTheme[]
 
-const PET_OPTIONS: { type: PetType; emoji: string; label: string; defaultName: string }[] = [
-  { type: 'cat', emoji: '\u{1F431}', label: '猫咪', defaultName: '小橘' },
-  { type: 'dog', emoji: '\u{1F436}', label: '狗狗', defaultName: '旺财' },
-  { type: 'rabbit', emoji: '\u{1F430}', label: '兔兔', defaultName: '团团' },
+const PET_OPTIONS: { type: PetType; emoji: string; labelKey: string; defaultName: string }[] = [
+  { type: 'cat', emoji: '\u{1F431}', labelKey: 'pet.types.cat', defaultName: '小橘' },
+  { type: 'dog', emoji: '\u{1F436}', labelKey: 'pet.types.dog', defaultName: '旺财' },
+  { type: 'rabbit', emoji: '\u{1F430}', labelKey: 'pet.types.rabbit', defaultName: '团团' },
 ]
 
 const GOAL_PRESETS = [
@@ -31,22 +42,23 @@ const GOAL_PRESETS = [
   { label: '8h', minutes: 480 },
 ]
 
-const MODULE_INFO: { id: string; icon: string; label: string; desc: string }[] = [
-  { id: 'timeline', icon: '\u{1F4C5}', label: '时间线', desc: '记录每日时间分配' },
-  { id: 'planner', icon: '\u{1F4CB}', label: '计划器', desc: '管理待办任务与日程' },
-  { id: 'focus', icon: '\u{1F3AF}', label: '专注模式', desc: '番茄钟式深度工作' },
-  { id: 'habits', icon: '\u{2705}', label: '习惯追踪', desc: '建立并坚持好习惯' },
-  { id: 'statistics', icon: '\u{1F4CA}', label: '数据统计', desc: '可视化你的时间数据' },
-  { id: 'pet', icon: '\u{1F43E}', label: '虚拟宠物', desc: '专注越多宠物越开心' },
+const MODULE_INFO: { id: string; icon: React.ReactNode; labelKey: string; descKey: string }[] = [
+  { id: 'timeline', icon: <Calendar size={20} />, labelKey: 'nav.timeline', descKey: 'onboarding.moduleTimelineDesc' },
+  { id: 'planner', icon: <ClipboardList size={20} />, labelKey: 'nav.planner', descKey: 'onboarding.modulePlannerDesc' },
+  { id: 'focus', icon: <Target size={20} />, labelKey: 'nav.focus', descKey: 'onboarding.moduleFocusDesc' },
+  { id: 'habits', icon: <CheckCircle2 size={20} />, labelKey: 'nav.habits', descKey: 'onboarding.moduleHabitsDesc' },
+  { id: 'statistics', icon: <BarChart3 size={20} />, labelKey: 'nav.statistics', descKey: 'onboarding.moduleStatsDesc' },
+  { id: 'pet', icon: <Cat size={20} />, labelKey: 'nav.pet', descKey: 'onboarding.modulePetDesc' },
 ]
 
-const PRIVACY_LEVELS: { key: 'basic' | 'standard' | 'detailed'; label: string; desc: string }[] = [
-  { key: 'basic', label: '基础', desc: '仅追踪当前活动的应用名称' },
-  { key: 'standard', label: '标准', desc: '追踪应用名称 + 窗口标题' },
-  { key: 'detailed', label: '详细', desc: '追踪应用 + 标题 + URL + 内容摘要（需额外权限）' },
+const PRIVACY_LEVELS: { key: 'basic' | 'standard' | 'detailed'; labelKey: string; descKey: string }[] = [
+  { key: 'basic', labelKey: 'timeline.basic', descKey: 'settings.privacyBasic' },
+  { key: 'standard', labelKey: 'timeline.standard', descKey: 'settings.privacyStandard' },
+  { key: 'detailed', labelKey: 'timeline.detailed', descKey: 'settings.privacyDetailed' },
 ]
 
 export default function Onboarding() {
+  const { t } = useTranslation()
   const [step, setStep] = useState(0)
   const [direction, setDirection] = useState<'next' | 'prev'>('next')
   const [animating, setAnimating] = useState(false)
@@ -158,7 +170,7 @@ export default function Onboarding() {
                   className="text-sm font-medium transition-colors cursor-pointer"
                   style={{ color: 'var(--color-text-muted)' }}
                 >
-                  ← 上一步
+                  ← {t('common.back')}
                 </button>
               )}
             </div>
@@ -186,7 +198,7 @@ export default function Onboarding() {
                   className="text-sm font-semibold transition-colors cursor-pointer"
                   style={{ color: accent }}
                 >
-                  下一步 →
+                  {t('common.next')} →
                 </button>
               )}
             </div>
@@ -265,6 +277,7 @@ const onboardingCSS = `
 
 /* ── Step 1: Welcome ── */
 function StepWelcome({ onStart, accent }: { onStart: () => void; accent: string }) {
+  const { t } = useTranslation()
   return (
     <div className="flex-1 flex flex-col items-center justify-center text-center gap-5">
       {/* Animated clock + plant illustration */}
@@ -294,17 +307,17 @@ function StepWelcome({ onStart, accent }: { onStart: () => void; accent: string 
           className="absolute -right-3 bottom-0 flex flex-col items-center"
           style={{ animation: 'onb-grow 2s ease-out forwards', transformOrigin: 'bottom' }}
         >
-          <div className="text-2xl">🌱</div>
+          <div className="text-2xl" style={{ color: '#22c55e' }}><Sprout size={28} /></div>
           <div className="w-1 h-8 rounded-full" style={{ background: '#22c55e' }} />
         </div>
       </div>
 
       <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
-        欢迎来到 Merize! 🌟
+        {t('onboarding.welcome')} 🌟
       </h1>
       <p className="text-base leading-relaxed" style={{ color: 'var(--color-text-muted)' }}>
-        你的AI智能时间管理助手<br />
-        <span className="text-sm">让每一分钟都有意义</span>
+        {t('onboarding.welcomeSubtitle1')}<br />
+        <span className="text-sm">{t('settings.tagline')}</span>
       </p>
 
       <button
@@ -315,7 +328,7 @@ function StepWelcome({ onStart, accent }: { onStart: () => void; accent: string 
           boxShadow: `0 6px 20px ${accent}40`,
         }}
       >
-        开始设置 →
+        {t('onboarding.getStarted')} →
       </button>
     </div>
   )
@@ -329,6 +342,7 @@ function StepPet({
   state: OnboardingState
   setState: React.Dispatch<React.SetStateAction<OnboardingState>>
 }) {
+  const { t } = useTranslation()
   const handlePetSelect = (type: PetType) => {
     const option = PET_OPTIONS.find((p) => p.type === type)!
     setState((s) => ({
@@ -342,10 +356,10 @@ function StepPet({
     <div className="flex-1 flex flex-col gap-5">
       <div className="text-center">
         <h2 className="text-xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
-          选择你的伙伴 🐾
+          {t('onboarding.choosePetTitle')} 🐾
         </h2>
         <p className="mt-1.5 text-sm" style={{ color: 'var(--color-text-muted)' }}>
-          它会陪你一起专注成长
+          {t('onboarding.choosePetSubtitle')}
         </p>
       </div>
 
@@ -379,7 +393,7 @@ function StepPet({
                 className="text-sm font-semibold"
                 style={{ color: isSel ? 'var(--color-accent)' : 'var(--color-text-secondary)' }}
               >
-                {pet.label}
+                {t(pet.labelKey)}
               </span>
             </button>
           )
@@ -389,7 +403,7 @@ function StepPet({
       {/* Pet name input */}
       <div className="mt-2">
         <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text-secondary)' }}>
-          给它起个名字
+          {t('pet.namingTitle').replace('!', '')}
         </label>
         <input
           type="text"
@@ -404,7 +418,7 @@ function StepPet({
           }}
           onFocus={(e) => (e.target.style.borderColor = 'var(--color-accent)')}
           onBlur={(e) => (e.target.style.borderColor = 'var(--color-border-subtle)')}
-          placeholder="输入宠物昵称..."
+          placeholder={t('pet.namePlaceholder')}
         />
       </div>
     </div>
@@ -421,15 +435,16 @@ function StepGoal({
   setState: React.Dispatch<React.SetStateAction<OnboardingState>>
   accent: string
 }) {
+  const { t } = useTranslation()
   const hours = state.dailyGoalMinutes / 60
   return (
     <div className="flex-1 flex flex-col gap-5">
       <div className="text-center">
         <h2 className="text-xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
-          每天想专注多久？ ⏱️
+          {t('onboarding.dailyGoalTitle')} ⏱️
         </h2>
         <p className="mt-1.5 text-sm" style={{ color: 'var(--color-text-muted)' }}>
-          设定一个适合自己的目标，之后随时调整
+          {t('onboarding.dailyGoalSubtitle')}
         </p>
       </div>
 
@@ -449,7 +464,7 @@ function StepGoal({
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <span className="text-3xl font-bold" style={{ color: accent }}>{hours}</span>
-            <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>小时/天</span>
+            <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{t('common.hours')}/{t('common.day')}</span>
           </div>
         </div>
       </div>
@@ -491,8 +506,8 @@ function StepGoal({
           style={{ accentColor: accent }}
         />
         <div className="flex justify-between text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>
-          <span>1h</span>
-          <span>10h</span>
+          <span>1{t('common.hours')}</span>
+          <span>10{t('common.hours')}</span>
         </div>
       </div>
     </div>
@@ -507,14 +522,15 @@ function StepTheme({
   state: OnboardingState
   setState: React.Dispatch<React.SetStateAction<OnboardingState>>
 }) {
+  const { t } = useTranslation()
   return (
     <div className="flex-1 flex flex-col gap-5">
       <div className="text-center">
         <h2 className="text-xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
-          选择你的主题 🎨
+          {t('onboarding.chooseThemeTitle')} 🎨
         </h2>
         <p className="mt-1.5 text-sm" style={{ color: 'var(--color-text-muted)' }}>
-          挑选一个最适合你的风格
+          {t('onboarding.chooseThemeSubtitle')}
         </p>
       </div>
 
@@ -563,7 +579,7 @@ function StepTheme({
 
       {/* Light/Dark toggle */}
       <div className="mt-4 flex items-center justify-center gap-4">
-        <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>☀️ 浅色</span>
+        <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>☀️ {t('onboarding.lightMode')}</span>
         <button
           onClick={() => setState((s) => ({ ...s, darkMode: !s.darkMode }))}
           className="relative w-14 h-7 rounded-full transition-colors duration-300 cursor-pointer"
@@ -574,7 +590,7 @@ function StepTheme({
             style={{ left: state.darkMode ? '30px' : '2px' }}
           />
         </button>
-        <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>🌙 深色</span>
+        <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>🌙 {t('onboarding.darkMode')}</span>
       </div>
 
       {/* Live preview card */}
@@ -611,6 +627,7 @@ function StepModules({
   setState: React.Dispatch<React.SetStateAction<OnboardingState>>
   accent: string
 }) {
+  const { t } = useTranslation()
   const toggle = (id: string) => {
     setState((s) => ({
       ...s,
@@ -624,10 +641,10 @@ function StepModules({
     <div className="flex-1 flex flex-col gap-4">
       <div className="text-center">
         <h2 className="text-xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
-          选择你需要的功能模块 🧩
+          {t('onboarding.chooseModulesTitle')} 🧩
         </h2>
         <p className="mt-1.5 text-sm" style={{ color: 'var(--color-text-muted)' }}>
-          全部默认开启，按需关闭
+          {t('onboarding.chooseModulesSubtitle')}
         </p>
       </div>
 
@@ -644,16 +661,16 @@ function StepModules({
                 border: isOn ? `2px solid ${accent}` : '2px solid transparent',
               }}
             >
-              <span className="text-xl mt-0.5">{mod.icon}</span>
+              <span className="mt-0.5" style={{ color: isOn ? accent : 'var(--color-text-muted)' }}>{mod.icon}</span>
               <div className="flex-1 min-w-0">
                 <div
                   className="text-sm font-semibold"
                   style={{ color: isOn ? accent : 'var(--color-text-primary)' }}
                 >
-                  {mod.label}
+                  {t(mod.labelKey)}
                 </div>
                 <div className="text-xs mt-0.5 leading-snug" style={{ color: 'var(--color-text-muted)' }}>
-                  {mod.desc}
+                  {t(mod.descKey)}
                 </div>
               </div>
               {/* Toggle indicator */}
@@ -687,24 +704,25 @@ function StepPrivacy({
   setState: React.Dispatch<React.SetStateAction<OnboardingState>>
   accent: string
 }) {
+  const { t } = useTranslation()
   return (
     <div className="flex-1 flex flex-col gap-5">
       <div className="text-center">
         <h2 className="text-xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
-          选择监控程度 🛡️
+          {t('onboarding.choosePrivacyTitle')} 🛡️
         </h2>
         <p className="mt-1.5 text-sm" style={{ color: 'var(--color-text-muted)' }}>
-          数据始终保存在本地，你完全掌控
+          {t('onboarding.choosePrivacySubtitle')}
         </p>
       </div>
 
       {/* Shield animation */}
       <div className="flex justify-center my-2">
         <div
-          className="w-16 h-16 flex items-center justify-center text-3xl"
-          style={{ animation: 'onb-shield-pulse 2s ease-in-out infinite' }}
+          className="w-16 h-16 flex items-center justify-center"
+          style={{ animation: 'onb-shield-pulse 2s ease-in-out infinite', color: 'var(--color-accent)' }}
         >
-          🛡️
+          <Shield size={32} />
         </div>
       </div>
 
@@ -742,10 +760,10 @@ function StepPrivacy({
                   className="text-sm font-semibold"
                   style={{ color: isSel ? accent : 'var(--color-text-primary)' }}
                 >
-                  {level.label}
+                  {t(level.labelKey)}
                 </div>
                 <div className="text-xs mt-0.5 leading-snug" style={{ color: 'var(--color-text-muted)' }}>
-                  {level.desc}
+                  {t(level.descKey)}
                 </div>
               </div>
               {/* Radio */}
@@ -775,6 +793,7 @@ function StepDone({
   onComplete: () => void
   accent: string
 }) {
+  const { t } = useTranslation()
   const petOption = PET_OPTIONS.find((p) => p.type === state.petType)!
   const [showBubble, setShowBubble] = useState(false)
 
@@ -782,6 +801,12 @@ function StepDone({
     const t = setTimeout(() => setShowBubble(true), 600)
     return () => clearTimeout(t)
   }, [])
+
+  const hours = state.dailyGoalMinutes / 60
+  const doneMessage = t('onboarding.doneMessage', {
+    petName: state.petName,
+    hours: hours,
+  })
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center text-center gap-5">
@@ -820,7 +845,7 @@ function StepDone({
               animation: 'onb-bounce-in 0.4s ease forwards',
             }}
           >
-            你好！我是{state.petName}~ 💕
+            {t('pet.dialogue.welcome', { name: state.petName })}
             {/* Speech bubble tail */}
             <div
               className="absolute left-1/2 -translate-x-1/2 -bottom-1.5 w-3 h-3 rotate-45"
@@ -831,12 +856,13 @@ function StepDone({
       </div>
 
       <h1 className="text-2xl font-bold mt-2" style={{ color: 'var(--color-text-primary)' }}>
-        一切就绪！ 🎉
+        {t('onboarding.doneTitle')} 🎉
       </h1>
-      <p className="text-sm leading-relaxed" style={{ color: 'var(--color-text-muted)' }}>
-        {state.petName}已经迫不及待地想陪你专注了<br />
-        每天{state.dailyGoalMinutes / 60}小时，我们一起加油！
-      </p>
+      <p className="text-sm leading-relaxed" style={{ color: 'var(--color-text-muted)' }}
+        dangerouslySetInnerHTML={{
+          __html: doneMessage.replace('{petName}', state.petName).replace('{hours}', String(hours))
+        }}
+      />
 
       <button
         onClick={onComplete}
@@ -846,7 +872,7 @@ function StepDone({
           boxShadow: `0 6px 24px ${accent}40`,
         }}
       >
-        开始使用 Merize 🚀
+        {t('onboarding.getStarted')} Merize 🚀
       </button>
     </div>
   )

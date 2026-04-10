@@ -1,4 +1,5 @@
 import React, { Suspense, useEffect, useState, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom'
 import { useAppStore } from './store/useAppStore'
 import { backgroundSkinConfigs } from './config/themes'
@@ -16,7 +17,7 @@ import { trackingService } from './services/trackingService'
 export type { Theme, ColorTheme, BackgroundSkin } from './config/themes'
 export { colorThemeConfigs, backgroundSkinConfigs } from './config/themes'
 
-/* ── Lazy-loaded pages ── */
+/* ─ Lazy-loaded pages ── */
 const Dashboard = React.lazy(() => import('./pages/Dashboard'))
 const Timeline = React.lazy(() => import('./pages/Timeline'))
 const Planner = React.lazy(() => import('./pages/Planner'))
@@ -25,17 +26,17 @@ const Statistics = React.lazy(() => import('./pages/Statistics'))
 const Habits = React.lazy(() => import('./pages/Habits'))
 const VirtualPet = React.lazy(() => import('./pages/VirtualPet'))
 const Settings = React.lazy(() => import('./pages/Settings'))
-const Team = React.lazy(() => import('./pages/Team'))
 
 /* ── Loading fallback ── */
 function PageLoader() {
+  const { t } = useTranslation()
   return (
     <div className="flex-1 flex items-center justify-center min-h-[60vh]">
       <div className="flex flex-col items-center gap-3">
         <div
           className="w-8 h-8 rounded-full border-2 border-[var(--color-accent)] border-t-transparent animate-spin"
         />
-        <span className="text-sm text-[var(--color-text-muted)]">加载中...</span>
+        <span className="text-sm text-[var(--color-text-muted)]">{t('app.pageLoading')}</span>
       </div>
     </div>
   )
@@ -49,12 +50,13 @@ function PetWidgetWrapper() {
 }
 
 /* ── Focus session popup orchestrator ── */
+import type { AppState, Activity } from './store/useAppStore'
 function FocusPopupManager() {
-  const focusState = useAppStore((s) => s.focusState)
-  const focusSessions = useAppStore((s) => s.focusSessions)
-  const focusSettings = useAppStore((s) => s.focusSettings)
-  const activities = useAppStore((s) => s.activities)
-  const dailyGoalMinutes = useAppStore((s) => s.dailyGoalMinutes)
+  const focusState = useAppStore((s: AppState) => s.focusState)
+  const focusSessions = useAppStore((s: AppState) => s.focusSessions)
+  const focusSettings = useAppStore((s: AppState) => s.focusSettings)
+  const activities = useAppStore((s: AppState) => s.activities)
+  const dailyGoalMinutes = useAppStore((s: AppState) => s.dailyGoalMinutes)
   const navigate = useNavigate()
 
   const [showStarted, setShowStarted] = useState(false)
@@ -87,7 +89,7 @@ function FocusPopupManager() {
   // Check daily goal achievement
   useEffect(() => {
     if (goalAchievedShown.current) return
-    const todayMinutes = activities.reduce((sum, a) => sum + (a.duration || 0), 0)
+    const todayMinutes = activities.reduce((sum: number, a: Activity) => sum + (a.duration || 0), 0)
     if (todayMinutes >= dailyGoalMinutes && dailyGoalMinutes > 0) {
       goalAchievedShown.current = true
       // Delay slightly to not overlap with focus completed modal
@@ -122,11 +124,11 @@ function FocusPopupManager() {
 
 /* ── Main app content (inside Router) ── */
 function AppContent() {
-  const initialize = useAppStore((s) => s.initialize)
-  const initialized = useAppStore((s) => s.initialized)
-  const isFirstLaunch = useAppStore((s) => s.isFirstLaunch)
-  const theme = useAppStore((s) => s.theme)
-  const backgroundSkin = useAppStore((s) => s.backgroundSkin)
+  const initialize = useAppStore((s: AppState) => s.initialize)
+  const initialized = useAppStore((s: AppState) => s.initialized)
+  const isFirstLaunch = useAppStore((s: AppState) => s.isFirstLaunch)
+  const theme = useAppStore((s: AppState) => s.theme)
+  const backgroundSkin = useAppStore((s: AppState) => s.backgroundSkin)
   const location = useLocation()
 
   useEffect(() => {
@@ -142,11 +144,12 @@ function AppContent() {
   }, [initialized, isFirstLaunch])
 
   if (!initialized) {
+    const { t } = useTranslation()
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg-base)]">
         <div className="flex flex-col items-center gap-3">
           <div className="w-10 h-10 rounded-full border-2 border-[var(--color-accent)] border-t-transparent animate-spin" />
-          <span className="text-[var(--color-text-muted)] text-sm">Merize 启动中...</span>
+          <span className="text-[var(--color-text-muted)] text-sm">{t('app.loading')}</span>
         </div>
       </div>
     )
@@ -175,7 +178,6 @@ function AppContent() {
                 <Route path="/habits" element={<Habits />} />
                 <Route path="/pet" element={<VirtualPet />} />
                 <Route path="/settings" element={<Settings />} />
-                <Route path="/team" element={<Team />} />
               </Routes>
             </div>
           </Suspense>

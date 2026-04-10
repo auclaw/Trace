@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAppStore } from '../store/useAppStore'
+import type { AppState } from '../store/useAppStore'
 
 /**
  * Global top-right focus status indicator.
@@ -33,9 +34,9 @@ function formatMM_SS(totalSeconds: number): string {
 }
 
 export default function FocusStatusIndicator() {
-  const focusState = useAppStore((s) => s.focusState)
-  const focusTimeLeft = useAppStore((s) => s.focusTimeLeft)
-  const focusSettings = useAppStore((s) => s.focusSettings)
+  const focusState = useAppStore((s: AppState) => s.focusState)
+  const focusTimeLeft = useAppStore((s: AppState) => s.focusTimeLeft)
+  const focusSettings = useAppStore((s: AppState) => s.focusSettings)
   const navigate = useNavigate()
 
   // No-op effect just to keep the component reactive to focusTimeLeft changes

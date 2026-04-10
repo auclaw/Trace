@@ -1,4 +1,24 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
+
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragStartEvent,
+  DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  rectSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 
 import { Modal, Button, Progress, Badge, EmptyState, Input } from '../components/ui'
 import { useAppStore } from '../store/useAppStore'
@@ -12,17 +32,17 @@ type FilterTab = 'all' | 'pending' | 'in_progress' | 'completed'
 type ViewMode = 'list' | 'board' | 'calendar' | 'timeline'
 
 const FILTER_LABELS: Record<FilterTab, string> = {
-  all: '全部',
-  pending: '待办',
-  in_progress: '进行中',
-  completed: '已完成',
+  all: 'planner.views.all',
+  pending: 'planner.views.pending',
+  in_progress: 'planner.views.inProgress',
+  completed: 'planner.views.completed',
 }
 
 const VIEW_LABELS: Record<ViewMode, string> = {
-  list: '列表视图',
-  board: '看板视图',
-  calendar: '日历视图',
-  timeline: '时间线视图',
+  list: 'planner.views.list',
+  board: 'planner.views.kanban',
+  calendar: 'planner.views.calendar',
+  timeline: 'planner.views.timeline',
 }
 
 const VIEW_ICONS: Record<ViewMode, string> = {
@@ -33,13 +53,11 @@ const VIEW_ICONS: Record<ViewMode, string> = {
 }
 
 const REPEAT_LABELS: Record<RepeatType, string> = {
-  none: '不重复',
-  daily: '每日',
-  weekly: '每周',
-  monthly: '每月',
+  none: 'planner.repeat.none',
+  daily: 'planner.repeat.daily',
+  weekly: 'planner.repeat.weekly',
+  monthly: 'planner.repeat.monthly',
 }
-
-const WEEKDAY_LABELS = ['一', '二', '三', '四', '五', '六', '日']
 
 // --- Helpers ---
 
@@ -54,12 +72,14 @@ function todayDisplay(): string {
   })
 }
 
-function fmtDuration(mins: number): string {
-  if (mins <= 0) return '0m'
+function fmtDuration(mins: number, t?: (key: string) => string): string {
+  const unitMins = t ? t('common.minutes') : 'm'
+  const unitHours = t ? t('common.hours') : 'h'
+  if (mins <= 0) return `0${unitMins}`
   const h = Math.floor(mins / 60)
   const m = Math.round(mins % 60)
-  if (h > 0) return `${h}h${m > 0 ? ` ${m}m` : ''}`
-  return `${m}m`
+  if (h > 0) return `${h}${unitHours}${m > 0 ? ` ${m}${unitMins}` : ''}`
+  return `${m}${unitMins}`
 }
 
 function pad2(n: number): string {
@@ -110,6 +130,7 @@ const EMPTY_FORM: TaskForm = {
 // ============================================================
 
 export default function Planner() {
+  const { t } = useTranslation()
   const { accentColor } = useTheme()
 
   const tasks = useAppStore((s) => s.tasks)
@@ -117,6 +138,10 @@ export default function Planner() {
   const addTask = useAppStore((s) => s.addTask)
   const updateTask = useAppStore((s) => s.updateTask)
   const deleteTask = useAppStore((s) => s.deleteTask)
+  const reorderTasks = useAppStore((s) => s.reorderTasks)
+
+  const habits = useAppStore((s) => s.habits)
+  const loadHabits = useAppStore((s) => s.loadHabits)
 
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [filter, setFilter] = useState<FilterTab>('all')
@@ -133,7 +158,7 @@ export default function Planner() {
   const [calMonth, setCalMonth] = useState(now.getMonth() + 1)
   const [selectedDate, setSelectedDate] = useState(todayStr())
 
-  useEffect(() => { loadTasks() }, [loadTasks])
+  useEffect(() => { loadTasks(); loadHabits() }, [loadTasks, loadHabits])
 
   // --- filtered tasks ---
   const filtered = tasks.filter((t) => {
@@ -171,6 +196,22 @@ export default function Planner() {
     })
     return map
   }, [tasks])
+
+  // Habit checkins by date for calendar heatmap
+  const habitCheckinsByDate = useMemo(() => {
+    const map: Record<string, number> = {}
+    habits.forEach((h) => {
+      Object.entries(h.checkins).forEach(([date, count]) => {
+        map[date] = (map[date] || 0) + count
+      })
+    })
+    return map
+  }, [habits])
+
+  // Get habits checked on selected date
+  const checkedHabitsOnSelectedDate = useMemo(() => {
+    return habits.filter((h) => h.checkins[selectedDate] > 0)
+  }, [habits, selectedDate])
 
   // --- Timeline range ---
   const timelineData = useMemo(() => {
@@ -243,11 +284,6 @@ export default function Planner() {
     setModalOpen(false)
   }, [editingId, form, addTask, updateTask])
 
-  const toggleStatus = useCallback((task: Task) => {
-    const next: TaskStatus = task.status === 'completed' ? 'pending' : 'completed'
-    updateTask(task.id, { status: next })
-  }, [updateTask])
-
   const cycleStatus = useCallback((task: Task) => {
     const order: TaskStatus[] = ['pending', 'in_progress', 'completed']
     const idx = order.indexOf(task.status)
@@ -300,8 +336,105 @@ export default function Planner() {
     else setCalMonth((m) => m + 1)
   }, [calMonth])
 
+  // --- DnD for task reordering in board view ---
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
+
+  const handleDragStart = (_event: DragStartEvent) => {}
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+    if (over && active.id !== over.id) {
+      // Get full task list with correct order for the current column
+      const activeStatus = boardColumns[active.data.current?.sortable.containerId as keyof typeof boardColumns]
+      const overStatus = boardColumns[over.data.current?.sortable.containerId as keyof typeof boardColumns]
+
+      if (activeStatus === overStatus) {
+        // Same column reorder
+        const oldIndex = activeStatus.findIndex(t => t.id === active.id)
+        const newIndex = overStatus.findIndex(t => t.id === over.id)
+        const newTasks = arrayMove(filtered, oldIndex, newIndex)
+        reorderTasks(newTasks)
+      }
+    }
+  }
+
   // ============================================================
   // RENDER
+  // ============================================================
+
+  // --- Sortable Task Card for DnD ---
+  function SortableTaskCard({ task, containerId, onToggleStatus, onEdit }: {
+    task: Task
+    index: number
+    containerId: string
+    onToggleStatus: (task: Task) => void
+    onEdit: (task: Task) => void
+  }) {
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition,
+      isDragging,
+    } = useSortable({ id: task.id, data: { containerId } })
+
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+      opacity: isDragging ? 0.3 : 1,
+      cursor: isDragging ? 'grabbing' : 'grab',
+      background: 'linear-gradient(135deg, #ffffff 0%, #fef8f0 100%)',
+      border: '1px solid var(--color-border-subtle)',
+      borderLeft: `3px solid ${PRIORITY_COLORS[task.priority]}`,
+      boxShadow: 'var(--shadow-card)',
+    }
+
+    return (
+      <div
+        ref={setNodeRef}
+        style={style}
+        className="flex flex-col items-start gap-2 px-3 py-2.5 rounded-[var(--radius-md)] cursor-pointer transition-all duration-200"
+        onClick={() => onEdit(task)}
+        onMouseEnter={(e) => { if (!isDragging) { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = 'var(--shadow-card-hover)'; } }}
+        onMouseLeave={(e) => { if (!isDragging) { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'var(--shadow-card)'; } }}
+        {...attributes}
+        {...listeners}
+      >
+        <div className="flex items-start justify-between gap-2 mb-1.5 w-full">
+          <span className="text-sm font-semibold text-[var(--color-text-primary)] leading-snug">{task.title}</span>
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleStatus(task) }}
+            className="cursor-pointer flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center transition-all"
+            style={{ border: task.status === 'completed' ? 'none' : '2px solid var(--color-border-subtle)', background: task.status === 'completed' ? 'var(--color-accent)' : 'transparent' }}
+          >
+            {task.status === 'completed' && <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 6l3 3 5-5" /></svg>}
+          </button>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap w-full">
+          <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: PRIORITY_COLORS[task.priority] }} />
+          {task.project && <Badge variant="accent">{task.project}</Badge>}
+          {task.dueDate && <span className="text-[10px] text-[var(--color-text-muted)]">{task.dueDate}</span>}
+        </div>
+        {task.subtasks.length > 0 && (
+          <div className="mt-2 flex items-center gap-1.5 w-full">
+            <Progress value={(task.subtasks.filter((s) => s.completed).length / task.subtasks.length) * 100} size="sm" className="w-12" />
+            <span className="text-[10px] text-[var(--color-text-muted)]">{task.subtasks.filter((s) => s.completed).length}/{task.subtasks.length}</span>
+          </div>
+        )}
+      </div>
+    )
+  }
+
   // ============================================================
 
   return (
@@ -310,7 +443,7 @@ export default function Planner() {
       <div className="flex items-center justify-between mb-2">
         <div>
           <h1 className="text-3xl font-extrabold text-[var(--color-text-primary)] tracking-tight" style={{ letterSpacing: '-0.02em' }}>
-            任务中心
+            {t('planner.title')}
           </h1>
           <div className="mt-1.5 h-1 rounded-full" style={{ width: 48, background: 'linear-gradient(90deg, var(--color-accent), var(--color-accent-soft))' }} />
         </div>
@@ -322,7 +455,7 @@ export default function Planner() {
           onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(44, 24, 16, 0.15)' }}
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M8 3v10M3 8h10" /></svg>
-          添加任务
+          {t('planner.addTask')}
         </button>
       </div>
       <p className="text-sm text-[var(--color-text-muted)] mb-5">{todayDisplay()}</p>
@@ -348,7 +481,7 @@ export default function Planner() {
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d={VIEW_ICONS[mode]} />
             </svg>
-            {VIEW_LABELS[mode]}
+            {t(VIEW_LABELS[mode])}
           </button>
         ))}
       </div>
@@ -369,7 +502,7 @@ export default function Planner() {
                 transform: filter === key ? 'scale(1.04)' : 'scale(1)',
               }}
             >
-              {FILTER_LABELS[key]}
+              {t(FILTER_LABELS[key])}
             </button>
           ))}
         </div>
@@ -379,15 +512,15 @@ export default function Planner() {
       {viewMode === 'list' && (
         filtered.length === 0 ? (
           <div style={{ background: 'linear-gradient(135deg, #ffffff 0%, #fef8f0 100%)', borderRadius: 'var(--radius-xl)', border: '1px solid var(--color-border-subtle)', boxShadow: 'var(--shadow-card)', padding: '48px 24px', textAlign: 'center' as const }}>
-            <EmptyState icon="📋" title="暂无任务" description="点击「添加任务」来规划你的一天"
-              action={<button onClick={() => openAdd()} className="cursor-pointer inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white" style={{ background: 'var(--color-accent)', borderRadius: 'var(--radius-md)' }}>添加任务</button>} />
+            <EmptyState icon="📋" title={t('planner.noTasks')} description={t('planner.noTasksHint')}
+              action={<button onClick={() => openAdd()} className="cursor-pointer inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white" style={{ background: 'var(--color-accent)', borderRadius: 'var(--radius-md)' }}>{t('planner.addTask')}</button>} />
           </div>
         ) : (
           <div className="space-y-3">
             {filtered.map((task, idx) => (
               <TaskCard
                 key={task.id} task={task} expanded={expandedIds.has(task.id)} confirmDelete={confirmDeleteId === task.id}
-                onToggleStatus={() => toggleStatus(task)} onEdit={() => openEdit(task)}
+                onToggleStatus={() => cycleStatus(task)} onEdit={() => openEdit(task)}
                 onDelete={() => setConfirmDeleteId(task.id)} onConfirmDelete={() => handleDelete(task.id)}
                 onCancelDelete={() => setConfirmDeleteId(null)} onToggleExpand={() => toggleExpand(task.id)}
                 onToggleSubtask={(sid) => { const st = task.subtasks.map((s) => s.id === sid ? { ...s, completed: !s.completed } : s); updateTask(task.id, { subtasks: st }) }}
@@ -400,66 +533,46 @@ export default function Planner() {
 
       {/* ── BOARD VIEW ── */}
       {viewMode === 'board' && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {([
-            { key: 'pending' as const, label: '待办', color: '#3b82f6' },
-            { key: 'in_progress' as const, label: '进行中', color: '#f59e0b' },
-            { key: 'completed' as const, label: '已完成', color: '#22c55e' },
-          ] as const).map(({ key, label, color }) => (
-            <div key={key} style={{ background: 'var(--color-bg-surface-1)', border: '1px solid var(--color-border-subtle)', borderRadius: 'var(--radius-xl)', padding: '16px', minHeight: 200 }}>
-              <div className="flex items-center gap-2 mb-4">
-                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
-                <span className="text-sm font-bold text-[var(--color-text-primary)]">{label}</span>
-                <span className="text-xs text-[var(--color-text-muted)] ml-auto">{boardColumns[key].length}</span>
-              </div>
-              {boardColumns[key].length === 0 ? (
-                <p className="text-xs text-[var(--color-text-muted)] text-center py-8">暂无任务</p>
-              ) : (
-                <div className="space-y-2.5">
-                  {boardColumns[key].map((task) => (
-                    <div
-                      key={task.id}
-                      onClick={() => openEdit(task)}
-                      className="cursor-pointer transition-all duration-200"
-                      style={{
-                        background: 'linear-gradient(135deg, #ffffff 0%, #fef8f0 100%)',
-                        border: '1px solid var(--color-border-subtle)',
-                        borderLeft: `3px solid ${PRIORITY_COLORS[task.priority]}`,
-                        borderRadius: 'var(--radius-lg)',
-                        padding: '12px',
-                        boxShadow: 'var(--shadow-card)',
-                      }}
-                      onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = 'var(--shadow-card-hover)' }}
-                      onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'var(--shadow-card)' }}
-                    >
-                      <div className="flex items-start justify-between gap-2 mb-1.5">
-                        <span className="text-sm font-semibold text-[var(--color-text-primary)] leading-snug">{task.title}</span>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); cycleStatus(task) }}
-                          className="cursor-pointer flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center transition-all"
-                          style={{ border: task.status === 'completed' ? 'none' : '2px solid var(--color-border-subtle)', background: task.status === 'completed' ? 'var(--color-accent)' : 'transparent' }}
-                        >
-                          {task.status === 'completed' && <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 6l3 3 5-5" /></svg>}
-                        </button>
-                      </div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: PRIORITY_COLORS[task.priority] }} />
-                        {task.project && <Badge variant="accent">{task.project}</Badge>}
-                        {task.dueDate && <span className="text-[10px] text-[var(--color-text-muted)]">{task.dueDate}</span>}
-                      </div>
-                      {task.subtasks.length > 0 && (
-                        <div className="mt-2 flex items-center gap-1.5">
-                          <Progress value={(task.subtasks.filter((s) => s.completed).length / task.subtasks.length) * 100} size="sm" className="w-12" />
-                          <span className="text-[10px] text-[var(--color-text-muted)]">{task.subtasks.filter((s) => s.completed).length}/{task.subtasks.length}</span>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+        <DndContext
+          collisionDetection={closestCenter}
+          sensors={sensors}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {([
+              { key: 'pending' as const, labelKey: 'planner.views.pending', color: '#3b82f6' },
+              { key: 'in_progress' as const, labelKey: 'planner.views.inProgress', color: '#f59e0b' },
+              { key: 'completed' as const, labelKey: 'planner.views.completed', color: '#22c55e' },
+            ] as const).map(({ key, labelKey, color }) => (
+              <div key={key} style={{ background: 'var(--color-bg-surface-1)', border: '1px solid var(--color-border-subtle)', borderRadius: 'var(--radius-xl)', padding: '16px', minHeight: 200 }}>
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
+                  <span className="text-sm font-bold text-[var(--color-text-primary)]">{t(labelKey)}</span>
+                  <span className="text-xs text-[var(--color-text-muted)] ml-auto">{boardColumns[key].length}</span>
                 </div>
-              )}
-            </div>
-          ))}
-        </div>
+                {boardColumns[key].length === 0 ? (
+                  <p className="text-xs text-[var(--color-text-muted)] text-center py-8">{t('planner.noTasks')}</p>
+                ) : (
+                  <SortableContext id={key} items={boardColumns[key].map(t => t.id)} strategy={rectSortingStrategy}>
+                    <div className="space-y-2.5">
+                      {boardColumns[key].map((task, idx) => (
+                        <SortableTaskCard
+                          key={task.id}
+                          task={task}
+                          index={idx}
+                          containerId={key}
+                          onToggleStatus={cycleStatus}
+                          onEdit={openEdit}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
+                )}
+              </div>
+            ))}
+          </div>
+        </DndContext>
       )}
 
       {/* ── CALENDAR VIEW ── */}
@@ -470,18 +583,18 @@ export default function Planner() {
             <button onClick={prevMonth} className="w-9 h-9 rounded-[var(--radius-md)] flex items-center justify-center text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-surface-2)] transition-all cursor-pointer" style={{ boxShadow: 'inset 0 0 0 1px var(--color-border-subtle)' }}>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M10 4l-4 4 4 4" /></svg>
             </button>
-            <h2 className="text-xl font-extrabold tracking-tight text-[var(--color-text-primary)] tabular-nums min-w-[8rem] text-center select-none">{calYear}年{calMonth}月</h2>
+            <h2 className="text-xl font-extrabold tracking-tight text-[var(--color-text-primary)] tabular-nums min-w-[8rem] text-center select-none">{calYear}{t('planner.year')}{calMonth}{t('planner.month')}</h2>
             <button onClick={nextMonth} className="w-9 h-9 rounded-[var(--radius-md)] flex items-center justify-center text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-surface-2)] transition-all cursor-pointer" style={{ boxShadow: 'inset 0 0 0 1px var(--color-border-subtle)' }}>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 4l4 4-4 4" /></svg>
             </button>
-            <Button variant="secondary" size="sm" onClick={() => { const t = new Date(); setCalYear(t.getFullYear()); setCalMonth(t.getMonth() + 1); setSelectedDate(todayStr()) }}>今天</Button>
+            <Button variant="secondary" size="sm" onClick={() => { const t = new Date(); setCalYear(t.getFullYear()); setCalMonth(t.getMonth() + 1); setSelectedDate(todayStr()) }}>{t('common.today')}</Button>
           </div>
 
           {/* Calendar grid */}
           <div className="rounded-[var(--radius-xl)] overflow-hidden mb-5" style={{ background: 'linear-gradient(135deg, var(--color-bg-surface-1), var(--color-bg-surface-2))', boxShadow: 'var(--shadow-card)', border: '1px solid var(--color-border-subtle)', padding: '1.25rem' }}>
             <div className="grid grid-cols-7 gap-1.5 mb-2">
-              {WEEKDAY_LABELS.map((label) => (
-                <div key={label} className="text-center text-[10px] font-semibold uppercase tracking-widest py-2" style={{ color: 'var(--color-text-muted)' }}>{label}</div>
+              {['planner.mon.mo', 'planner.mon.tu', 'planner.mon.we', 'planner.mon.th', 'planner.mon.fr', 'planner.mon.sa', 'planner.mon.su'].map((labelKey) => (
+                <div key={labelKey} className="text-center text-[10px] font-semibold uppercase tracking-widest py-2" style={{ color: 'var(--color-text-muted)' }}>{t(labelKey)}</div>
               ))}
             </div>
             <div className="grid grid-cols-7 gap-1.5">
@@ -489,11 +602,13 @@ export default function Planner() {
                 if (day === null) return <div key={`e-${idx}`} className="aspect-square" />
                 const ds = dateStr(calYear, calMonth, day)
                 const taskCount = (tasksByDate[ds] || []).length
+                const habitCheckinCount = habitCheckinsByDate[ds] || 0
+                const totalEventCount = taskCount + (habitCheckinCount > 0 ? 1 : 0)
                 const isToday = ds === todayStr()
                 const isSelected = ds === selectedDate
 
                 const cellStyle: React.CSSProperties = {
-                  backgroundColor: getHeatmapBg(taskCount),
+                  backgroundColor: getHeatmapBg(totalEventCount),
                   transition: 'transform 0.2s ease, box-shadow 0.2s ease',
                 }
                 if (isToday && !isSelected) {
@@ -510,25 +625,30 @@ export default function Planner() {
                     className="aspect-square rounded-[var(--radius-md)] flex flex-col items-center justify-center relative text-sm cursor-pointer hover:scale-[1.08] hover:z-10"
                     style={cellStyle}
                   >
-                    <span style={{ fontWeight: isSelected || isToday ? 700 : 500, color: isSelected || isToday ? 'var(--color-accent)' : taskCount > 0 ? 'var(--color-text-primary)' : 'var(--color-text-muted)' }}>
+                    <span style={{ fontWeight: isSelected || isToday ? 700 : 500, color: isSelected || isToday ? 'var(--color-accent)' : totalEventCount > 0 ? 'var(--color-text-primary)' : 'var(--color-text-muted)' }}>
                       {day}
                     </span>
-                    {taskCount > 0 && !isSelected && (
-                      <span className="absolute bottom-1.5 w-1 h-1 rounded-full" style={{ backgroundColor: 'var(--color-accent)' }} />
-                    )}
+                    <div className="absolute bottom-1 flex gap-0.5">
+                      {taskCount > 0 && (
+                        <span className="w-1 h-1 rounded-full" style={{ backgroundColor: 'var(--color-accent)' }} />
+                      )}
+                      {habitCheckinCount > 0 && (
+                        <span className="w-1 h-1 rounded-full" style={{ backgroundColor: 'var(--color-success)' }} />
+                      )}
+                    </div>
                   </button>
                 )
               })}
             </div>
             {/* Legend */}
             <div className="flex items-center justify-end gap-2 mt-4 pt-3" style={{ borderTop: '1px solid var(--color-border-subtle)' }}>
-              <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>少</span>
+              <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>{t('planner.few')}</span>
               <div className="flex gap-0.5">
                 {[0, 1, 2, 3].map((c) => (
                   <div key={c} className="w-3 h-3 rounded-sm" style={{ backgroundColor: getHeatmapBg(c) }} />
                 ))}
               </div>
-              <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>多</span>
+              <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>{t('planner.many')}</span>
             </div>
           </div>
 
@@ -537,14 +657,32 @@ export default function Planner() {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-base font-bold text-[var(--color-text-primary)]">
-                  {new Date(selectedDate + 'T00:00:00').toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}
+                  {new Date(selectedDate + 'T00:00:00').toLocaleDateString(t('i18n.locale'), { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}
                 </h3>
-                <span className="text-xs text-[var(--color-text-muted)]">{(tasksByDate[selectedDate] || []).length} 个任务</span>
+                <span className="text-xs text-[var(--color-text-muted)]">{(tasksByDate[selectedDate] || []).length} {t('planner.tasks')}{checkedHabitsOnSelectedDate.length > 0 ? ` · ${checkedHabitsOnSelectedDate.length} ${t('habits.checkin')}` : ''}</span>
               </div>
-              <Button size="sm" onClick={() => openAdd(selectedDate)}>添加任务</Button>
+              <Button size="sm" onClick={() => openAdd(selectedDate)}>{t('planner.addTask')}</Button>
             </div>
+
+            {/* Habit check-ins */}
+            {checkedHabitsOnSelectedDate.length > 0 && (
+              <div className="mb-4 pb-4 border-b" style={{ borderColor: 'var(--color-border-subtle)' }}>
+                <h4 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)] mb-2">{t('habits.checkin')}</h4>
+                <div className="flex flex-wrap gap-2">
+                  {checkedHabitsOnSelectedDate.map((habit) => (
+                    <span key={habit.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs"
+                      style={{ backgroundColor: `${habit.color}20`, color: habit.color, border: `1px solid ${habit.color}40` }}>
+                      <span>{habit.icon}</span>
+                      <span className="font-medium">{habit.name}</span>
+                      <span className="opacity-70">{habit.checkins[selectedDate]}×</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {(tasksByDate[selectedDate] || []).length === 0 ? (
-              <EmptyState icon="📅" title="当日无任务" description="点击上方按钮添加任务" action={<Button size="sm" onClick={() => openAdd(selectedDate)}>添加任务</Button>} />
+              <EmptyState icon="📅" title={t('planner.noTasksToday')} description={t('planner.clickAddTask')} action={<Button size="sm" onClick={() => openAdd(selectedDate)}>{t('planner.addTask')}</Button>} />
             ) : (
               <div className="space-y-2">
                 {(tasksByDate[selectedDate] || []).map((task) => (
@@ -553,7 +691,7 @@ export default function Planner() {
                     onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--color-bg-surface-2)'; e.currentTarget.style.transform = 'translateX(2px)' }}
                     onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.transform = 'translateX(0)' }}
                   >
-                    <span onClick={(e) => { e.stopPropagation(); toggleStatus(task) }}
+                    <span onClick={(e) => { e.stopPropagation(); cycleStatus(task) }}
                       className="cursor-pointer flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center transition-all"
                       style={{ border: task.status === 'completed' ? 'none' : '2px solid var(--color-border-subtle)', background: task.status === 'completed' ? 'var(--color-accent)' : 'transparent' }}
                     >
@@ -564,7 +702,7 @@ export default function Planner() {
                         <span className={`text-sm font-medium truncate ${task.status === 'completed' ? 'line-through text-[var(--color-text-muted)]' : 'text-[var(--color-text-primary)]'}`}>{task.title}</span>
                         {task.project && <Badge variant="accent">{task.project}</Badge>}
                       </div>
-                      <span className="text-xs text-[var(--color-text-muted)]">P{task.priority} · {fmtDuration(task.estimatedMinutes)}</span>
+                      <span className="text-xs text-[var(--color-text-muted)]">P{task.priority} · {fmtDuration(task.estimatedMinutes, t)}</span>
                     </div>
                   </div>
                 ))}
@@ -579,7 +717,7 @@ export default function Planner() {
         <div>
           {timelineData.tasks.length === 0 ? (
             <div style={{ background: 'linear-gradient(135deg, #ffffff 0%, #fef8f0 100%)', borderRadius: 'var(--radius-xl)', border: '1px solid var(--color-border-subtle)', boxShadow: 'var(--shadow-card)', padding: '48px 24px', textAlign: 'center' as const }}>
-              <EmptyState icon="📊" title="暂无任务" description="添加带截止日期的任务以查看时间线" action={<Button onClick={() => openAdd()}>添加任务</Button>} />
+              <EmptyState icon="📊" title={t('planner.noTasks')} description={t('planner.noTasksTimeline')} action={<Button onClick={() => openAdd()}>{t('planner.addTask')}</Button>} />
             </div>
           ) : (
             <div className="rounded-[var(--radius-xl)] overflow-hidden" style={{ background: 'var(--color-bg-surface-1)', border: '1px solid var(--color-border-subtle)', boxShadow: 'var(--shadow-card)' }}>
@@ -587,7 +725,7 @@ export default function Planner() {
                 <div style={{ minWidth: Math.max(700, timelineData.totalDays * 48) }}>
                   {/* Date headers */}
                   <div className="flex border-b" style={{ borderColor: 'var(--color-border-subtle)' }}>
-                    <div className="flex-shrink-0 w-48 p-3 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">任务</div>
+                    <div className="flex-shrink-0 w-48 p-3 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">{t('planner.task')}</div>
                     <div className="flex flex-1">
                       {Array.from({ length: timelineData.totalDays }, (_, i) => {
                         const d = new Date(timelineData.startDate + 'T00:00:00')
@@ -646,14 +784,14 @@ export default function Planner() {
       )}
 
       {/* ── Add / Edit Modal ── */}
-      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editingId ? '编辑任务' : '添加任务'} size="lg"
-        footer={<><Button variant="ghost" onClick={() => setModalOpen(false)}>取消</Button><Button onClick={handleSave} disabled={!form.title.trim()}>保存</Button></>}
+      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editingId ? t('planner.editTask') : t('planner.addTask')} size="lg"
+        footer={<><Button variant="ghost" onClick={() => setModalOpen(false)}>{t('common.cancel')}</Button><Button onClick={handleSave} disabled={!form.title.trim()}>{t('common.save')}</Button></>}
       >
         <div className="space-y-5">
-          <Input label="任务标题" value={form.title} onChange={(v) => setForm((f) => ({ ...f, title: v }))} placeholder="输入任务名称..." />
+          <Input label={t('planner.taskName')} value={form.title} onChange={(v) => setForm((f) => ({ ...f, title: v }))} placeholder={t('planner.taskNamePlaceholder')} />
           {/* Priority */}
           <div>
-            <span className="block text-[10px] font-medium text-[var(--color-text-muted)] mb-2">优先级</span>
+            <span className="block text-[10px] font-medium text-[var(--color-text-muted)] mb-2">{t('planner.priority')}</span>
             <div className="flex gap-2">
               {([1, 2, 3, 4, 5] as const).map((p) => (
                 <button key={p} onClick={() => setForm((f) => ({ ...f, priority: p }))}
@@ -665,29 +803,29 @@ export default function Planner() {
           </div>
           {/* Project + time */}
           <div className="grid grid-cols-2 gap-4">
-            <Input label="项目" value={form.project} onChange={(v) => setForm((f) => ({ ...f, project: v }))} placeholder="例如: 工作" />
-            <Input label="预估时间 (分钟)" type="number" value={String(form.estimatedMinutes)} onChange={(v) => setForm((f) => ({ ...f, estimatedMinutes: Math.max(1, Number(v) || 0) }))} />
+            <Input label={t('planner.project')} value={form.project} onChange={(v) => setForm((f) => ({ ...f, project: v }))} placeholder={t('planner.projectPlaceholder')} />
+            <Input label={t('planner.estimatedMinutes')} type="number" value={String(form.estimatedMinutes)} onChange={(v) => setForm((f) => ({ ...f, estimatedMinutes: Math.max(1, Number(v) || 0) }))} />
           </div>
           {/* Due date + repeat */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <span className="block text-[10px] font-medium text-[var(--color-text-muted)] mb-1">截止日期</span>
+              <span className="block text-[10px] font-medium text-[var(--color-text-muted)] mb-1">{t('planner.dueDate')}</span>
               <input type="date" value={form.dueDate} onChange={(e) => setForm((f) => ({ ...f, dueDate: e.target.value }))}
                 className="w-full text-sm py-2 bg-transparent border-b-2 border-[var(--color-border-subtle)]/50 focus:border-[var(--color-accent)] outline-none text-[var(--color-text-primary)] transition-colors" />
             </div>
             <div>
-              <span className="block text-[10px] font-medium text-[var(--color-text-muted)] mb-1">重复</span>
+              <span className="block text-[10px] font-medium text-[var(--color-text-muted)] mb-1">{t('planner.repeat')}</span>
               <select value={form.repeatType} onChange={(e) => setForm((f) => ({ ...f, repeatType: e.target.value as RepeatType }))}
                 className="w-full text-sm py-2 bg-transparent border-b-2 border-[var(--color-border-subtle)]/50 focus:border-[var(--color-accent)] outline-none text-[var(--color-text-primary)] transition-colors cursor-pointer">
                 {(Object.keys(REPEAT_LABELS) as RepeatType[]).map((r) => (
-                  <option key={r} value={r}>{REPEAT_LABELS[r]}</option>
+                  <option key={r} value={r}>{t(REPEAT_LABELS[r])}</option>
                 ))}
               </select>
             </div>
           </div>
           {/* Subtasks */}
           <div>
-            <span className="block text-[10px] font-medium text-[var(--color-text-muted)] mb-2">子任务</span>
+            <span className="block text-[10px] font-medium text-[var(--color-text-muted)] mb-2">{t('planner.subtasks')}</span>
             {form.subtasks.length > 0 && (
               <ul className="space-y-1.5 mb-3">
                 {form.subtasks.map((st) => (
@@ -697,15 +835,15 @@ export default function Planner() {
                       {st.completed && <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 6l3 3 5-5" /></svg>}
                     </span>
                     <span className={['flex-1 text-sm', st.completed ? 'line-through text-[var(--color-text-muted)]' : 'text-[var(--color-text-primary)]'].join(' ')}>{st.title}</span>
-                    <button onClick={() => removeFormSubtask(st.id)} className="opacity-0 group-hover:opacity-100 text-red-500 text-xs transition-opacity cursor-pointer">删除</button>
+                    <button onClick={() => removeFormSubtask(st.id)} className="opacity-0 group-hover:opacity-100 text-red-500 text-xs transition-opacity cursor-pointer">{t('common.delete')}</button>
                   </li>
                 ))}
               </ul>
             )}
             <div className="flex gap-2">
               <input type="text" value={newSubtaskTitle} onChange={(e) => setNewSubtaskTitle(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addFormSubtask()}
-                placeholder="添加子任务..." className="flex-1 text-sm py-1.5 bg-transparent border-b border-[var(--color-border-subtle)]/40 focus:border-[var(--color-accent)] outline-none text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)]/60 transition-colors" />
-              <Button size="sm" variant="ghost" onClick={addFormSubtask} disabled={!newSubtaskTitle.trim()}>添加</Button>
+                placeholder={t('planner.addSubtaskPlaceholder')} className="flex-1 text-sm py-1.5 bg-transparent border-b border-[var(--color-border-subtle)]/40 focus:border-[var(--color-accent)] outline-none text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)]/60 transition-colors" />
+              <Button size="sm" variant="ghost" onClick={addFormSubtask} disabled={!newSubtaskTitle.trim()}>{t('common.add')}</Button>
             </div>
           </div>
         </div>
@@ -746,6 +884,7 @@ function TaskCard({
   onToggleStatus, onEdit, onDelete, onConfirmDelete, onCancelDelete,
   onToggleExpand, onToggleSubtask, index,
 }: TaskCardProps) {
+  const { t } = useTranslation()
   const isDone = task.status === 'completed'
   const completedSubs = task.subtasks.filter((s) => s.completed).length
   const totalSubs = task.subtasks.length
@@ -783,7 +922,7 @@ function TaskCard({
           <div className="flex items-center gap-2 flex-wrap">
             <span className={['font-semibold text-[var(--color-text-primary)]', isDone ? 'line-through text-[var(--color-text-muted)]' : ''].join(' ')}>{task.title}</span>
             {task.project && <Badge variant="accent">{task.project}</Badge>}
-            {task.repeatType !== 'none' && <Badge variant="warning">{REPEAT_LABELS[task.repeatType]}</Badge>}
+            {task.repeatType !== 'none' && <Badge variant="warning">{t(REPEAT_LABELS[task.repeatType])}</Badge>}
           </div>
           <div className="flex items-center gap-3 mt-1.5 flex-wrap">
             <span className="flex items-center gap-1 text-xs text-[var(--color-text-muted)]">
@@ -797,7 +936,7 @@ function TaskCard({
               </span>
             )}
             <span className="text-xs text-[var(--color-text-muted)]">
-              <span className="metric-value">{fmtDuration(task.actualMinutes)}</span>{' / '}{fmtDuration(task.estimatedMinutes)}
+              <span className="metric-value">{fmtDuration(task.actualMinutes, t)}</span>{' / '}{fmtDuration(task.estimatedMinutes, t)}
             </span>
             {task.dueDate && <span className="text-xs text-[var(--color-text-muted)]">{task.dueDate}</span>}
           </div>
@@ -805,20 +944,20 @@ function TaskCard({
         {/* actions */}
         <div className="flex items-center gap-1 flex-shrink-0">
           {totalSubs > 0 && (
-            <button onClick={onToggleExpand} className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-surface-2)] transition-all duration-200 cursor-pointer" style={{ borderRadius: 'var(--radius-md)' }} title="展开子任务">
+            <button onClick={onToggleExpand} className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-surface-2)] transition-all duration-200 cursor-pointer" style={{ borderRadius: 'var(--radius-md)' }} title={t('planner.expandSubtasks')}>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className={`transition-transform duration-200 ${expanded ? 'rotate-90' : ''}`}><path d="M6 4l4 4-4 4" /></svg>
             </button>
           )}
-          <button onClick={onEdit} className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-accent)] hover:bg-[var(--color-accent-soft)] transition-all duration-200 cursor-pointer" style={{ borderRadius: 'var(--radius-md)' }} title="编辑">
+          <button onClick={onEdit} className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-accent)] hover:bg-[var(--color-accent-soft)] transition-all duration-200 cursor-pointer" style={{ borderRadius: 'var(--radius-md)' }} title={t('common.edit')}>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11.5 2.5l2 2L5 13H3v-2l8.5-8.5z" /></svg>
           </button>
           {confirmDelete ? (
             <span className="flex items-center gap-1">
-              <Button size="sm" variant="danger" onClick={onConfirmDelete}>确认</Button>
-              <Button size="sm" variant="ghost" onClick={onCancelDelete}>取消</Button>
+              <Button size="sm" variant="danger" onClick={onConfirmDelete}>{t('common.confirm')}</Button>
+              <Button size="sm" variant="ghost" onClick={onCancelDelete}>{t('common.cancel')}</Button>
             </span>
           ) : (
-            <button onClick={onDelete} className="p-1.5 text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/10 transition-all duration-200 cursor-pointer" style={{ borderRadius: 'var(--radius-md)' }} title="删除">
+            <button onClick={onDelete} className="p-1.5 text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/10 transition-all duration-200 cursor-pointer" style={{ borderRadius: 'var(--radius-md)' }} title={t('common.delete')}>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 4h10M6 4V3a1 1 0 011-1h2a1 1 0 011 1v1m2 0v9a1 1 0 01-1 1H5a1 1 0 01-1-1V4h8z" /></svg>
             </button>
           )}

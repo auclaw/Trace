@@ -2,6 +2,7 @@ import { useMemo, useCallback } from 'react';
 import { Modal, Button, Badge, Progress } from '../components/ui';
 import dataService from '../services/dataService';
 import { useAppStore } from '../store/useAppStore';
+import type { AppState, FocusSession } from '../store/useAppStore';
 import { CATEGORY_COLORS } from '../config/themes';
 
 // ─── Types ───
@@ -30,11 +31,6 @@ function formatMinutesShort(min: number): string {
   if (h === 0) return `${m}m`;
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
-
-/* placeholder: AI_SUMMARY_LOGIC */
-/* placeholder: DONUT_CHART */
-/* placeholder: PROGRESS_RING */
-/* placeholder: COMPONENT_BODY */
 
 // ─── AI Summary generation (simulated) ───
 function generateAISummary(
@@ -81,7 +77,7 @@ function DonutChart({
   segments: { label: string; value: number; color: string }[];
   size?: number;
 }) {
-  const total = segments.reduce((s, seg) => s + seg.value, 0);
+  const total = segments.reduce((s: number, seg) => s + seg.value, 0);
   if (total === 0) {
     return (
       <div
@@ -185,10 +181,10 @@ function ProgressRing({
 // ─── Main Component ───
 export default function DailySummary({ isOpen, onClose, date }: DailySummaryProps) {
   const dateStr = date || todayStr();
-  const tasks = useAppStore((s) => s.tasks);
-  const habits = useAppStore((s) => s.habits);
-  const dailyGoalMinutes = useAppStore((s) => s.dailyGoalMinutes);
-  const addToast = useAppStore((s) => s.addToast);
+  const tasks = useAppStore((s: AppState) => s.tasks);
+  const habits = useAppStore((s: AppState) => s.habits);
+  const dailyGoalMinutes = useAppStore((s: AppState) => s.dailyGoalMinutes);
+  const addToast = useAppStore((s: AppState) => s.addToast);
 
   const data = useMemo(() => {
     if (!isOpen) return null;
@@ -200,11 +196,11 @@ export default function DailySummary({ isOpen, onClose, date }: DailySummaryProp
 
     // Focus / break time
     const focusMinutes = focusSessions
-      .filter((s) => s.type === 'work' && s.completed)
-      .reduce((sum, s) => sum + s.duration, 0);
+      .filter((s: FocusSession) => s.type === 'work' && s.completed)
+      .reduce((sum: number, s: FocusSession) => sum + s.duration, 0);
     const breakMinutes = focusSessions
-      .filter((s) => s.type === 'break' || s.type === 'longBreak')
-      .reduce((sum, s) => sum + s.duration, 0);
+      .filter((s: FocusSession) => s.type === 'break' || s.type === 'longBreak')
+      .reduce((sum: number, s: FocusSession) => sum + s.duration, 0);
 
     // Goal completion
     const goalPct = dailyGoalMinutes > 0 ? Math.round((stats.totalMinutes / dailyGoalMinutes) * 100) : 0;

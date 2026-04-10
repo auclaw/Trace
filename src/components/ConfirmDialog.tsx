@@ -1,3 +1,4 @@
+import { AlertTriangle, HelpCircle, Info } from 'lucide-react'
 import { Modal } from './ui'
 
 /**
@@ -14,7 +15,7 @@ interface ConfirmDialogProps {
   confirmText?: string
   cancelText?: string
   variant?: 'danger' | 'warning' | 'info'
-  icon?: string
+  icon?: React.ReactNode
 }
 
 const variantStyles: Record<string, { color: string; bg: string }> = {
@@ -23,10 +24,10 @@ const variantStyles: Record<string, { color: string; bg: string }> = {
   info: { color: 'var(--color-accent)', bg: 'var(--color-accent-soft)' },
 }
 
-const defaultIcons: Record<string, string> = {
-  danger: '⚠️',
-  warning: '❓',
-  info: 'ℹ️',
+const defaultIcons: Record<string, React.ReactNode> = {
+  danger: <AlertTriangle size={28} />,
+  warning: <HelpCircle size={28} />,
+  info: <Info size={28} />,
 }
 
 export default function ConfirmDialog({
@@ -48,8 +49,8 @@ export default function ConfirmDialog({
       <div className="text-center space-y-4 py-2">
         {/* Icon */}
         <div
-          className="w-14 h-14 rounded-full flex items-center justify-center text-2xl mx-auto"
-          style={{ background: style.bg }}
+          className="w-14 h-14 rounded-full flex items-center justify-center mx-auto"
+          style={{ background: style.bg, color: style.color }}
         >
           {displayIcon}
         </div>

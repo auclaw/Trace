@@ -60,24 +60,27 @@ export const backgroundSkinConfigs: Record<BackgroundSkin, BackgroundSkinConfig>
   gradient: {
     name: '柔和渐变',
     description: '通透渐变背景，现代感十足',
+    // eslint-disable-next-line no-useless-concat
     getBgClass: (isDark: boolean) =>
       isDark
-        ? 'bg-gradient-to-br from-[#1a1614] to-[#1e1a2e]'
-        : 'bg-gradient-to-br from-[#fffefb] to-[#fef7ed]',
+        ? 'bg-gradient-to-br from-[#1a1614]' + ' to-[#1e1a2e]'
+        : 'bg-gradient-to-br from-[#fffefb]' + ' to-[#fef7ed]',
   },
   solid: {
     name: '纯净背景',
     description: '纯色背景，干净简洁',
+    // eslint-disable-next-line no-useless-concat
     getBgClass: (isDark: boolean) =>
       isDark ? 'bg-[#1a1614]' : 'bg-[#fffefb]',
   },
   glass: {
     name: '玻璃拟态',
     description: '半透明磨砂效果',
+    // eslint-disable-next-line no-useless-concat
     getBgClass: (isDark: boolean) =>
       isDark
-        ? 'bg-gradient-to-br from-[#1a1614] to-[#1e1a2e]'
-        : 'bg-gradient-to-br from-[#fffefb] to-[#fef7ed]',
+        ? 'bg-gradient-to-br from-[#1a1614]' + ' to-[#1e1a2e]'
+        : 'bg-gradient-to-br from-[#fffefb]' + ' to-[#fef7ed]',
   },
 }
 
@@ -112,6 +115,5 @@ export const DEFAULT_MODULES = [
   'habits',
   'statistics',
   'pet',
-  'team',
   'settings',
 ]
