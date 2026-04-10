@@ -273,7 +273,7 @@ export default function DailySummary({ isOpen, onClose, date }: DailySummaryProp
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `merize-daily-summary-${dateStr}.json`;
+    a.download = `trace-daily-summary-${dateStr}.json`;
     a.click();
     URL.revokeObjectURL(url);
     addToast('success', '导出成功！');
@@ -282,7 +282,7 @@ export default function DailySummary({ isOpen, onClose, date }: DailySummaryProp
   const handleShare = useCallback(() => {
     if (!data) return;
     const text = [
-      `Merize 每日总结 - ${dateStr}`,
+      `Trace 每日总结 - ${dateStr}`,
       `总工作时间: ${formatMinutes(data.totalMinutes)}`,
       `目标完成: ${data.goalPct}%`,
       `完成任务: ${data.completedTasks}/${data.totalTasks}`,

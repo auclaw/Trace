@@ -58,8 +58,8 @@ const PET_TYPE_ITEMS: PetTypeItem[] = [
   { id: 'pet-panda', name: '小熊猫', emoji: '🐼', type: 'panda', cost: 300 },
 ]
 
-const LS_DECORATIONS = 'merize-pet-decorations'
-const LS_UNLOCKED = 'merize-pet-unlocked'
+const LS_DECORATIONS = 'trace-pet-decorations'
+const LS_UNLOCKED = 'trace-pet-unlocked'
 
 function loadOwned(key: string, fallback: string[]): string[] {
   try {

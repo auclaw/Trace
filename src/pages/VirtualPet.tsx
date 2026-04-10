@@ -389,7 +389,7 @@ export default function VirtualPet() {
   // Check first visit (naming)
   useEffect(() => {
     if (firstVisitChecked) return
-    const named = localStorage.getItem('merize-pet-named')
+    const named = localStorage.getItem('trace-pet-named')
     if (!named) {
       setNamingOpen(true)
     }
@@ -430,7 +430,7 @@ export default function VirtualPet() {
     const trimmed = nameInput.trim()
     if (!trimmed) return
     renamePet(trimmed)
-    localStorage.setItem('merize-pet-named', '1')
+    localStorage.setItem('trace-pet-named', '1')
     setNamingOpen(false)
     setRenameOpen(false)
   }, [nameInput, renamePet])
@@ -744,7 +744,7 @@ export default function VirtualPet() {
       <Modal
         isOpen={namingOpen}
         onClose={() => {
-          localStorage.setItem('merize-pet-named', '1')
+          localStorage.setItem('trace-pet-named', '1')
           setNamingOpen(false)
         }}
         title={t('pet.namingTitle')}
@@ -755,7 +755,7 @@ export default function VirtualPet() {
               variant="ghost"
               size="sm"
               onClick={() => {
-                localStorage.setItem('merize-pet-named', '1')
+                localStorage.setItem('trace-pet-named', '1')
                 setNamingOpen(false)
               }}
             >

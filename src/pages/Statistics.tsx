@@ -250,7 +250,7 @@ export default function Statistics() {
     const allActs = dataService.getActivitiesRange(startDate, endDate)
     const payload = { period: periodLabel, startDate, endDate, totalMinutes, categories: data.categories, daily: data.daily, activities: allActs }
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
-    downloadBlob(blob, `merize-${period}-stats-${endDate}.json`)
+    downloadBlob(blob, `trace-${period}-stats-${endDate}.json`)
     addToast('success', t('statistics.exportSuccess'))
   }
 
@@ -267,7 +267,7 @@ export default function Statistics() {
     )
     const csv = [headers.join(','), ...rows].join('\n')
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
-    downloadBlob(blob, `merize-${period}-stats-${endDate}.csv`)
+    downloadBlob(blob, `trace-${period}-stats-${endDate}.csv`)
     addToast('success', t('statistics.exportSuccess'))
   }
 

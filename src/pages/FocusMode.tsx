@@ -94,8 +94,8 @@ interface BlockedSite {
 
 type ScheduleMode = 'focus' | 'always' | 'custom'
 
-const LS_KEY = 'merize-flow-blocks'
-const LS_SCHEDULE_KEY = 'merize-flow-blocks-schedule'
+const LS_KEY = 'trace-flow-blocks'
+const LS_SCHEDULE_KEY = 'trace-flow-blocks-schedule'
 
 function loadSites(): BlockedSite[] {
   try {

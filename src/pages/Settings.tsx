@@ -771,7 +771,7 @@ export default function Settings() {
         if (activities.length > 0) {
           doc.setFontSize(12)
           doc.setFont('helvetica', 'bold')
-          doc.text(`${t('dashboard.activityCount'}:`, margin, yPos)
+          doc.text(`${t('dashboard.activityCount')}:`, margin, yPos)
           yPos += 8
 
           activities
@@ -1671,6 +1671,9 @@ export default function Settings() {
                 e.currentTarget.style.boxShadow = 'none'
               }}
             />
+            <p className="text-xs text-[var(--color-text-muted)] mt-2">
+              {t('settings.apiKeySecurityNote')}
+            </p>
           </div>
 
           {/* AI Provider Selection */}

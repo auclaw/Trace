@@ -20,8 +20,8 @@ const IDLE_MESSAGES = [
   ...IDLE_LONG,
 ]
 
-const LS_HIDDEN_KEY = 'merize-pet-mini-widget-hidden'
-const LS_PET_NAME_KEY = 'merize-pet-mini-name'
+const LS_HIDDEN_KEY = 'trace-pet-mini-widget-hidden'
+const LS_PET_NAME_KEY = 'trace-pet-mini-name'
 
 // ─── Keyframes ───
 

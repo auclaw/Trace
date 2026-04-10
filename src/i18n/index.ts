@@ -3,7 +3,7 @@ import { initReactI18next } from 'react-i18next'
 import zhCN from './zh-CN.json'
 import enUS from './en-US.json'
 
-const LS_LANG_KEY = 'merize-language'
+const LS_LANG_KEY = 'trace-language'
 
 function getInitialLanguage(): string {
   try {

@@ -38,12 +38,12 @@ export default function FocusStartedModal({ isOpen, onClose, onViewSession }: Fo
     // Save goal to localStorage if set
     if (goal.trim()) {
       try {
-        localStorage.setItem('merize-current-focus-goal', goal.trim())
+        localStorage.setItem('trace-current-focus-goal', goal.trim())
       } catch { /* noop */ }
     }
     if (projectTag.trim() || clientTag.trim() || taskTag.trim()) {
       try {
-        localStorage.setItem('merize-current-focus-tags', JSON.stringify({
+        localStorage.setItem('trace-current-focus-tags', JSON.stringify({
           project: projectTag.trim(),
           client: clientTag.trim(),
           task: taskTag.trim(),
@@ -63,7 +63,7 @@ export default function FocusStartedModal({ isOpen, onClose, onViewSession }: Fo
               className="text-sm font-bold tracking-wider"
               style={{ color: 'var(--color-text-primary)' }}
             >
-              MERIZE
+              TRACE
             </span>
             <span className="text-xs" style={{ color: 'var(--color-accent)' }}>
               ⚡ {t('focus.productivityCoach')}

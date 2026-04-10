@@ -156,7 +156,7 @@ struct DoubaoRequest {
 // 获取数据目录
 fn get_data_dir() -> Result<PathBuf> {
     let home_dir = dirs::data_dir().ok_or_else(|| anyhow!("无法获取数据目录"))?;
-    let app_dir = home_dir.join("merize");
+    let app_dir = home_dir.join("trace");
     fs::create_dir_all(&app_dir)?;
     Ok(app_dir)
 }

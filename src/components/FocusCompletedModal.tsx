@@ -38,7 +38,7 @@ export default function FocusCompletedModal({
 
   const focusGoal = useMemo(() => {
     try {
-      return localStorage.getItem('merize-current-focus-goal') || ''
+      return localStorage.getItem('trace-current-focus-goal') || ''
     } catch {
       return ''
     }

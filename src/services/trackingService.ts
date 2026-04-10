@@ -528,11 +528,11 @@ class TrackingService {
   }
 
   /**
-   * Push the generated activity into the main merize-activities store
+   * Push the generated activity into the main trace-activities store
    * used by dataService, enabling dashboard/timeline integration.
    */
   private syncToDataService(activity: Activity): void {
-    const KEY = 'merize-activities';
+    const KEY = 'trace-activities';
     const all = loadJSON<Activity[]>(KEY, []);
     all.push(activity);
     saveJSON(KEY, all);
@@ -616,7 +616,7 @@ class TrackingService {
     saveJSON(STORAGE_KEYS.generatedActivities, allGenerated);
 
     // Update in main store too
-    const KEY = 'merize-activities';
+    const KEY = 'trace-activities';
     const mainAll = loadJSON<Activity[]>(KEY, []);
     const updated = mainAll.map(a =>
       a.id === activityId ? { ...a, category: newCategory } : a
@@ -633,7 +633,7 @@ class TrackingService {
     saveJSON(STORAGE_KEYS.generatedActivities, generated);
 
     // Update in main activities store
-    const KEY = 'merize-activities';
+    const KEY = 'trace-activities';
     let main = loadJSON<Activity[]>(KEY, []);
     main = batchCategorize(activityIds, category, main);
     saveJSON(KEY, main);
@@ -646,7 +646,7 @@ class TrackingService {
     saveJSON(STORAGE_KEYS.generatedActivities, generated);
 
     // Remove from main activities store
-    const KEY = 'merize-activities';
+    const KEY = 'trace-activities';
     let main = loadJSON<Activity[]>(KEY, []);
     main = batchDelete(activityIds, main);
     saveJSON(KEY, main);

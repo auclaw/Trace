@@ -95,7 +95,7 @@ export default function Onboarding() {
     store.setDailyGoalMinutes(state.dailyGoalMinutes)
     store.renamePet(state.petName)
     // Pet type is set via dataService directly - store the preference
-    localStorage.setItem('merize-privacy-level', state.privacyLevel)
+    localStorage.setItem('trace-privacy-level', state.privacyLevel)
     store.completeFirstLaunch()
   }
 

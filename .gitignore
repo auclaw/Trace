@@ -36,3 +36,6 @@ src-tauri/target/
 test-results/
 playwright-report/
 
+# Test screenshots
+tests/**/screenshots/*.png
+

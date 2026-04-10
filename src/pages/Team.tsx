@@ -39,7 +39,7 @@ type SubTab = 'dashboard' | 'focus' | 'weekly' | 'admin'
 
 // ── Constants ──
 
-const STORAGE_KEY = 'merize-team-data'
+const STORAGE_KEY = 'trace-team-data'
 const SUB_TABS: { key: SubTab; labelKey: string; icon: string }[] = [
   { key: 'dashboard', labelKey: 'team.tabs.dashboard', icon: '📊' },
   { key: 'focus', labelKey: 'team.tabs.focus', icon: '🎯' },

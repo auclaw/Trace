@@ -24,14 +24,14 @@ export interface Toast {
 
 // ─── Helpers ───
 const LS = {
-  THEME: 'merize-theme',
-  COLOR_THEME: 'merize-color-theme',
-  BG_SKIN: 'merize-background-skin',
-  SIDEBAR: 'merize-sidebar-collapsed',
-  MODULES: 'merize-active-modules',
-  FIRST_LAUNCH: 'merize-first-launch-done',
-  FOCUS_SETTINGS: 'merize-focus-settings',
-  DASHBOARD_WIDGETS: 'merize-dashboard-widget-order',
+  THEME: 'trace-theme',
+  COLOR_THEME: 'trace-color-theme',
+  BG_SKIN: 'trace-background-skin',
+  SIDEBAR: 'trace-sidebar-collapsed',
+  MODULES: 'trace-active-modules',
+  FIRST_LAUNCH: 'trace-first-launch-done',
+  FOCUS_SETTINGS: 'trace-focus-settings',
+  DASHBOARD_WIDGETS: 'trace-dashboard-widget-order',
 }
 
 function loadJSON<T>(key: string, fallback: T): T {
@@ -481,9 +481,9 @@ export const useAppStore = create<AppState>()((set, get) => ({
   },
 
   // ── Daily Goal ──
-  dailyGoalMinutes: loadJSON<number>('merize-daily-goal', 480),
+  dailyGoalMinutes: loadJSON<number>('trace-daily-goal', 480),
   setDailyGoalMinutes: (minutes) => {
-    localStorage.setItem('merize-daily-goal', JSON.stringify(minutes))
+    localStorage.setItem('trace-daily-goal', JSON.stringify(minutes))
     set({ dailyGoalMinutes: minutes })
   },
 

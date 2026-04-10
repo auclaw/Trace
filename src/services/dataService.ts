@@ -537,6 +537,9 @@ function ensureSeeded(): void {
 // Data service
 // ============================================================
 
+// In-memory cache for pet to avoid decay on every read
+let cachedPet: Pet | null = null;
+
 const dataService = {
   // --- Activities ---
   getActivities(date?: string): Activity[] {
@@ -685,9 +688,15 @@ const dataService = {
   // --- Pet ---
   getPet(): Pet {
     ensureSeeded();
+    // Return cached version if available - no side effect on repeated reads
+    if (cachedPet) {
+      return cachedPet;
+    }
+
     let pet = load<Pet>(KEYS.pet, seedPet());
 
     // Natural decay: hunger and mood decrease over time
+    // Only apply once when first loaded from storage
     const now = new Date();
     const lastFedDate = new Date(pet.lastFed);
     const hoursSinceFed = (now.getTime() - lastFedDate.getTime()) / (1000 * 60 * 60);
@@ -706,6 +715,7 @@ const dataService = {
       save(KEYS.pet, pet);
     }
 
+    cachedPet = pet;
     return pet;
   },
 
@@ -719,6 +729,7 @@ const dataService = {
       lastInteracted: 'mood' in updates ? new Date().toISOString() : pet.lastInteracted,
     };
     save(KEYS.pet, updated);
+    cachedPet = updated;
     return updated;
   },
 
