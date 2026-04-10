@@ -646,7 +646,7 @@ def create_subscription_order():
         order_no=order_no,
         user_id=user_id,
         total_fee=plan['amount_cents'],
-        body=f"Merize 看见 {plan['name']}"
+        body=f"时迹 看见 {plan['name']}"
     )
 
     if not success:

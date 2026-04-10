@@ -4,7 +4,7 @@ export const API_HOST = import.meta.env.VITE_API_HOST || 'http://localhost:5000'
 
 // 检查是否已登录
 export async function checkAuth(): Promise<boolean> {
-  const token = localStorage.getItem('merize_token')
+  const token = localStorage.getItem('trace_token')
   if (!token) {
     return false
   }
@@ -32,7 +32,7 @@ export async function loginWithPhone(phone: string, code: string): Promise<void>
   })
   const data = await res.json()
   if (data.code === 200) {
-    localStorage.setItem('merize_token', data.data.token)
+    localStorage.setItem('trace_token', data.data.token)
   } else {
     throw new Error(data.msg || '登录失败')
   }
@@ -46,13 +46,13 @@ export async function loginWechat(): Promise<void> {
 
 // 退出登录
 export function logout(): void {
-  localStorage.removeItem('merize_token')
+  localStorage.removeItem('trace_token')
   window.location.reload()
 }
 
 // 获取当前token
 export function getToken(): string | null {
-  return localStorage.getItem('merize_token')
+  return localStorage.getItem('trace_token')
 }
 
 // 发送验证码
@@ -80,7 +80,7 @@ export async function devLogin(phone: string): Promise<void> {
   })
   const data = await res.json()
   if (data.code === 200) {
-    localStorage.setItem('merize_token', data.data.token)
+    localStorage.setItem('trace_token', data.data.token)
   } else {
     throw new Error(data.msg || '登录失败')
   }

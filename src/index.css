@@ -275,7 +275,7 @@ h1, h2, h3, h4, h5, h6 {
    ============================================================ */
 
 @layer components {
-  .merize-card {
+  .trace-card {
     background: var(--color-bg-surface-1);
     border: 1px solid var(--color-border-subtle);
     border-radius: var(--radius-lg);
@@ -284,12 +284,12 @@ h1, h2, h3, h4, h5, h6 {
                 transform var(--duration-normal) var(--ease-default);
   }
 
-  .merize-card-hover:hover {
+  .trace-card-hover:hover {
     box-shadow: var(--shadow-card-hover);
     transform: translateY(-2px);
   }
 
-  .merize-card-accent {
+  .trace-card-accent {
     border-left: 3px solid var(--color-accent);
   }
 }
@@ -322,14 +322,14 @@ h1, h2, h3, h4, h5, h6 {
    Glass mode
    ============================================================ */
 
-.glass-mode .merize-card,
+.glass-mode .trace-card,
 .glass-mode [data-card] {
   background: rgba(255, 255, 255, 0.55) !important;
   backdrop-filter: blur(16px) saturate(1.2);
   -webkit-backdrop-filter: blur(16px) saturate(1.2);
 }
 
-.dark .glass-mode .merize-card,
+.dark .glass-mode .trace-card,
 .dark .glass-mode [data-card] {
   background: rgba(30, 28, 24, 0.55) !important;
   backdrop-filter: blur(16px) saturate(1.2);

@@ -309,7 +309,7 @@ CREATE TABLE IF NOT EXISTS pets (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL UNIQUE,
     pet_type TEXT DEFAULT 'cat', -- 'cat', 'dog', 'rabbit'
-    name TEXT DEFAULT 'Merize',
+    name TEXT DEFAULT 'Trace',
     level INTEGER DEFAULT 1,
     experience INTEGER DEFAULT 0,
     hunger INTEGER DEFAULT 100, -- 0-100

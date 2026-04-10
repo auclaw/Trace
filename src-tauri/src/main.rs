@@ -1471,7 +1471,7 @@ fn main() {
                             "main",
                             tauri::WebviewUrl::default()
                         )
-                            .title("Merize")
+                            .title("Trace")
                             .inner_size(1024.0, 768.0)
                             .build();
                     }
@@ -1489,7 +1489,7 @@ fn main() {
                             "main",
                             tauri::WebviewUrl::default()
                         )
-                            .title("Merize - 专注模式")
+                            .title("Trace - 专注模式")
                             .inner_size(800.0, 600.0)
                             .build();
                     }

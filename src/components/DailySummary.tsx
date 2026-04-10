@@ -312,7 +312,7 @@ export default function DailySummary({ isOpen, onClose, date }: DailySummaryProp
       size="lg"
       footer={
         <div className="flex items-center gap-2 w-full justify-between">
-          <span className="text-xs text-[var(--color-text-muted)]">Merize Daily Summary</span>
+          <span className="text-xs text-[var(--color-text-muted)]">Trace Daily Summary</span>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={handleShare}>
               分享

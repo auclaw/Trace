@@ -4,7 +4,7 @@ Uniform logging configuration
 import logging
 import sys
 
-def setup_logger(name: str = 'merize') -> logging.Logger:
+def setup_logger(name: str = 'trace') -> logging.Logger:
     """Setup and return logger"""
     logger = logging.getLogger(name)
     logger.setLevel(logging.INFO)

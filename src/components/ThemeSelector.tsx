@@ -107,7 +107,7 @@ export default function ThemeSelector() {
               boxShadow: `0 4px 16px ${colorThemeConfigs[selected].accent}40`,
             }}
           >
-            开始使用 Merize
+            开始使用 时迹
           </button>
         </div>
       </div>

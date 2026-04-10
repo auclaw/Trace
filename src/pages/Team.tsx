@@ -83,7 +83,7 @@ function loadTeamData(): TeamData {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) return JSON.parse(raw)
   } catch { /* ignore */ }
-  return { members: DEFAULT_MEMBERS, sessions: DEFAULT_SESSIONS, reports: DEFAULT_REPORTS, teamName: 'Merize 核心团队', privacy: 'private' }
+  return { members: DEFAULT_MEMBERS, sessions: DEFAULT_SESSIONS, reports: DEFAULT_REPORTS, teamName: 'Trace 核心团队', privacy: 'private' }
 }
 
 function saveTeamData(data: TeamData) {

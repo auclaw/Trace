@@ -51,7 +51,7 @@ interface SkeletonCardProps {
 export function SkeletonCard({ className = '', lines = 3 }: SkeletonCardProps) {
   return (
     <div
-      className={`merize-card p-5 space-y-4 ${className}`}
+      className={`trace-card p-5 space-y-4 ${className}`}
       style={{ animation: 'none' }}
     >
       {/* Title bar */}

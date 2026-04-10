@@ -66,7 +66,7 @@ class Pet(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, unique=True)
     pet_type = db.Column(db.Text, default='cat')  # cat, dog, rabbit
-    name = db.Column(db.Text, default='Merize')
+    name = db.Column(db.Text, default='Trace')
     level = db.Column(db.Integer, default=1)
     experience = db.Column(db.Integer, default=0)
     hunger = db.Column(db.Integer, default=100)  # 0-100

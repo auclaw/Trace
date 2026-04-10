@@ -872,7 +872,7 @@ function StepDone({
           boxShadow: `0 6px 24px ${accent}40`,
         }}
       >
-        {t('onboarding.getStarted')} Merize 🚀
+        {t('onboarding.getStarted')} Trace 🚀
       </button>
     </div>
   )

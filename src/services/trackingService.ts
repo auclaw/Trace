@@ -1,4 +1,4 @@
-// Merize Tracking Service - AI Auto-Tracking Core System (TASK-01)
+// Trace Tracking Service - AI Auto-Tracking Core System (TASK-01)
 // Simulates background activity tracking with auto-classification,
 // privacy controls, rule-based categorization, and batch operations.
 
@@ -63,15 +63,15 @@ const TRACKING_INTERVAL_MS = 30_000; // 30 seconds
 
 const SIMULATED_APPS: SimulatedApp[] = [
   // --- Development / 开发 ---
-  { appName: 'VS Code', titles: ['trackingService.ts - merize', 'App.tsx - merize', 'dataService.ts - merize', 'package.json - merize'], url: undefined, summary: '编辑TypeScript源码', defaultCategory: '开发', timeSlots: [[9, 12], [14, 18]], weight: 10, durationRange: [15, 90] },
+  { appName: 'VS Code', titles: ['trackingService.ts - trace', 'App.tsx - trace', 'dataService.ts - trace', 'package.json - trace'], url: undefined, summary: '编辑TypeScript源码', defaultCategory: '开发', timeSlots: [[9, 12], [14, 18]], weight: 10, durationRange: [15, 90] },
   { appName: 'Terminal', titles: ['npm run dev', 'git log --oneline', 'pnpm install', 'vitest run'], url: undefined, summary: '运行开发命令和构建', defaultCategory: '开发', timeSlots: [[9, 12], [14, 18]], weight: 6, durationRange: [5, 30] },
-  { appName: 'GitHub Desktop', titles: ['merize-project - Pull Request #42', 'merize-project - Changes', 'Code Review - feat/tracking'], url: 'https://github.com/merize/merize-project', summary: '代码提交与审查', defaultCategory: '开发', timeSlots: [[9, 12], [14, 18]], weight: 4, durationRange: [10, 40] },
-  { appName: 'Docker Desktop', titles: ['Containers - merize-api', 'Images', 'Volumes'], url: undefined, summary: '管理容器化开发环境', defaultCategory: '开发', timeSlots: [[10, 12], [14, 17]], weight: 2, durationRange: [5, 20] },
+  { appName: 'GitHub Desktop', titles: ['trace-project - Pull Request #42', 'trace-project - Changes', 'Code Review - feat/tracking'], url: 'https://github.com/auclaw/trace', summary: '代码提交与审查', defaultCategory: '开发', timeSlots: [[9, 12], [14, 18]], weight: 4, durationRange: [10, 40] },
+  { appName: 'Docker Desktop', titles: ['Containers - trace-api', 'Images', 'Volumes'], url: undefined, summary: '管理容器化开发环境', defaultCategory: '开发', timeSlots: [[10, 12], [14, 17]], weight: 2, durationRange: [5, 20] },
 
   // --- Work / 工作 ---
   { appName: '飞书', titles: ['项目群 - 前端重构进度', '周报模板', '消息 - 产品需求讨论', 'OKR看板'], url: 'https://feishu.cn', summary: '团队协作与沟通', defaultCategory: '工作', timeSlots: [[9, 12], [14, 18]], weight: 7, durationRange: [5, 45] },
-  { appName: 'Notion', titles: ['技术文档 - API设计', '会议纪要 - 2026/04', '项目排期表', '知识库 - 前端架构'], url: 'https://notion.so/merize', summary: '文档编辑与项目管理', defaultCategory: '工作', timeSlots: [[9, 12], [14, 17]], weight: 5, durationRange: [10, 50] },
-  { appName: 'Figma', titles: ['Merize v2 - 仪表盘设计稿', '组件库 - Design System', '追踪页面改版'], url: 'https://figma.com/file/merize-v2', summary: '查看和标注UI设计稿', defaultCategory: '工作', timeSlots: [[10, 12], [14, 16]], weight: 3, durationRange: [10, 35] },
+  { appName: 'Notion', titles: ['技术文档 - API设计', '会议纪要 - 2026/04', '项目排期表', '知识库 - 前端架构'], url: 'https://notion.so/trace', summary: '文档编辑与项目管理', defaultCategory: '工作', timeSlots: [[9, 12], [14, 17]], weight: 5, durationRange: [10, 50] },
+  { appName: 'Figma', titles: ['Trace v2 - 仪表盘设计稿', '组件库 - Design System', '追踪页面改版'], url: 'https://figma.com/file/trace-v2', summary: '查看和标注UI设计稿', defaultCategory: '工作', timeSlots: [[10, 12], [14, 16]], weight: 3, durationRange: [10, 35] },
 
   // --- Meeting / 会议 ---
   { appName: '腾讯会议', titles: ['每日站会', '前端周例会', '产品需求评审', '技术方案评审'], url: undefined, summary: '参加视频会议', defaultCategory: '会议', timeSlots: [[9, 10], [14, 15]], weight: 5, durationRange: [15, 60] },

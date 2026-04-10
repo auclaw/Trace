@@ -248,18 +248,18 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({
 
 export default OnboardingTour
 
-// Default tour steps for merize app
+// Default tour steps for Trace app
 export const getDefaultTourSteps = (): TourStep[] => [
   {
     target: '[data-tour="dashboard"]',
-    title: '欢迎使用 merize',
-    content: 'merize 是一款自动时间追踪工具，帮你记录每天的时间都花在了哪里。让我们快速了解一下核心功能吧！',
+    title: '欢迎使用 时迹',
+    content: 'Trace 是一款自动时间追踪工具，帮你记录每天的时间都花在了哪里。让我们快速了解一下核心功能吧！',
     placement: 'bottom'
   },
   {
     target: '[data-tour="tracking-status"]',
     title: '自动追踪',
-    content: 'merize 会在后台自动记录你在每个应用上花费的时间，无需手动打卡。',
+    content: 'Trace 会在后台自动记录你在每个应用上花费的时间，无需手动打卡。',
     placement: 'bottom'
   },
   {
