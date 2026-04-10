@@ -1,6 +1,6 @@
 // auth.ts - 用户认证工具，支持手机号验证码登录和微信登录
 
-import { API_HOST } from './api'
+export const API_HOST = import.meta.env.VITE_API_HOST || 'http://localhost:5000'
 
 // 检查是否已登录
 export async function checkAuth(): Promise<boolean> {

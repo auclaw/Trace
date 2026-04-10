@@ -1,8 +1,8 @@
 // Runtime feature flags - 功能特性开关
 // 从后端设置加载，并在前端使用
 
-import { getSettings, saveSettings } from './api'
-import type { Settings } from './tracking'
+import dataService from '../services/dataService'
+import type { AppSettings as Settings } from '../services/dataService'
 
 // 所有可用功能特性
 export type FeatureFlagKey =
@@ -52,7 +52,7 @@ export function setFeatureFlag(key: FeatureFlagKey, enabled: boolean): void {
  */
 export async function loadFeatureFlags(): Promise<void> {
   try {
-    const settings = await getSettings()
+    const settings = await dataService.getSettings()
     // 如果设置中已有 featureFlags，使用它
     if (settings && typeof settings === 'object' && 'featureFlags' in settings) {
       featureFlagCache = {
@@ -76,12 +76,12 @@ export async function saveFeatureFlags(): Promise<void> {
     return
   }
   try {
-    const settings = await getSettings()
+    const settings = await dataService.getSettings()
     const updatedSettings: Settings = {
       ...settings,
       featureFlags: { ...featureFlagCache },
     }
-    await saveSettings(updatedSettings)
+    await dataService.updateSettings(updatedSettings)
   } catch (error) {
     if (import.meta.env.DEV) console.error('Failed to save feature flags:', error)
   }

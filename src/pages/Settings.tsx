@@ -5,7 +5,6 @@ import { useAppStore } from '../store/useAppStore'
 import useTheme from '../hooks/useTheme'
 import dataService from '../services/dataService'
 import { trackingService } from '../services/trackingService'
-import { getSettings, saveSettings } from '../utils/api'
 import type { Settings as AiSettings } from '../utils/tracking'
 import type { PrivacyLevel, TrackingRule } from '../services/trackingService'
 import type { ActivityCategory } from '../services/dataService'
@@ -256,8 +255,18 @@ export default function Settings() {
   useEffect(() => {
     const loadAiSettings = async () => {
       try {
-        const settings = await getSettings()
-        setAiSettings(settings)
+        const settings = await dataService.getSettings()
+        setAiSettings({
+          aiApiKey: settings.aiApiKey || '',
+          aiProvider: settings.aiProvider || 'ernie',
+          autoStartOnBoot: settings.autoStartOnBoot || true,
+          ignoredApplications: settings.ignoredApplications || [],
+          featureFlags: settings.featureFlags || {},
+          privacy_sync_mode: settings.privacy_sync_mode || 'local_only',
+          privacy_cloud_encryption: settings.privacy_cloud_encryption || false,
+          privacy_retain_raw_local: settings.privacy_retain_raw_local || true,
+          privacy_auto_delete_days: settings.privacy_auto_delete_days || 30,
+        })
       } catch (e) {
         if (import.meta.env.DEV) console.error('Failed to load settings:', e)
       }
@@ -268,7 +277,7 @@ export default function Settings() {
   const handleSaveAiSettings = async () => {
     setSavingAiSettings(true)
     try {
-      await saveSettings(aiSettings)
+      await dataService.updateSettings(aiSettings)
       addToast('success', t('settings.aiSettingsSaved'))
     } catch (e) {
       if (import.meta.env.DEV) console.error('Failed to save AI settings:', e)
@@ -372,24 +381,24 @@ export default function Settings() {
         categoryTotals[a.category] = (categoryTotals[a.category] || 0) + a.duration
       })
       const lines = [
-        `Merize 日报 - ${today}`,
+        `${t('settings.exportDailyTitle', { date: today })}`,
         '='.repeat(40),
         '',
-        `总活动数: ${todayActivities.length}`,
-        `总时长: ${todayActivities.reduce((s, a) => s + a.duration, 0)} 分钟`,
+        `${t('settings.totalActivities')}: ${todayActivities.length}`,
+        `${t('settings.totalDuration')}: ${todayActivities.reduce((s, a) => s + a.duration, 0)} ${t('common.minutes')}`,
         '',
-        '分类汇总:',
+        `${t('settings.categorySummary')}:`,
         ...Object.entries(categoryTotals).map(
-          ([cat, min]) => `  ${cat}: ${min} 分钟 (${(min / 60).toFixed(1)}h)`,
+          ([cat, min]) => `  ${cat}: ${min} ${t('common.minutes')} (${(min / 60).toFixed(1)}h)`
         ),
         '',
-        '活动明细:',
+        `${t('settings.activityDetail')}:`,
         ...todayActivities.map(
           (a) =>
-            `  [${a.startTime.slice(11, 16)}-${a.endTime.slice(11, 16)}] ${a.category} | ${a.name} (${a.duration}min)`,
+            `  [${a.startTime.slice(11, 16)}-${a.endTime.slice(11, 16)}] ${a.category} | ${a.name} (${a.duration}${t('common.minutes')})`
         ),
         '',
-        '--- Merize v2.0.0-beta ---',
+        `--- ${t('settings.appVersion')} ---`
       ]
       const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8;' })
       const url = URL.createObjectURL(blob)
@@ -425,23 +434,23 @@ export default function Settings() {
         dailyTotals[day] = (dailyTotals[day] || 0) + a.duration
       })
       const lines = [
-        `Merize 周报 - ${weekAgo.toISOString().slice(0, 10)} ~ ${now.toISOString().slice(0, 10)}`,
+        `${t('settings.exportWeeklyTitle', { start: weekAgo.toISOString().slice(0, 10), end: now.toISOString().slice(0, 10) })}`,
         '='.repeat(50),
         '',
-        `总活动数: ${weekActivities.length}`,
-        `总时长: ${weekActivities.reduce((s, a) => s + a.duration, 0)} 分钟`,
+        `${t('settings.totalActivities')}: ${weekActivities.length}`,
+        `${t('settings.totalDuration')}: ${weekActivities.reduce((s, a) => s + a.duration, 0)} ${t('common.minutes')}`,
         '',
-        '每日时长:',
+        `${t('settings.dailyDuration')}:`,
         ...Object.entries(dailyTotals)
           .sort()
-          .map(([day, min]) => `  ${day}: ${min} 分钟 (${(min / 60).toFixed(1)}h)`),
+          .map(([day, min]) => `  ${day}: ${min} ${t('common.minutes')} (${(min / 60).toFixed(1)}h)`),
         '',
-        '分类汇总:',
+        `${t('settings.categorySummary')}:`,
         ...Object.entries(categoryTotals)
           .sort((a, b) => b[1] - a[1])
-          .map(([cat, min]) => `  ${cat}: ${min} 分钟 (${(min / 60).toFixed(1)}h)`),
+          .map(([cat, min]) => `  ${cat}: ${min} ${t('common.minutes')} (${(min / 60).toFixed(1)}h)`),
         '',
-        '--- Merize v2.0.0-beta ---',
+        `--- ${t('settings.appVersion')} ---`
       ]
       const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8;' })
       const url = URL.createObjectURL(blob)

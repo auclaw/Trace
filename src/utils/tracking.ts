@@ -56,25 +56,33 @@ export interface Settings {
   privacy_auto_delete_days?: number
 }
 
-// 所有函数从 api.ts 重导出，保持 API 兼容性
-export {
-  getTodayActivities,
-  getActivitiesByDate,
-  getTodayStats,
-  getStatsByDate,
+// All functions re-exported from dataService for compatibility
+import dataService from '../services/dataService';
+
+// Compatibility re-exports - map old api.ts names to current dataService names
+export const {
   getWeeklyStats,
-  getMonthlyStats,
   getSettings,
-  saveSettings,
-  toggleTracking,
-  checkTrackingStatus,
-  classifyActivity,
   deleteActivity,
-  updateActivityCategory,
-  getAllActivitiesExport,
-  createActivity,
   updateActivity,
-  aiClassify,
-  getTodayStats as getTodayStatsApi,
-  saveActivities
-} from './api'
+} = dataService;
+
+// Aliases for compatibility
+export const getTodayActivities = dataService.getActivities;
+export const getActivitiesByDate = dataService.getActivities;
+export const getTodayStats = dataService.getDailyStats;
+export const getStatsByDate = dataService.getDailyStats;
+export const createActivity = dataService.addActivity;
+export const saveSettings = dataService.updateSettings;
+
+// Missing functions - placeholders for compatibility (should be removed eventually)
+export const toggleTracking = () => Promise.resolve(false);
+export const checkTrackingStatus = () => Promise.resolve(false);
+export const classifyActivity = () => Promise.resolve({});
+export const updateActivityCategory = () => Promise.resolve({});
+export const getAllActivitiesExport = () => Promise.resolve([]);
+export const aiClassify = () => Promise.resolve([]);
+export const saveActivities = () => Promise.resolve([]);
+export const getMonthlyStats = () => Promise.resolve([]);
+
+export const getTodayStatsApi = dataService.getDailyStats;

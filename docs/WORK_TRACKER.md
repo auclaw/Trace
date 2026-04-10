@@ -142,7 +142,7 @@ src/
 ### 🔴 P0 — 立即修复 (阻塞发布)
 
 #### TASK-P0-1: 实现 Timeline 批量操作真实逻辑
-**文件**: `src/pages/Timeline.ts`
+**文件**: `src/pages/Timeline.tsx`
 **当前问题**: 第 735 行 "批量分类" 和第 746 行 "批量删除" 按钮的 onClick 是空 placeholder
 **需要做的事**:
 1. 批量分类: 弹出类别选择下拉/Modal, 选择后将 `selectedIds` 中所有活动更新为目标类别

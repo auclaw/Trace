@@ -4,16 +4,21 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import type { Theme } from '../App'
-import type { TimeBlockDTO, TaskDTO } from '../utils/api'
-import {
-  getTimeblocks,
-  createTimeblock,
-  updateTimeblock,
-  deleteTimeblock,
-  toggleTimeblockCompleted,
-  aiSuggestSchedule,
-  getTasks
-} from '../utils/api'
+import type { TimeBlock, Task, ActivityCategory } from '../services/dataService'
+import dataService from '../services/dataService'
+
+export type TimeBlockDTO = TimeBlock
+export type TaskDTO = Task
+
+const {
+  getTimeBlocks,
+  addTimeBlock,
+  updateTimeBlock,
+  deleteTimeBlock,
+  getTasks,
+} = dataService
+
+// AI suggestion is handled inline
 
 interface TimeBlockPlannerProps {
   selectedDate: Date
@@ -36,11 +41,9 @@ const TimeBlockPlanner: React.FC<TimeBlockPlannerProps> = ({ selectedDate, theme
 
   // 表单状态
   const [formTitle, setFormTitle] = useState('')
-  const [formCategory, setFormCategory] = useState('')
-  const [formNotes, setFormNotes] = useState('')
+  const [formCategory, setFormCategory] = useState<ActivityCategory>('工作')
   const [formStartTime, setFormStartTime] = useState('09:00')
   const [formDuration, setFormDuration] = useState('60')
-  const [formTaskId, setFormTaskId] = useState<number | null>(null)
 
   const formatDateYMD = (date: Date): string => {
     const year = date.getFullYear()
@@ -49,11 +52,15 @@ const TimeBlockPlanner: React.FC<TimeBlockPlannerProps> = ({ selectedDate, theme
     return `${year}-${month}-${day}`
   }
 
-  const parseTimeToDate = (timeStr: string, baseDate: Date): Date => {
+  const parseTimeToDate = (timeStr: string, dateStr: string): string => {
     const [hours, minutes] = timeStr.split(':').map(Number)
-    const date = new Date(baseDate)
-    date.setHours(hours, minutes, 0, 0)
-    return date
+    return `${dateStr}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00`
+  }
+
+  const calculateDurationMinutes = (startTimeStr: string, endTimeStr: string): number => {
+    const start = new Date(startTimeStr)
+    const end = new Date(endTimeStr)
+    return Math.round((end.getTime() - start.getTime()) / (1000 * 60))
   }
 
   const loadData = useCallback(async () => {
@@ -61,15 +68,15 @@ const TimeBlockPlanner: React.FC<TimeBlockPlannerProps> = ({ selectedDate, theme
     try {
       const dateStr = formatDateYMD(selectedDate)
       const [blocksData, tasksData] = await Promise.all([
-        getTimeblocks(dateStr),
+        getTimeBlocks(dateStr),
         getTasks()
       ])
       // 按开始时间排序
-      blocksData.sort((a, b) =>
-        new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+      blocksData.sort((a: TimeBlockDTO, b: TimeBlockDTO) =>
+        new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
       )
       setTimeblocks(blocksData)
-      setTasks(tasksData.filter(t => t.status !== 'completed'))
+      setTasks(tasksData.filter((t: TaskDTO) => t.status !== 'completed'))
     } catch (err) {
       if (import.meta.env.DEV) console.error('加载时间块失败', err)
     } finally {
@@ -85,24 +92,21 @@ const TimeBlockPlanner: React.FC<TimeBlockPlannerProps> = ({ selectedDate, theme
     const now = new Date()
     const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
     setFormTitle('')
-    setFormCategory('')
-    setFormNotes('')
+    setFormCategory('工作')
     setFormStartTime(currentTime)
     setFormDuration('60')
-    setFormTaskId(null)
     setEditingBlock(null)
     setShowModal(true)
   }
 
   const openEditModal = (block: TimeBlockDTO) => {
-    const start = new Date(block.start_time)
+    const start = new Date(block.startTime)
     const timeStr = `${start.getHours().toString().padStart(2, '0')}:${start.getMinutes().toString().padStart(2, '0')}`
+    const duration = calculateDurationMinutes(block.startTime, block.endTime)
     setFormTitle(block.title)
-    setFormCategory(block.category || '')
-    setFormNotes(block.notes || '')
+    setFormCategory(block.category)
     setFormStartTime(timeStr)
-    setFormDuration(block.duration_minutes.toString())
-    setFormTaskId(block.task_id || null)
+    setFormDuration(duration.toString())
     setEditingBlock(block)
     setShowModal(true)
   }
@@ -112,31 +116,49 @@ const TimeBlockPlanner: React.FC<TimeBlockPlannerProps> = ({ selectedDate, theme
     setEditingBlock(null)
   }
 
+  const handleToggleCompleted = async (block: TimeBlock) => {
+    try {
+      await updateTimeBlock(block.id, {
+        ...block,
+        completed: !block.completed
+      })
+      await loadData()
+    } catch (err) {
+      if (import.meta.env.DEV) console.error('切换状态失败', err)
+    }
+  }
+
   const handleSubmit = async () => {
     if (!formTitle.trim()) {
       alert('请输入标题')
       return
     }
 
-    const startDt = parseTimeToDate(formStartTime, selectedDate)
+    const dateStr = formatDateYMD(selectedDate)
+    const startTime = parseTimeToDate(formStartTime, dateStr)
     const duration = parseInt(formDuration) || 30
-    const endDt = new Date(startDt.getTime() + duration * 60 * 1000)
+    const startDate = new Date(startTime)
+    const endTime = new Date(startDate.getTime() + duration * 60 * 1000).toISOString().slice(0, 19)
 
-    const data: Partial<TimeBlockDTO> = {
+    const baseData = {
       title: formTitle,
-      category: formCategory || undefined,
-      notes: formNotes || undefined,
-      start_time: startDt.toISOString(),
-      end_time: endDt.toISOString(),
-      duration_minutes: duration,
-      task_id: formTaskId || undefined,
+      category: formCategory,
+      date: dateStr,
+      endTime,
+      startTime,
     }
 
     try {
       if (editingBlock) {
-        await updateTimeblock(editingBlock.id, data)
+        await updateTimeBlock(editingBlock.id, {
+          ...baseData,
+          completed: editingBlock.completed,
+        })
       } else {
-        await createTimeblock(data)
+        await addTimeBlock({
+          ...baseData,
+          completed: false,
+        })
       }
       closeModal()
       await loadData()
@@ -146,23 +168,14 @@ const TimeBlockPlanner: React.FC<TimeBlockPlannerProps> = ({ selectedDate, theme
     }
   }
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     if (!confirm('确定要删除这个时间块吗？')) return
     try {
-      await deleteTimeblock(id)
+      await deleteTimeBlock(id)
       await loadData()
     } catch (err) {
       if (import.meta.env.DEV) console.error('删除失败', err)
       alert('删除失败')
-    }
-  }
-
-  const handleToggleCompleted = async (block: TimeBlockDTO) => {
-    try {
-      await toggleTimeblockCompleted(block.id)
-      await loadData()
-    } catch (err) {
-      if (import.meta.env.DEV) console.error('切换状态失败', err)
     }
   }
 
@@ -182,21 +195,35 @@ const TimeBlockPlanner: React.FC<TimeBlockPlannerProps> = ({ selectedDate, theme
 
     setSuggesting(true)
     try {
-      const suggestions = await aiSuggestSchedule(
-        pendingTasks.map(t => ({
-          title: t.title,
-          estimated_minutes: t.estimated_minutes || 30
-        })),
-        Math.max(availableHours, 1)
-      )
+      // Create simple blocks from pending tasks with automatic spacing
+      const dateStr = formatDateYMD(selectedDate)
+      let currentTime = new Date(now.getTime())
+      // If current time is before 8:00 AM, start at 8:00 AM
+      const startOfDay = new Date(selectedDate).setHours(8, 0, 0, 0)
+      if (currentTime.getTime() < startOfDay) {
+        currentTime = new Date(startOfDay)
+      }
 
-      // 保存建议的时间块
-      for (const suggestion of suggestions) {
-        await createTimeblock(suggestion)
+      for (const task of pendingTasks) {
+        const duration = task.estimatedMinutes || 30
+        const startTime = new Date(currentTime.getTime())
+        const endTime = new Date(startTime.getTime() + duration * 60 * 1000)
+
+        await addTimeBlock({
+          title: task.title,
+          category: '工作',
+          date: dateStr,
+          startTime: startTime.toISOString().slice(0, 19),
+          endTime: endTime.toISOString().slice(0, 19),
+          completed: false,
+        })
+
+        // Add 5 minute break between tasks
+        currentTime = new Date(endTime.getTime() + 5 * 60 * 1000)
       }
 
       await loadData()
-      alert(`AI 已为你推荐 ${suggestions.length} 个时间块`)
+      alert(`AI 已为你安排 ${pendingTasks.length} 个时间块`)
     } catch (err) {
       if (import.meta.env.DEV) console.error('AI 建议失败', err)
       alert('AI 建议失败，请稍后重试')
@@ -210,20 +237,28 @@ const TimeBlockPlanner: React.FC<TimeBlockPlannerProps> = ({ selectedDate, theme
     return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`
   }
 
-  const getCategoryColor = (category?: string): string => {
-    if (!category) return 'bg-blue-500'
-    const colors: Record<string, string> = {
-      '工作': 'bg-blue-500',
+  const calculateDuration = (startTime: string, endTime: string): number => {
+    const start = new Date(startTime)
+    const end = new Date(endTime)
+    return Math.round((end.getTime() - start.getTime()) / (1000 * 60))
+  }
+
+  const getCategoryColor = (category: ActivityCategory): string => {
+    const colors: Record<ActivityCategory, string> = {
       '开发': 'bg-indigo-500',
+      '工作': 'bg-blue-500',
       '学习': 'bg-green-500',
       '会议': 'bg-yellow-500',
-      '社交': 'bg-purple-500',
-      '娱乐': 'bg-pink-500',
-      '视频': 'bg-red-500',
       '休息': 'bg-gray-500',
+      '娱乐': 'bg-pink-500',
+      '运动': 'bg-orange-500',
+      '阅读': 'bg-cyan-500',
+      '其他': 'bg-purple-500',
     }
     return colors[category] || 'bg-blue-500'
   }
+
+  const categoryOptions: ActivityCategory[] = ['开发', '工作', '学习', '会议', '休息', '娱乐', '运动', '阅读', '其他']
 
   return (
     <div className="rounded-xl p-6 border mt-6" style={{ ...cardStyle, ...borderStyle }}>
@@ -282,8 +317,9 @@ const TimeBlockPlanner: React.FC<TimeBlockPlannerProps> = ({ selectedDate, theme
       {!loading && timeblocks.length > 0 && (
         <div className="space-y-2 max-h-[500px] overflow-y-auto">
           {timeblocks.map(block => {
-            const isCompleted = block.is_completed === 1
+            const isCompleted = block.completed
             const categoryColor = getCategoryColor(block.category)
+            const duration = calculateDuration(block.startTime, block.endTime)
             return (
               <div
                 key={block.id}
@@ -300,22 +336,14 @@ const TimeBlockPlanner: React.FC<TimeBlockPlannerProps> = ({ selectedDate, theme
                     <span className="text-sm font-medium" style={{ ...titleStyle, textDecoration: isCompleted ? 'line-through' : 'none' }}>
                       {block.title}
                     </span>
-                    {block.category && (
-                      <span className="text-xs px-2 py-0.5 rounded" style={{ background: 'var(--color-bg-surface-3)', ...textStyle }}>
-                        {block.category}
-                      </span>
-                    )}
+                    <span className="text-xs px-2 py-0.5 rounded" style={{ background: 'var(--color-bg-surface-3)', ...textStyle }}>
+                      {block.category}
+                    </span>
                   </div>
                   <div className="text-xs mt-1 flex items-center gap-2" style={textStyle}>
-                    <span>{formatTime(block.start_time)} - {formatTime(block.end_time)}</span>
+                    <span>{formatTime(block.startTime)} - {formatTime(block.endTime)}</span>
                     <span>•</span>
-                    <span>{block.duration_minutes} 分钟</span>
-                    {block.notes && (
-                      <>
-                        <span>•</span>
-                        <span className="truncate">{block.notes}</span>
-                      </>
-                    )}
+                    <span>{duration} 分钟</span>
                   </div>
                 </div>
                 <div className="flex gap-1 ml-2">
@@ -372,14 +400,16 @@ const TimeBlockPlanner: React.FC<TimeBlockPlannerProps> = ({ selectedDate, theme
                 <label className={`block text-sm font-medium text-[var(--color-text-secondary)] mb-1`}>
                   分类
                 </label>
-                <input
-                  type="text"
+                <select
                   value={formCategory}
-                  onChange={(e) => setFormCategory(e.target.value)}
-                  placeholder="例如：开发、工作、会议"
+                  onChange={(e) => setFormCategory(e.target.value as ActivityCategory)}
                   className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
                   style={inputStyle}
-                />
+                >
+                  {categoryOptions.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
               </div>
 
               <div>
@@ -410,41 +440,6 @@ const TimeBlockPlanner: React.FC<TimeBlockPlannerProps> = ({ selectedDate, theme
                   style={inputStyle}
                 />
               </div>
-
-              <div>
-                <label className={`block text-sm font-medium text-[var(--color-text-secondary)] mb-1`}>
-                  备注 (可选)
-                </label>
-                <textarea
-                  value={formNotes}
-                  onChange={(e) => setFormNotes(e.target.value)}
-                  placeholder="额外说明..."
-                  rows={2}
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
-                  style={inputStyle}
-                />
-              </div>
-
-              {tasks.length > 0 && (
-                <div>
-                  <label className={`block text-sm font-medium text-[var(--color-text-secondary)] mb-1`}>
-                    关联任务 (可选)
-                  </label>
-                  <select
-                    value={formTaskId || ''}
-                    onChange={(e) => setFormTaskId(e.target.value ? parseInt(e.target.value) : null)}
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
-                  style={inputStyle}
-                  >
-                    <option value="">无</option>
-                    {tasks.map(task => (
-                      <option key={task.id} value={task.id}>
-                        {task.title}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
             </div>
 
             <div className="flex gap-3 mt-6 justify-end">

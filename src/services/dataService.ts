@@ -87,6 +87,16 @@ export interface AppSettings {
   featureFlags: Record<string, boolean>;
   dailyGoalMinutes: number;
   language: string;
+  // AI provider settings
+  aiApiKey?: string;
+  aiProvider?: 'ernie' | 'doubao' | 'qwen' | 'glm' | 'openai' | 'claude' | 'gemini' | 'deepseek' | 'xai';
+  autoStartOnBoot?: boolean;
+  ignoredApplications?: string[];
+  // Privacy settings
+  privacy_sync_mode?: 'full' | 'summary_only' | 'local_only';
+  privacy_cloud_encryption?: boolean;
+  privacy_retain_raw_local?: boolean;
+  privacy_auto_delete_days?: number;
 }
 
 export interface TimeBlock {

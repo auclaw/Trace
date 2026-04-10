@@ -31,3 +31,8 @@ config.local.py
 # Tauri
 src-tauri/target/
 .gstack/
+
+# Playwright
+test-results/
+playwright-report/
+

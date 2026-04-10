@@ -573,7 +573,15 @@
     "aiSettingsSaved": "AI 设置已保存",
     "aiSettingsSaveFailed": "AI 设置保存失败",
     "exportPDF": "导出 PDF",
-    "exportPDFTitle": "Merize 活动报告"
+    "exportPDFTitle": "金时 活动报告",
+    "exportDailyTitle": "金时 日报 - {{date}}",
+    "exportWeeklyTitle": "金时 周报 - {{start}} ~ {{end}}",
+    "totalActivities": "总活动数",
+    "totalDuration": "总时长",
+    "categorySummary": "分类汇总",
+    "activityDetail": "活动明细",
+    "dailyDuration": "每日时长",
+    "appVersion": "金时 v2.0.0-beta"
   },
   "common": {
     "save": "保存",
