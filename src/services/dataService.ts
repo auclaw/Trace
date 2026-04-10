@@ -1,5 +1,5 @@
-// Merize Data Service - localStorage-based data layer for web demo
-// All localStorage keys prefixed with 'merize-'
+// Trace Data Service - localStorage-based data layer for web demo
+// All localStorage keys prefixed with 'trace-'
 
 // ============================================================
 // Types
@@ -15,6 +15,8 @@ export interface Activity {
   endTime: string;
   duration: number; // minutes
   isManual: boolean;
+  isAiClassified?: boolean; // Whether this activity was classified by AI
+  aiApproved?: boolean | null; // User approval status: true = approved, false = rejected, null = not reviewed
 }
 
 export interface Subtask {
@@ -80,6 +82,13 @@ export interface Pet {
   decoration: string;
 }
 
+export interface BlockedPattern {
+  id: string;
+  pattern: string; // domain or app name pattern to match
+  type: 'domain' | 'app';
+  enabled: boolean;
+}
+
 export interface AppSettings {
   theme: string;
   colorTheme: string;
@@ -97,6 +106,24 @@ export interface AppSettings {
   privacy_cloud_encryption?: boolean;
   privacy_retain_raw_local?: boolean;
   privacy_auto_delete_days?: number;
+  // Distraction blocking
+  blockedPatterns?: BlockedPattern[];
+  blockingScheduleMode?: 'focusOnly' | 'always' | 'custom';
+  blockingScheduleStart?: string; // HH:mm
+  blockingScheduleEnd?: string; // HH:mm
+  // Custom AI classification rules
+  customAiClassificationRules?: string;
+  // Calendar sync
+  calendarSyncEnabled?: boolean;
+  calendarSyncAutoCreateActivities?: boolean;
+  calendarSyncDefaultCategory?: ActivityCategory;
+  // Only sync events containing certain keywords (optional)
+  calendarSyncKeywordFilter?: string;
+  // AI personalized break reminders based on work patterns
+  adaptiveBreakReminders?: boolean;
+  adaptiveBreakMinInterval?: number;
+  adaptiveBreakMaxInterval?: number;
+  adaptiveBreakUrgentThreshold?: number;
 }
 
 export interface TimeBlock {
@@ -121,14 +148,14 @@ export interface DailyStat {
 // ============================================================
 
 const KEYS = {
-  activities: 'merize-activities',
-  tasks: 'merize-tasks',
-  habits: 'merize-habits',
-  focusSessions: 'merize-focus-sessions',
-  pet: 'merize-pet',
-  settings: 'merize-settings',
-  timeBlocks: 'merize-time-blocks',
-  seeded: 'merize-seeded',
+  activities: 'trace-activities',
+  tasks: 'trace-tasks',
+  habits: 'trace-habits',
+  focusSessions: 'trace-focus-sessions',
+  pet: 'trace-pet',
+  settings: 'trace-settings',
+  timeBlocks: 'trace-time-blocks',
+  seeded: 'trace-seeded',
 } as const;
 
 function load<T>(key: string, fallback: T): T {
@@ -440,6 +467,19 @@ function seedSettings(): AppSettings {
     },
     dailyGoalMinutes: 480,
     language: 'zh-CN',
+    blockedPatterns: [],
+    blockingScheduleMode: 'focusOnly',
+    blockingScheduleStart: '09:00',
+    blockingScheduleEnd: '18:00',
+    customAiClassificationRules: '',
+    calendarSyncEnabled: false,
+    calendarSyncAutoCreateActivities: true,
+    calendarSyncDefaultCategory: '会议',
+    calendarSyncKeywordFilter: '',
+    adaptiveBreakReminders: true,
+    adaptiveBreakMinInterval: 20,
+    adaptiveBreakMaxInterval: 60,
+    adaptiveBreakUrgentThreshold: 90,
   };
 }
 

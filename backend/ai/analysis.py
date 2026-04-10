@@ -6,6 +6,36 @@ from datetime import datetime
 from .client import volcano_client
 
 
+def generate_daily_insights(daily_data: Dict) -> str:
+    """生成每日个性化效率洞察"""
+    total_minutes = daily_data.get('total_minutes', 0)
+    by_category = daily_data.get('by_category', [])
+    focus_sessions = daily_data.get('focus_sessions', 0)
+    total_focus_minutes = daily_data.get('total_focus_minutes', 0)
+
+    category_str = "\n".join([f"- {cat['category']}: {cat['minutes']/60:.1f}小时" for cat in by_category[:8]])
+
+    prompt = f"""请作为一个专业的AI效率教练，根据我今天的数据生成个性化的效率洞察和建议。
+
+今日数据：
+- 总记录工时：{total_minutes/60:.1f}小时
+- 完成专注番茄：{focus_sessions} 个，共 {total_focus_minutes} 分钟
+- 分类工时分布：
+{category_str}
+
+请给我：
+1. 一句话整体评价
+2. 一个值得肯定的优点
+3. 一个具体可操作的改进建议
+保持简洁，总共不超过200字，中文。
+"""
+
+    response = volcano_client.get_response_text('analysis', [
+        {"role": "user", "content": prompt}
+    ])
+    return response if response else "无法生成今日洞察"
+
+
 def generate_weekly_report(weekly_data: Dict) -> str:
     """生成每周效率报告"""
     total_hours = weekly_data.get('total_hours', 0)

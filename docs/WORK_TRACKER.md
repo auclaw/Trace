@@ -1,8 +1,8 @@
-# Merize 开发任务跟踪 / Development Work Tracker
+# Trace 时迹 开发任务跟踪 / Development Work Tracker
 
-> **Branch**: `main`
-> **Last Updated**: 2026-04-10 (产品中文命名确认 + 零 Rize 政策)
-> **Product Chinese Name**: 金时 (jīn shí)
+> **Branch**: `p1-completed`
+> **Last Updated**: 2026-04-10 (产品命名确认 - 中文名：时迹，英文名：Trace)
+> **Product Chinese Name**: 时迹 (shí jì)
 > **Purpose**: 让任何 AI 或开发者可以接手继续工作 / Enable any AI or developer to continue work
 > **Audit Report**: `docs/AUDIT_REPORT_2026-04-09.html` (含完整竞品分析)
 > **Legal Policy**: 产品绝不包含任何 "Rize" “多邻国”“duolingo”文字或商标，避免法律风险。所有参考注释已清理干净。
@@ -11,9 +11,9 @@
 
 ## 项目概述 / Project Context
 
-Merize 是一个集 Rize.io（自动时间追踪）、滴答清单（任务管理）、Forest（专注游戏化）、多邻国（互动激励）、Monday（项目管理）优势于一体的中文 AI 效率工具。
+**Trace 时迹** 是一个集 Rize.io（自动时间追踪）、滴答清单（任务管理）、Forest（专注游戏化）、多邻国（互动激励）、Monday（项目管理）优势于一体的中文 AI 效率工具。
 
-**核心差异化**: 市场上没有任何单一产品同时提供 "自动时间追踪 + 任务管理 + 习惯追踪 + 游戏化宠物 + 团队功能"。这是 Merize 的独有定位。
+**核心差异化**: 市场上没有任何单一产品同时提供 "自动时间追踪 + 任务管理 + 习惯追踪 + 游戏化宠物 + 团队功能"。这是 **Trace 时迹** 的独有定位。
 
 **技术栈**: React 18 + TypeScript + Tailwind CSS + Zustand + Tauri 2 (desktop) + localStorage (web demo)
 **仓库**: https://github.com/auclaw/merize.git
@@ -584,7 +584,7 @@ src/
 
 ## 竞品定位矩阵 / Competitive Positioning
 
-| 功能 | TickTick | Things 3 | Trello | Notion | Forest | Monday | Rize | **Merize** |
+| 功能 | TickTick | Things 3 | Trello | Notion | Forest | Monday | Rize | **Trace 时迹** |
 |------|----------|----------|--------|--------|--------|--------|------|-----------|
 | 自动时间追踪 | ❌ | ❌ | ❌ | ❌ | ❌ | ⚠️手动 | ✅ | ✅ |
 | 任务管理 | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ | ✅ |
@@ -593,9 +593,9 @@ src/
 | 专注计时器 | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ | ✅ | ✅ |
 | 团队功能 | ⚠️ | ❌ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ |
 | 中文优先 | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | **✅** |
-| 价格 | $3/月 | $80一次 | $5-10/人 | $10-20/人 | $4一次 | $9-19/人 | $10-20/月 | **¥29/月** |
+| 价格 | $3/月 | $80一次 | $5-10/人 | $10-20/月 | $4一次 | $9-19/人 | $10-20/月 | **¥29/月** |
 
-**Merize 的独有优势**: 没有任何单一竞品同时具备 自动追踪 + 任务管理 + 习惯 + 游戏化 + 团队 + 中文。
+**Trace 时迹 的独有优势**: 没有任何单一竞品同时具备 自动追踪 + 任务管理 + 习惯 + 游戏化 + 团队 + 中文。
 
 ---
 
@@ -616,10 +616,10 @@ src/
 
 ## 商业模式注意事项 / Business Model Notes
 
-- ⚠️ **用户不能使用自己的 API key** — 所有 AI 功能必须走 Merize 管理的后端
+- ⚠️ **用户不能使用自己的 API key** — 所有 AI 功能必须走 Trace 时迹 管理的后端
 - 后端 AI 调用使用火山引擎模型 (配置在 `backend/` 目录)
 - Web demo 模式: 客户端模拟 AI 功能 (不需要真实 API)
-- 桌面版: 通过 Merize 后端 API 调用 AI
+- 桌面版: 通过 Trace 时迹 后端 API 调用 AI
 - 定价: ¥29/月 或 ¥199/年
 
 ---
@@ -670,7 +670,7 @@ grep -rn "placeholder\|TODO\|FIXME\|HACK" src/ --include="*.tsx" --include="*.ts
 - **Top Categories 分布**: Learning 38% (17 min), Code 21% (9 min), Productivity 21% (9 min)
 - **User Rating 自评**: 1-10 刻度, Not Focused → Very Focused
 - 两个 CTA 按钮: "Review Session" / "Start Break (5 min)"
-- **Merize 现状**: FocusCompletedModal 有时长/XP/金币, 缺少 Focus Score 详细分解和自评系统
+- **Trace 时迹 现状**: FocusCompletedModal 有时长/XP/金币, 缺少 Focus Score 详细分解和自评系统
 - **需补齐**: 添加 Focus Score 分解 (按类别) + 用户自评 1-10 刻度
 
 ### Rize Tracking Rule 编辑器
@@ -681,12 +681,12 @@ grep -rn "placeholder\|TODO\|FIXME\|HACK" src/ --include="*.tsx" --include="*.ts
 - 下拉选择应用/网站
 - 关键词匹配标题 (Enter keywords to match on the title)
 - 类别选择: 预设 (Admin/Break/Browsing/Code) + "Create a new category" + "Exclude from tracking"
-- **Merize 现状**: Settings 中有追踪规则管理, 支持 app→category 映射, 但缺少关键词标题匹配和 URL 规则
+- **Trace 时迹 现状**: Settings 中有追踪规则管理, 支持 app→category 映射, 但缺少关键词标题匹配和 URL 规则
 - **需补齐**: 支持标题关键词匹配规则, URL 匹配规则
 
 ### Rize 顶栏状态条
 - 实时显示: "07:56 TIME SINCE LAST BREAK | 4 hr 20 min WORK HOURS | 54% PERCENT OF DAY"
-- **Merize 现状**: FocusStatusIndicator 显示专注计时, 但缺少 "距上次休息" 和 "当天工作百分比"
+- **Trace 时迹 现状**: FocusStatusIndicator 显示专注计时, 但缺少 "距上次休息" 和 "当天工作百分比"
 - **需补齐**: 顶栏增加 TIME SINCE LAST BREAK 和 PERCENT OF DAY 指标
 
 ### Rize 侧边栏完整菜单
@@ -700,7 +700,7 @@ grep -rn "placeholder\|TODO\|FIXME\|HACK" src/ --include="*.tsx" --include="*.ts
 - Planning (计划)
 - Calendar (日历)
 - Data Export (数据导出)
-- **Merize 对比**: 基本覆盖, 但缺少独立的 Breaks 页面和 Time Entries (计费时间条目) 页面
+- **Trace 对比**: 基本覆盖, 但缺少独立的 Breaks 页面和 Time Entries (计费时间条目) 页面
 
 ---
 

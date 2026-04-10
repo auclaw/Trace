@@ -97,6 +97,7 @@ function TimelineActivityBlock({
   activity,
   adjustedTop,
   onCategoryChange,
+  onAiApprovalToggle,
   batchMode,
   isSelected,
   onToggleSelect,
@@ -105,6 +106,7 @@ function TimelineActivityBlock({
   activity: Activity
   adjustedTop: number
   onCategoryChange: (id: string, cat: ActivityCategory) => void
+  onAiApprovalToggle?: (id: string) => void
   batchMode?: boolean
   isSelected?: boolean
   onToggleSelect?: (id: string) => void
@@ -167,6 +169,30 @@ function TimelineActivityBlock({
               >
                 {t('timeline.manual')}
               </span>
+            )}
+            {activity.isAiClassified && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAiApprovalToggle?.(activity.id);
+                }}
+                className={`text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0 border transition-colors ${
+                  activity.aiApproved === true
+                    ? 'bg-green-100 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-400 dark:border-green-700'
+                    : activity.aiApproved === false
+                    ? 'bg-red-100 text-red-700 border-red-300 dark:bg-red-900/30 dark:text-red-400 dark:border-red-700'
+                    : 'bg-yellow-100 text-yellow-700 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-700'
+                }`}
+                title={
+                  activity.aiApproved === true
+                    ? t('timeline.aiApproved')
+                    : activity.aiApproved === false
+                    ? t('timeline.aiRejected')
+                    : t('timeline.aiPendingReview')
+                }
+              >
+                {activity.aiApproved === true ? '✓ AI' : activity.aiApproved === false ? '✗ AI' : '🤖 AI'}
+              </button>
             )}
           </div>
           {height >= 40 && (
@@ -377,6 +403,23 @@ export default function Timeline() {
     setShowDeleteConfirm(false)
     toast(t('timeline.deleteCompleted', { count }), 'success')
   }, [selectedIds, today, toast, t])
+
+  // AI classification approval quick toggle
+  const handleAiApprovalToggle = useCallback((id: string) => {
+    const activity = activities.find(a => a.id === id)
+    if (!activity) return
+    // Cycle: null → approved → rejected → null
+    let nextApproved: boolean | null = null
+    if (activity.aiApproved === null || activity.aiApproved === undefined) {
+      nextApproved = true
+    } else if (activity.aiApproved === true) {
+      nextApproved = false
+    } else {
+      nextApproved = null
+    }
+    dataService.updateActivity(id, { aiApproved: nextApproved })
+    setActivities(dataService.getActivities(today))
+  }, [activities, today])
 
   // Current activity (simulated tracking)
   const currentActivity = useMemo(() => {
@@ -729,6 +772,7 @@ export default function Timeline() {
                   activity={activity}
                   adjustedTop={adjustedTop}
                   onCategoryChange={handleCategoryChange}
+                  onAiApprovalToggle={handleAiApprovalToggle}
                   batchMode={batchMode}
                   isSelected={selectedIds.has(activity.id)}
                   onToggleSelect={handleToggleSelect}

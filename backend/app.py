@@ -1,5 +1,5 @@
 """
-Merize - AI 自动时间追踪工具后端 API
+Trace 时迹 - AI 自动时间追踪工具后端 API
 支持：手机号验证码登录、微信登录、活动记录存储、AI分类统计
 Refactored according to Aurum Tech architecture specification 2026
 """
@@ -2004,9 +2004,9 @@ def browser_get_today_activities():
     today = datetime.now().date()
     date_str = today.strftime('%Y-%m-%d')
 
-    # On macOS, data directory is ~/Library/Application Support/merize/
+    # On macOS, data directory is ~/Library/Application Support/trace/
     home_dir = os.path.expanduser('~')
-    data_dir = os.path.join(home_dir, 'Library', 'Application Support', 'merize')
+    data_dir = os.path.join(home_dir, 'Library', 'Application Support', 'trace')
     file_path = os.path.join(data_dir, f'activities_{date_str}.json')
 
     if not os.path.exists(file_path):
@@ -2029,9 +2029,9 @@ def browser_get_activities_by_date():
     if not date_str:
         return jsonify({'code': 400, 'msg': 'Missing date parameter'})
 
-    # On macOS, data directory is ~/Library/Application Support/merize/
+    # On macOS, data directory is ~/Library/Application Support/trace/
     home_dir = os.path.expanduser('~')
-    data_dir = os.path.join(home_dir, 'Library', 'Application Support', 'merize')
+    data_dir = os.path.join(home_dir, 'Library', 'Application Support', 'trace')
     file_path = os.path.join(data_dir, f'activities_{date_str}.json')
 
     if not os.path.exists(file_path):
@@ -2055,7 +2055,7 @@ def browser_get_today_stats():
         date_str = datetime.now().date().strftime('%Y-%m-%d')
 
     home_dir = os.path.expanduser('~')
-    data_dir = os.path.join(home_dir, 'Library', 'Application Support', 'merize')
+    data_dir = os.path.join(home_dir, 'Library', 'Application Support', 'trace')
     file_path = os.path.join(data_dir, f'activities_{date_str}.json')
 
     if not os.path.exists(file_path):
@@ -2114,7 +2114,7 @@ def browser_get_monthly_stats():
     month = int(month)
 
     home_dir = os.path.expanduser('~')
-    data_dir = os.path.join(home_dir, 'Library', 'Application Support', 'merize')
+    data_dir = os.path.join(home_dir, 'Library', 'Application Support', 'trace')
 
     # Calculate number of days in this month
     if month == 12:
@@ -2460,8 +2460,10 @@ def classify_activity():
     app_name = data.get('app_name', '')
     window_title = data.get('window_title', '')
     existing_categories = data.get('existing_categories', [])
+    custom_rules = data.get('custom_rules', '')
+    provider = data.get('provider', None)
     from ai.classification import classify_activity
-    category = classify_activity(app_name, window_title, existing_categories)
+    category = classify_activity(app_name, window_title, existing_categories, custom_rules, provider)
     return jsonify({'code': 200, 'data': {'category': category}})
 
 
@@ -2473,9 +2475,48 @@ def suggest_category():
     data = request.get_json()
     title = data.get('title', '')
     description = data.get('description', '')
+    provider = data.get('provider', None)
     from ai.classification import suggest_category
-    category = suggest_category(title, description)
+    category = suggest_category(title, description, provider)
     return jsonify({'code': 200, 'data': {'category': category}})
+
+
+# ========== AI Productivity Coach ==========
+
+@app.route('/api/ai/daily-insights', methods=['POST'])
+@require_subscription
+def daily_insights():
+    """Generate daily productivity insights using AI"""
+    user_id = request.user_id
+    data = request.get_json()
+    daily_data = data.get('daily_data', {})
+    from ai.analysis import generate_daily_insights
+    insights = generate_daily_insights(daily_data)
+    return jsonify({'code': 200, 'data': {'insights': insights}})
+
+
+@app.route('/api/ai/weekly-report', methods=['POST'])
+@require_subscription
+def weekly_report():
+    """Generate weekly productivity report using AI"""
+    user_id = request.user_id
+    data = request.get_json()
+    weekly_data = data.get('weekly_data', {})
+    from ai.analysis import generate_weekly_report
+    report = generate_weekly_report(weekly_data)
+    return jsonify({'code': 200, 'data': {'report': report}})
+
+
+@app.route('/api/ai/analyze-personal', methods=['POST'])
+@require_subscription
+def analyze_personal():
+    """Generate personal efficiency profile analysis"""
+    user_id = request.user_id
+    data = request.get_json()
+    profile = data.get('profile', {})
+    from ai.analysis import analyze_personal_efficiency
+    analysis = analyze_personal_efficiency(profile)
+    return jsonify({'code': 200, 'data': {'analysis': analysis}})
 
 
 if __name__ == '__main__':

@@ -48,11 +48,11 @@ interface SimulatedApp {
 // ============================================================
 
 const STORAGE_KEYS = {
-  rules: 'merize-tracking-rules',
-  privacyLevel: 'merize-tracking-privacy',
-  state: 'merize-tracking-state',
-  userOverrides: 'merize-tracking-overrides', // remembers user classification changes
-  generatedActivities: 'merize-tracking-generated',
+  rules: 'trace-tracking-rules',
+  privacyLevel: 'trace-tracking-privacy',
+  state: 'trace-tracking-state',
+  userOverrides: 'trace-tracking-overrides', // remembers user classification changes
+  generatedActivities: 'trace-tracking-generated',
 } as const;
 
 const TRACKING_INTERVAL_MS = 30_000; // 30 seconds

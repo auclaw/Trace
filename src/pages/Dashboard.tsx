@@ -419,6 +419,25 @@ export default function Dashboard() {
     [activities],
   )
 
+  // AI classification approval quick toggle
+  const handleAiApprovalToggle = useCallback((id: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Don't open edit modal
+    const activity = activities.find(a => a.id === id);
+    if (!activity) return;
+    // Cycle: null → approved → rejected → null
+    let nextApproved: boolean | null = null;
+    if (activity.aiApproved === null || activity.aiApproved === undefined) {
+      nextApproved = true;
+    } else if (activity.aiApproved === true) {
+      nextApproved = false;
+    } else {
+      nextApproved = null;
+    }
+    dataService.updateActivity(id, { aiApproved: nextApproved });
+    // Refresh activities
+    window.location.reload();
+  }, [activities]);
+
   // Pending tasks (top 5)
   const pendingTasks = useMemo(
     () => tasks.filter((t) => t.status !== 'completed').slice(0, 5),
@@ -592,6 +611,53 @@ export default function Dashboard() {
     },
     [checkinHabit, today],
   )
+
+  // ── AI Productivity Coach ──
+  const [aiPersonalizedInsights, setAiPersonalizedInsights] = useState<string>('')
+  const [generatingInsights, setGeneratingInsights] = useState(false)
+  const addToast = useAppStore((s) => s.addToast)
+
+  const generatePersonalizedInsights = useCallback(async () => {
+    setGeneratingInsights(true)
+    try {
+      // Collect daily data
+      const focusSessions = dataService.getFocusSessions(today)
+      const completedFocusSessions = focusSessions.filter(s => s.completed && s.type === 'work')
+      const totalFocusMinutes = completedFocusSessions.reduce((sum, s) => sum + s.duration, 0)
+
+      // Convert categories to array format
+      const byCategory = Object.entries(dailyStats.categories).map(([category, minutes]) => ({
+        category,
+        minutes,
+      }))
+
+      const dailyData = {
+        total_minutes: dailyStats.totalMinutes,
+        by_category: byCategory,
+        focus_sessions: completedFocusSessions.length,
+        total_focus_minutes: totalFocusMinutes,
+      }
+
+      const response = await fetch('/api/ai/daily-insights', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ daily_data: dailyData }),
+      })
+
+      const data = await response.json()
+      if (data.code === 200) {
+        setAiPersonalizedInsights(data.data.insights)
+        addToast('success', t('dashboard.insightsGenerated'))
+      } else {
+        addToast('error', t('dashboard.insightsFailed'))
+      }
+    } catch (e) {
+      console.error('Failed to generate insights:', e)
+      addToast('error', t('dashboard.insightsFailed'))
+    } finally {
+      setGeneratingInsights(false)
+    }
+  }, [dailyStats, today, addToast, t])
 
   // ── Render ──
 
@@ -1232,9 +1298,84 @@ export default function Dashboard() {
                               ))}
                             </div>
                           </div>
+
+                          {/* AI Productivity Coach - Personalized Insights */}
+                          <div
+                            className="rounded-2xl overflow-hidden mt-4"
+                            style={{
+                              background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 50%, #bbf7d0 100%)',
+                              border: '1px solid var(--color-border-subtle)',
+                              boxShadow: 'var(--shadow-card)',
+                            }}
+                          >
+                            <div className="px-5 pt-4 pb-3 flex items-center gap-2">
+                              <span className="text-base" style={{ filter: 'drop-shadow(0 0 4px rgba(34, 197, 94, 0.4))' }}>🤖</span>
+                              <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                                {t('dashboard.productivityCoach')}
+                              </h3>
+                            </div>
+
+                            <div className="px-5 pb-5">
+                              {!aiPersonalizedInsights && !generatingInsights && (
+                                <div className="text-center py-4">
+                                  <p className="text-sm text-[var(--color-text-muted)] mb-4">
+                                    {t('dashboard.coachDescription')}
+                                  </p>
+                                  <Button
+                                    variant="primary"
+                                    size="sm"
+                                    onClick={generatePersonalizedInsights}
+                                    loading={generatingInsights}
+                                  >
+                                    {t('dashboard.generateInsights')}
+                                  </Button>
+                                </div>
+                              )}
+
+                              {generatingInsights && (
+                                <div className="text-center py-6">
+                                  <div className="animate-pulse space-y-2">
+                                    <div className="h-4 bg-green-200 rounded w-3/4 mx-auto"></div>
+                                    <div className="h-4 bg-green-100 rounded w-full"></div>
+                                    <div className="h-4 bg-green-100 rounded w-5/6 mx-auto"></div>
+                                  </div>
+                                  <p className="text-sm text-[var(--color-text-muted)] mt-3">
+                                    {t('dashboard.generatingInsights')}
+                                  </p>
+                                </div>
+                              )}
+
+                              {aiPersonalizedInsights && !generatingInsights && (
+                                <div className="mt-2">
+                                  <div
+                                    className="p-4 rounded-xl"
+                                    style={{
+                                      background: 'rgba(255, 255, 255, 0.6)',
+                                      backdropFilter: 'blur(8px)',
+                                      border: '1px solid rgba(255, 255, 255, 0.5)',
+                                    }}
+                                  >
+                                    <p className="text-sm leading-relaxed text-[var(--color-text-secondary)] whitespace-pre-line">
+                                      {aiPersonalizedInsights}
+                                    </p>
+                                  </div>
+                                  <div className="mt-3 text-center">
+                                    <Button
+                                      variant="secondary"
+                                      size="sm"
+                                      onClick={generatePersonalizedInsights}
+                                      loading={generatingInsights}
+                                    >
+                                      {t('dashboard.regenerate')}
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                      </SortableWidget>
-                    );
+                    </SortableWidget>
+                  );
 
                   case 'mainTimeline':
                     return (
@@ -1308,6 +1449,27 @@ export default function Dashboard() {
                                             <span className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>
                                               {fmtDuration(act.duration)}
                                             </span>
+                                            {act.isAiClassified && (
+                                              <button
+                                                onClick={(e) => handleAiApprovalToggle(act.id, e)}
+                                                className={`text-[9px] px-1.5 py-0.5 rounded-full border transition-colors ${
+                                                  act.aiApproved === true
+                                                    ? 'bg-green-100 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-400 dark:border-green-700'
+                                                    : act.aiApproved === false
+                                                    ? 'bg-red-100 text-red-700 border-red-300 dark:bg-red-900/30 dark:text-red-400 dark:border-red-700'
+                                                    : 'bg-yellow-100 text-yellow-700 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-700'
+                                                }`}
+                                                title={
+                                                  act.aiApproved === true
+                                                    ? t('timeline.aiApproved')
+                                                    : act.aiApproved === false
+                                                    ? t('timeline.aiRejected')
+                                                    : t('timeline.aiPendingReview')
+                                                }
+                                              >
+                                                {act.aiApproved === true ? '✓ AI' : act.aiApproved === false ? '✗ AI' : '🤖 AI'}
+                                              </button>
+                                            )}
                                           </div>
                                         </div>
                                         {/* Edit hint */}

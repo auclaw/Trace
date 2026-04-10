@@ -88,14 +88,14 @@ export default function Sidebar() {
             boxShadow: 'var(--shadow-accent)',
           }}
         >
-          M
+          T
         </div>
         <div className={[
           'flex flex-col min-w-0 transition-opacity duration-200',
           sidebarCollapsed ? 'opacity-0 group-hover/sidebar:opacity-100' : 'opacity-100',
         ].join(' ')}>
           <span className="text-sm font-semibold truncate" style={{ color: 'var(--color-text-primary)' }}>
-            Merize
+            时迹 Trace
           </span>
           <span className="text-[11px] truncate" style={{ color: 'var(--color-text-muted)' }}>
             {t('app.demoUser')}

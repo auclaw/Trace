@@ -1,7 +1,7 @@
 {
-  "name": "merize",
+  "name": "trace",
   "version": "1.0.0",
-  "description": "Merize - AI自动时间追踪工具，中文本地化优化",
+  "description": "Trace - 时迹 AI自动时间追踪工具",
   "type": "module",
   "scripts": {
     "dev": "vite",

@@ -1,6 +1,8 @@
 // 自动追踪工具函数 - Tauri 后端调用
 // 已迁移到 api.ts，这里保留导出兼容性
 
+import type { ActivityCategory } from '../services/dataService';
+
 // 类型定义保留在这里
 export interface Activity {
   id: string
@@ -54,6 +56,18 @@ export interface Settings {
   privacy_cloud_encryption?: boolean
   privacy_retain_raw_local?: boolean
   privacy_auto_delete_days?: number
+  // Custom AI classification rules
+  customAiClassificationRules?: string
+  // Calendar sync
+  calendarSyncEnabled?: boolean
+  calendarSyncAutoCreateActivities?: boolean
+  calendarSyncDefaultCategory?: ActivityCategory
+  calendarSyncKeywordFilter?: string
+  // AI personalized break reminders based on work patterns
+  adaptiveBreakReminders?: boolean
+  adaptiveBreakMinInterval?: number
+  adaptiveBreakMaxInterval?: number
+  adaptiveBreakUrgentThreshold?: number
 }
 
 // All functions re-exported from dataService for compatibility

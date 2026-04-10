@@ -7,7 +7,7 @@ import dataService from '../services/dataService'
 import { trackingService } from '../services/trackingService'
 import type { Settings as AiSettings } from '../utils/tracking'
 import type { PrivacyLevel, TrackingRule } from '../services/trackingService'
-import type { ActivityCategory } from '../services/dataService'
+import type { ActivityCategory, BlockedPattern } from '../services/dataService'
 import { Card, Button, Badge } from '../components/ui'
 import {
   colorThemeConfigs,
@@ -243,11 +243,25 @@ export default function Settings() {
   const addToast = useAppStore((s) => s.addToast)
 
   const [exporting, setExporting] = useState(false)
+  // Default custom range: last 30 days
+  const today = new Date().toISOString().slice(0, 10)
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+  const [customStartDate, setCustomStartDate] = useState(thirtyDaysAgo)
+  const [customEndDate, setCustomEndDate] = useState(today)
   const [aiSettings, setAiSettings] = useState<AiSettings>({
     aiApiKey: '',
     aiProvider: 'ernie',
     autoStartOnBoot: true,
     ignoredApplications: [],
+    customAiClassificationRules: '',
+    calendarSyncEnabled: false,
+    calendarSyncAutoCreateActivities: true,
+    calendarSyncDefaultCategory: '会议',
+    calendarSyncKeywordFilter: '',
+    adaptiveBreakReminders: true,
+    adaptiveBreakMinInterval: 20,
+    adaptiveBreakMaxInterval: 60,
+    adaptiveBreakUrgentThreshold: 90,
   })
   const [savingAiSettings, setSavingAiSettings] = useState(false)
 
@@ -266,6 +280,15 @@ export default function Settings() {
           privacy_cloud_encryption: settings.privacy_cloud_encryption || false,
           privacy_retain_raw_local: settings.privacy_retain_raw_local || true,
           privacy_auto_delete_days: settings.privacy_auto_delete_days || 30,
+          customAiClassificationRules: settings.customAiClassificationRules || '',
+          calendarSyncEnabled: settings.calendarSyncEnabled || false,
+          calendarSyncAutoCreateActivities: settings.calendarSyncAutoCreateActivities || true,
+          calendarSyncDefaultCategory: settings.calendarSyncDefaultCategory || '会议',
+          calendarSyncKeywordFilter: settings.calendarSyncKeywordFilter || '',
+          adaptiveBreakReminders: settings.adaptiveBreakReminders !== undefined ? settings.adaptiveBreakReminders : true,
+          adaptiveBreakMinInterval: settings.adaptiveBreakMinInterval || 20,
+          adaptiveBreakMaxInterval: settings.adaptiveBreakMaxInterval || 60,
+          adaptiveBreakUrgentThreshold: settings.adaptiveBreakUrgentThreshold || 90,
         })
       } catch (e) {
         if (import.meta.env.DEV) console.error('Failed to load settings:', e)
@@ -342,7 +365,7 @@ export default function Settings() {
     habitInterval: number
     breakInterval: number
   }
-  const NOTIF_KEY = 'merize-notification-settings'
+  const NOTIF_KEY = 'trace-notification-settings'
   const defaultNotif: NotificationSettings = {
     habitReminder: true,
     breakReminder: true,
@@ -404,7 +427,7 @@ export default function Settings() {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `merize-daily-report-${today}.txt`
+      a.download = `trace-daily-report-${today}.txt`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
@@ -456,7 +479,7 @@ export default function Settings() {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `merize-weekly-report-${now.toISOString().slice(0, 10)}.txt`
+      a.download = `trace-weekly-report-${now.toISOString().slice(0, 10)}.txt`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
@@ -487,7 +510,7 @@ export default function Settings() {
       const data: Record<string, unknown> = {}
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i)
-        if (key && key.startsWith('merize-')) {
+        if (key && key.startsWith('trace-')) {
           try {
             data[key] = JSON.parse(localStorage.getItem(key)!)
           } catch {
@@ -501,7 +524,7 @@ export default function Settings() {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `merize-export-${new Date().toISOString().slice(0, 10)}.json`
+      a.download = `trace-export-${new Date().toISOString().slice(0, 10)}.json`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
@@ -536,7 +559,7 @@ export default function Settings() {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `merize-activities-${new Date().toISOString().slice(0, 10)}.csv`
+      a.download = `trace-activities-${new Date().toISOString().slice(0, 10)}.csv`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
@@ -634,12 +657,12 @@ export default function Settings() {
         }
 
         // Footer
-        const footerText = `Merize - https://github.com/auclaw/merize`
+        const footerText = `Trace - https://github.com/auclaw/merize`
         doc.setFontSize(8)
         doc.setTextColor(128, 128, 128)
         doc.text(footerText, pageWidth / 2, pageHeight - 10, { align: 'center' })
 
-        doc.save(`merize-report-${today}.pdf`)
+        doc.save(`trace-report-${today}.pdf`)
         addToast('success', t('settings.exportPDF') + ' ' + t('common.success'))
         setExporting(false)
       })
@@ -649,12 +672,149 @@ export default function Settings() {
     }
   }, [addToast, t])
 
+  /* ── Custom range exports ── */
+  const exportCustomRangeCSV = useCallback(() => {
+    setExporting(true)
+    try {
+      const activities = dataService.getActivitiesRange(customStartDate, customEndDate)
+      const headers = ['id', 'name', 'category', 'startTime', 'endTime', 'duration', 'isManual', 'isAiClassified', 'aiApproved']
+      const rows = activities.map((a) =>
+        [
+          a.id,
+          `"${a.name.replace(/"/g, '""')}"`,
+          a.category,
+          a.startTime,
+          a.endTime,
+          String(a.duration),
+          String(a.isManual),
+          a.isAiClassified ? String(a.isAiClassified) : '',
+          a.aiApproved !== undefined ? String(a.aiApproved) : '',
+        ].join(','),
+      )
+      const csv = [headers.join(','), ...rows].join('\n')
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `trace-activities-${customStartDate}-to-${customEndDate}.csv`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      addToast('success', t('settings.exportCSV') + ' ' + t('common.success'))
+    } catch {
+      addToast('error', t('settings.exportCSV') + ' ' + t('common.error'))
+    } finally {
+      setExporting(false)
+    }
+  }, [customStartDate, customEndDate, addToast, t])
+
+  const exportCustomRangePDF = useCallback(() => {
+    setExporting(true)
+    try {
+      import('jspdf').then(({ jsPDF }) => {
+        const activities = dataService.getActivitiesRange(customStartDate, customEndDate)
+
+        // Calculate statistics
+        const totalMinutes = activities.reduce((sum, a) => sum + a.duration, 0)
+        const categoryTotals: Record<string, number> = {}
+        activities.forEach((a) => {
+          if (a.category) {
+            categoryTotals[a.category] = (categoryTotals[a.category] || 0) + a.duration
+          }
+        })
+
+        const doc = new jsPDF()
+        const pageWidth = doc.internal.pageSize.getWidth()
+        const pageHeight = doc.internal.pageSize.getHeight()
+        const margin = 14
+
+        // Title
+        doc.setFontSize(18)
+        doc.setFont('helvetica', 'bold')
+        doc.text(t('settings.exportCustomRange'), margin, 20)
+
+        doc.setFontSize(10)
+        doc.setFont('helvetica', 'normal')
+        doc.text(`${t('settings.startDate')}: ${customStartDate}`, margin, 28)
+        doc.text(`${t('settings.endDate')}: ${customEndDate}`, margin, 34)
+        doc.text(`${t('statistics.totalHours')}: ${(totalMinutes / 60).toFixed(1)}h`, margin, 40)
+        doc.text(`${t('dashboard.activityCount')}: ${activities.length}`, margin, 46)
+
+        let yPos = 56
+
+        // Category summary
+        if (Object.keys(categoryTotals).length > 0) {
+          doc.setFontSize(12)
+          doc.setFont('helvetica', 'bold')
+          doc.text(t('statistics.categoryBreakdown'), margin, yPos)
+          yPos += 8
+
+          Object.entries(categoryTotals)
+            .sort((a, b) => b[1] - a[1])
+            .forEach(([cat, mins]) => {
+              if (yPos > pageHeight - 20) {
+                doc.addPage()
+                yPos = margin
+              }
+              doc.setFontSize(9)
+              doc.setFont('helvetica', 'normal')
+              const hours = (mins / 60).toFixed(1)
+              doc.text(`${cat}: ${hours}h (${mins} ${t('common.minutes')})`, margin + 2, yPos)
+              yPos += 6
+            })
+
+          yPos += 10
+        }
+
+        // Activity list
+        if (activities.length > 0) {
+          doc.setFontSize(12)
+          doc.setFont('helvetica', 'bold')
+          doc.text(`${t('dashboard.activityCount'}:`, margin, yPos)
+          yPos += 8
+
+          activities
+            .sort((a, b) => a.startTime.localeCompare(b.startTime))
+            .forEach((a) => {
+              if (yPos > pageHeight - 10) {
+                doc.addPage()
+                yPos = margin
+              }
+              doc.setFontSize(8)
+              doc.setFont('helvetica', 'normal')
+              const startTime = a.startTime.slice(11, 16)
+              const endTime = a.endTime ? a.endTime.slice(11, 16) : ''
+              const duration = `${a.duration.toFixed(0)}${t('common.minutes')}`
+              const name = a.name.length > 40 ? a.name.slice(0, 37) + '...' : a.name
+              const line = `${startTime}-${endTime} | ${a.category || t('common.unknown')} | ${name} (${duration})${a.isAiClassified ? ` [AI ${a.aiApproved ? '✓' : a.aiApproved === false ? '✗' : '?'}]` : ''}`
+              doc.text(line, margin + 2, yPos)
+              yPos += 5
+            })
+        }
+
+        // Footer
+        const footerText = `Trace - https://github.com/auclaw/merize`
+        doc.setFontSize(8)
+        doc.setTextColor(128, 128, 128)
+        doc.text(footerText, pageWidth / 2, pageHeight - 10, { align: 'center' })
+
+        doc.save(`trace-report-${customStartDate}-to-${customEndDate}.pdf`)
+        addToast('success', t('settings.exportPDF') + ' ' + t('common.success'))
+        setExporting(false)
+      })
+    } catch {
+      addToast('error', t('settings.exportPDF') + ' ' + t('common.error'))
+      setExporting(false)
+    }
+  }, [customStartDate, customEndDate, addToast, t])
+
   /* ── Reset demo data ── */
   const handleReset = useCallback(() => {
     const keys: string[] = []
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i)
-      if (key && key.startsWith('merize-')) keys.push(key)
+      if (key && key.startsWith('trace-')) keys.push(key)
     }
     keys.forEach((k) => localStorage.removeItem(k))
     // Re-seed by removing the seeded flag (ensureSeeded will re-run)
@@ -662,6 +822,62 @@ export default function Settings() {
     addToast('success', '数据已重置，即将刷新页面')
     setTimeout(() => window.location.reload(), 800)
   }, [addToast])
+
+  /* ── Distraction Blocking ── */
+  const [blockedPatterns, setBlockedPatterns] = useState<BlockedPattern[]>([])
+  const [newPatternInput, setNewPatternInput] = useState('')
+  const [blockingScheduleMode, setBlockingScheduleMode] = useState<'focusOnly' | 'always' | 'custom'>('focusOnly')
+
+  // Load distraction blocking settings on mount
+  useEffect(() => {
+    const loadDistractionSettings = async () => {
+      const settings = await dataService.getSettings()
+      setBlockedPatterns(settings.blockedPatterns || [])
+      setBlockingScheduleMode(settings.blockingScheduleMode || 'focusOnly')
+    }
+    loadDistractionSettings()
+  }, [])
+
+  const saveBlockedPatterns = useCallback(async (patterns: BlockedPattern[]) => {
+    try {
+      const current = await dataService.getSettings()
+      await dataService.updateSettings({ ...current, blockedPatterns: patterns })
+      addToast('success', t('focus.settingsSaved'))
+    } catch (e) {
+      if (import.meta.env.DEV) console.error('Failed to save blocked patterns:', e)
+      addToast('error', t('common.error'))
+    }
+  }, [addToast, t])
+
+  const saveBlockingScheduleMode = useCallback(async (mode: 'focusOnly' | 'always' | 'custom') => {
+    try {
+      const current = await dataService.getSettings()
+      await dataService.updateSettings({ ...current, blockingScheduleMode: mode })
+      addToast('success', t('focus.settingsSaved'))
+    } catch (e) {
+      if (import.meta.env.DEV) console.error('Failed to save schedule mode:', e)
+      addToast('error', t('common.error'))
+    }
+  }, [addToast, t])
+
+  const addNewPattern = useCallback(() => {
+    const pattern = newPatternInput.trim()
+    if (!pattern) return
+
+    // Auto-detect type: if it contains a dot, treat as domain
+    const type: 'domain' | 'app' = pattern.includes('.') ? 'domain' : 'app'
+    const newPattern: BlockedPattern = {
+      id: crypto.randomUUID(),
+      pattern,
+      type,
+      enabled: true,
+    }
+
+    const newList = [...blockedPatterns, newPattern]
+    setBlockedPatterns(newList)
+    saveBlockedPatterns(newList)
+    setNewPatternInput('')
+  }, [newPatternInput, blockedPatterns, saveBlockedPatterns])
 
   return (
     <div className="p-6 md:p-10 max-w-2xl mx-auto space-y-8">
@@ -960,6 +1176,132 @@ export default function Settings() {
             max={10}
             suffix={t('settings.sessions')}
           />
+        </div>
+      </Section>
+
+      {/* ─── 3.5 Distraction Blocking ─── */}
+      <Section title={t('focus.blockedSites')} index={3.5}>
+        <p
+          className="text-xs"
+          style={{ color: 'var(--color-text-muted)' }}
+        >
+          {t('focus.shieldDescription')}
+        </p>
+        <p
+          className="text-xs"
+          style={{ color: 'var(--color-text-muted)' }}
+        >
+          {t('focus.desktopNote')}
+        </p>
+
+        <div className="mt-4 space-y-3">
+          {/* Blocked list */}
+          {blockedPatterns.length === 0 ? (
+            <p className="text-sm text-[var(--color-text-muted)] py-3">
+              {t('focus.noBlockRules')}
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {blockedPatterns.map((pattern) => (
+                <div
+                  key={pattern.id}
+                  className="flex items-center justify-between p-3 border rounded-lg"
+                  style={{
+                    borderColor: 'var(--color-border-subtle)',
+                    background: pattern.enabled ? 'var(--color-bg-surface-2)' : 'transparent',
+                    opacity: pattern.enabled ? 1 : 0.5,
+                  }}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
+                      {pattern.pattern}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const newPatterns = blockedPatterns.filter(p => p.id !== pattern.id);
+                      setBlockedPatterns(newPatterns);
+                      saveBlockedPatterns(newPatterns);
+                    }}
+                    className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors dark:bg-red-900/30 dark:text-red-400"
+                  >
+                    {t('common.delete')}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Add new pattern */}
+          <div className="flex gap-2 items-end">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
+                {t('focus.domain')}
+              </label>
+              <input
+                type="text"
+                value={newPatternInput}
+                onChange={(e) => setNewPatternInput(e.target.value)}
+                placeholder={t('focus.domainPlaceholder')}
+                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                style={{
+                  background: 'var(--color-bg-surface-2)',
+                  borderColor: 'var(--color-border-subtle)',
+                  color: 'var(--color-text-primary)',
+                }}
+              />
+              <p className="text-xs text-[var(--color-text-muted)] mt-1">
+                {t('focus.domainHint')}
+              </p>
+            </div>
+            <button
+              onClick={addNewPattern}
+              disabled={!newPatternInput.trim()}
+              className="px-4 py-2 bg-[var(--color-accent)] text-[#fffefb] rounded-lg hover:opacity-90 transition-colors disabled:opacity-50"
+            >
+              {t('focus.addSite')}
+            </button>
+          </div>
+
+          {/* Schedule mode */}
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
+              {t('focus.scheduleMode')}
+            </label>
+            <div className="space-y-2">
+              {([
+                { value: 'focusOnly', label: t('focus.focusOnly'), desc: t('focus.focusOnlyDesc') },
+                { value: 'always', label: t('focus.always'), desc: t('focus.alwaysDesc') },
+              ] as const).map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => {
+                    setBlockingScheduleMode(opt.value);
+                    saveBlockingScheduleMode(opt.value);
+                  }}
+                  className="w-full text-left cursor-pointer p-3 border rounded-lg transition-all"
+                  style={{
+                    border: blockingScheduleMode === opt.value
+                      ? '2px solid var(--color-accent)'
+                      : '1.5px solid var(--color-border-subtle)',
+                    backgroundColor: blockingScheduleMode === opt.value
+                      ? 'var(--color-accent-soft)'
+                      : 'transparent',
+                  }}
+                >
+                  <div className="font-medium text-sm" style={{ color: 'var(--color-text-primary)' }}>
+                    {opt.label}
+                  </div>
+                  <p className="text-xs text-[var(--color-text-muted)] mt-1">
+                    {opt.desc}
+                  </p>
+                </button>
+              ))}
+            </div>
+            <p className="text-sm font-medium text-[var(--color-text-secondary)] mt-3 mb-1">
+              {t('focus.blockingCount', { count: blockedPatterns.filter(p => p.enabled).length })}
+            </p>
+          </div>
         </div>
       </Section>
 
@@ -1395,6 +1737,31 @@ export default function Settings() {
             </p>
           </div>
 
+          {/* Custom AI classification rules */}
+          <div className="mt-4">
+            <label
+              className="block text-xs mb-2 font-medium"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
+              {t('settings.customAiRules')}
+            </label>
+            <textarea
+              value={aiSettings.customAiClassificationRules || ''}
+              onChange={(e) => setAiSettings({ ...aiSettings, customAiClassificationRules: e.target.value })}
+              placeholder={t('settings.customAiRulesPlaceholder')}
+              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] min-h-[100px]"
+              style={{
+                background: 'var(--color-bg-surface-2)',
+                borderColor: 'var(--color-border-subtle)',
+                color: 'var(--color-text-primary)',
+                resize: 'vertical',
+              }}
+            />
+            <p className="text-xs text-[var(--color-text-muted)] mt-1">
+              {t('settings.customAiRulesHint')}
+            </p>
+          </div>
+
           {/* Save Button */}
           <div className="pt-2">
             <Button
@@ -1407,6 +1774,103 @@ export default function Settings() {
               {t('settings.saveAiSettings')}
             </Button>
           </div>
+        </div>
+      </Section>
+
+      {/* ─── 7d. Calendar Sync ─── */}
+      <Section title={t('settings.sections.calendar')} index={7.8}>
+        <p
+          className="text-xs"
+          style={{ color: 'var(--color-text-muted)' }}
+        >
+          {t('settings.calendarDescription')}
+        </p>
+
+        <div className="space-y-4 mt-4">
+          {/* Enable calendar sync toggle */}
+          <div
+            className="flex items-center justify-between p-3 rounded-lg"
+            style={{
+              backgroundColor: 'var(--color-bg-surface-2)',
+              border: '1px solid var(--color-border-subtle)',
+            }}
+          >
+            <div>
+              <p
+                className="text-sm font-semibold"
+                style={{ color: 'var(--color-text-primary)' }}
+              >
+                {t('settings.calendarSyncEnabled')}
+              </p>
+              <p
+                className="text-xs mt-0.5"
+                style={{ color: 'var(--color-text-muted)' }}
+              >
+                {t('settings.calendarSyncEnabledHint')}
+              </p>
+            </div>
+            <Toggle
+              checked={aiSettings.calendarSyncEnabled || false}
+              onChange={(v) => setAiSettings({ ...aiSettings, calendarSyncEnabled: v })}
+            />
+          </div>
+
+          {/* Auto-create activities toggle */}
+          <div
+            className="flex items-center justify-between p-3 rounded-lg"
+            style={{
+              backgroundColor: 'var(--color-bg-surface-2)',
+              border: '1px solid var(--color-border-subtle)',
+            }}
+          >
+            <div>
+              <p
+                className="text-sm font-semibold"
+                style={{ color: 'var(--color-text-primary)' }}
+              >
+                {t('settings.calendarAutoCreate')}
+              </p>
+              <p
+                className="text-xs mt-0.5"
+                style={{ color: 'var(--color-text-muted)' }}
+              >
+                {t('settings.calendarAutoCreateHint')}
+              </p>
+            </div>
+            <Toggle
+              checked={aiSettings.calendarSyncAutoCreateActivities !== false}
+              onChange={(v) => setAiSettings({ ...aiSettings, calendarSyncAutoCreateActivities: v })}
+            />
+          </div>
+
+          {/* Keyword filter */}
+          <div>
+            <label
+              className="block text-xs mb-2 font-medium"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
+              {t('settings.calendarKeywordFilter')}
+            </label>
+            <input
+              type="text"
+              value={aiSettings.calendarSyncKeywordFilter || ''}
+              onChange={(e) => setAiSettings({ ...aiSettings, calendarSyncKeywordFilter: e.target.value })}
+              placeholder={t('settings.calendarKeywordFilterPlaceholder')}
+              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+              style={{
+                background: 'var(--color-bg-surface-2)',
+                borderColor: 'var(--color-border-subtle)',
+                color: 'var(--color-text-primary)',
+              }}
+            />
+            <p className="text-xs text-[var(--color-text-muted)] mt-1">
+              {t('settings.calendarKeywordFilterHint')}
+            </p>
+          </div>
+
+          <p className="text-xs text-[var(--color-text-muted)]">
+            {t('settings.calendarDesktopNote')}
+          </p>
         </div>
       </Section>
 
@@ -1531,6 +1995,62 @@ export default function Settings() {
             suffix={t('common.minutes')}
           />
         </div>
+
+        {/* Adaptive AI break reminders */}
+        <div className="mt-4 pt-4 border-t border-[var(--color-border-subtle)]">
+          <div
+            className="flex items-center justify-between p-3 rounded-lg"
+            style={{ backgroundColor: 'var(--color-bg-surface-2)', border: '1px solid var(--color-border-subtle)' }}
+          >
+            <div>
+              <p
+                className="text-sm font-semibold"
+                style={{ color: 'var(--color-text-primary)' }}
+              >
+                {t('settings.adaptiveBreakReminders')}
+              </p>
+              <p
+                className="text-xs mt-0.5"
+                style={{ color: 'var(--color-text-muted)' }}
+              >
+                {t('settings.adaptiveBreakRemindersHint')}
+              </p>
+            </div>
+            <Toggle
+              checked={aiSettings.adaptiveBreakReminders || false}
+              onChange={(v) => setAiSettings({ ...aiSettings, adaptiveBreakReminders: v })}
+            />
+          </div>
+
+          {aiSettings.adaptiveBreakReminders && (
+            <div className="space-y-3 mt-4">
+              <NumberField
+                label={t('settings.adaptiveBreakMinInterval')}
+                value={aiSettings.adaptiveBreakMinInterval || 20}
+                onChange={(v) => setAiSettings({ ...aiSettings, adaptiveBreakMinInterval: v })}
+                min={5}
+                max={60}
+                suffix={t('common.minutes')}
+              />
+              <NumberField
+                label={t('settings.adaptiveBreakMaxInterval')}
+                value={aiSettings.adaptiveBreakMaxInterval || 60}
+                onChange={(v) => setAiSettings({ ...aiSettings, adaptiveBreakMaxInterval: v })}
+                min={30}
+                max={120}
+                suffix={t('common.minutes')}
+              />
+              <NumberField
+                label={t('settings.adaptiveBreakUrgentThreshold')}
+                value={aiSettings.adaptiveBreakUrgentThreshold || 90}
+                onChange={(v) => setAiSettings({ ...aiSettings, adaptiveBreakUrgentThreshold: v })}
+                min={60}
+                max={180}
+                suffix={t('common.minutes')}
+              />
+            </div>
+          )}
+        </div>
       </Section>
 
       {/* ─── 8. Data Management ─── */}
@@ -1595,6 +2115,67 @@ export default function Settings() {
           </Button>
         </div>
 
+        {/* Custom date range export */}
+        <div className="mt-4 pt-4 border-t border-[var(--color-border-subtle)]">
+          <p className="text-xs mb-3" style={{ color: 'var(--color-text-muted)' }}>
+            {t('settings.customRangeDescription')}
+          </p>
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            <div>
+              <label className="block text-xs mb-1 font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                {t('settings.startDate')}
+              </label>
+              <input
+                type="date"
+                value={customStartDate}
+                onChange={(e) => setCustomStartDate(e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                style={{
+                  background: 'var(--color-bg-surface-2)',
+                  borderColor: 'var(--color-border-subtle)',
+                  color: 'var(--color-text-primary)',
+                }}
+              />
+            </div>
+            <div>
+              <label className="block text-xs mb-1 font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                {t('settings.endDate')}
+              </label>
+              <input
+                type="date"
+                value={customEndDate}
+                onChange={(e) => setCustomEndDate(e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                style={{
+                  background: 'var(--color-bg-surface-2)',
+                  borderColor: 'var(--color-border-subtle)',
+                  color: 'var(--color-text-primary)',
+                }}
+              />
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={exportCustomRangeCSV}
+              loading={exporting}
+              className="flex-1"
+            >
+              {t('settings.exportCustomCSV')}
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={exportCustomRangePDF}
+              loading={exporting}
+              className="flex-1"
+            >
+              {t('settings.exportCustomPDF')}
+            </Button>
+          </div>
+        </div>
+
         {/* Danger zone */}
         <div
           style={{
@@ -1634,7 +2215,7 @@ export default function Settings() {
             <Badge variant="default" size="sm">redesign/v2</Badge>
           </div>
           <p style={{ color: 'var(--color-text-secondary)' }}>
-            Merize — {t('settings.tagline')}
+            Trace — {t('settings.tagline')}
           </p>
           <p className="text-xs">
             {t('settings.dataLocalHint')}

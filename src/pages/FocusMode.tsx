@@ -57,8 +57,9 @@ const AMBIENT_SOUNDS = [
   { id: 'cafe', labelKey: 'focus.cafe', icon: '☕' },
 ] as const
 
-const LS_AMBIENT_KEY = 'merize-ambient-sound'
-const URGENT_BREAK_THRESHOLD = 50 * 60 // 50 minutes in seconds — second, more urgent reminder
+const LS_AMBIENT_KEY = 'trace-ambient-sound'
+// Default urgent break threshold if adaptive settings not loaded
+const DEFAULT_URGENT_BREAK_THRESHOLD = 90 * 60 // 90 minutes in seconds — second, more urgent reminder
 
 const BREAK_PET_MESSAGES = [
   '休息一下吧！你已经很棒了～',
@@ -168,12 +169,25 @@ export default function FocusMode() {
   const [breakTimerActive, setBreakTimerActive] = useState(false)
   const [breakTimeLeft, setBreakTimeLeft] = useState(5 * 60) // 5 minutes break
   const [breakPetMessage, setBreakPetMessage] = useState('')
+  // Adaptive break reminder settings
+  const [adaptiveBreakEnabled, setAdaptiveBreakEnabled] = useState(true)
+  const [adaptiveUrgentThreshold, setAdaptiveUrgentThreshold] = useState(DEFAULT_URGENT_BREAK_THRESHOLD)
 
   // ── FlowBlocks state ──
   const [sites, setSites] = useState<BlockedSite[]>(loadSites)
   const [schedule, setSchedule] = useState<ScheduleMode>(loadSchedule)
   const [addOpen, setAddOpen] = useState(false)
   const [newDomain, setNewDomain] = useState('')
+
+  // ── Load adaptive break settings ──
+  useEffect(() => {
+    const loadAdaptiveSettings = async () => {
+      const settings = await dataService.getSettings()
+      setAdaptiveBreakEnabled(settings.adaptiveBreakReminders ?? true)
+      setAdaptiveUrgentThreshold((settings.adaptiveBreakUrgentThreshold ?? 90) * 60)
+    }
+    loadAdaptiveSettings()
+  }, [])
 
   // ── Tick interval ──
   useEffect(() => {
@@ -220,7 +234,7 @@ export default function FocusMode() {
 
   const showUrgentBreakReminderModal =
     focusState === 'working' &&
-    continuousFocusSeconds >= URGENT_BREAK_THRESHOLD &&
+    continuousFocusSeconds >= (adaptiveBreakEnabled ? adaptiveUrgentThreshold : DEFAULT_URGENT_BREAK_THRESHOLD) &&
     !urgentReminderDismissed &&
     breakReminderDismissed && // only show after first was dismissed
     !breakTimerActive
