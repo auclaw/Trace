@@ -21,7 +21,7 @@
 - ✅ 全中文界面，针对中国用户优化
 
 **技术栈**: React 18 + TypeScript + Tailwind CSS + Zustand + Tauri 2 (desktop) + SQLite (native)
-**仓库**: https://github.com/auclaw/merize.git
+**仓库**: https://github.com/auclaw/Trace.git
 **分支**: p1-completed → 准备合并 main
 
 ---
@@ -30,8 +30,8 @@
 
 ```bash
 # 1. Clone
-git clone https://github.com/auclaw/merize.git
-cd merize
+git clone https://github.com/auclaw/Trace.git
+cd Trace
 
 # 2. Install dependencies
 npm install
