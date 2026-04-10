@@ -1,7 +1,7 @@
 # Trace 时迹 开发任务跟踪 / Development Work Tracker
 
 > **Branch**: `p1-completed`
-> **Last Updated**: 2026-04-11 (P0/P1 completed - all core refactoring done)
+> **Last Updated**: 2026-04-11 (P0 全部完成，P1 隐私政策已完成，只剩 ErrorBoundary 和 Tauri updater)
 > **Product Chinese Name**: 时迹 (shí jì)
 > **Purpose**: 让任何 AI 或开发者可以接手继续工作 / Enable any AI or developer to continue work
 > **Audit Report**: `docs/AUDIT_REPORT_2026-04-09.html` (含完整竞品分析)
@@ -11,13 +11,13 @@
 
 ## 项目概述 / Project Context
 
-**Trace 时迹** 是 **中文市场的 AI 驱动自动时间追踪效率工具。聚焦**个人用户**做深做透**自动追踪和手动编辑。
+**Trace 时迹** 是中文市场的 AI 驱动自动时间追踪效率工具，聚焦**个人用户**，做深做透**自动追踪**和**手动编辑**。
 
 **核心差异化**：
-- ✅ 原生 macOS/Windows 桌面端自动追踪（不需要手动打卡
-- ✅ 支持**本地数据存储，隐私优先
+- ✅ 原生 macOS/Windows 桌面端自动追踪（不需要手动打卡）
+- ✅ 支持**本地数据存储，隐私优先**
 - ✅ 内置任务管理 + 习惯追踪
-- ✅ 内置虚拟宠物游戏化（**保留基础，商店延后）
+- ✅ 内置虚拟宠物游戏化（保留基础，商店延后）
 - ✅ 全中文界面，针对中国用户优化
 
 **技术栈**: React 18 + TypeScript + Tailwind CSS + Zustand + Tauri 2 (desktop) + SQLite (native)
@@ -145,9 +145,10 @@ src/
 | **2-2** | 🔴 本地数据库替换 localStorage | 最高 | 使用 SQLite（通过 tauri-plugin-sql）。设计 schema：activities、tasks、habits、focus_sessions、pet、settings 表。数据迁移脚本 | ✅ **已完成** - src-tauri/src/database.rs 包含完整 migrations 10 tables，plugin 已注册 |
 | **2-3** | 🔴 移除/重构模拟数据生成 | 高 | dataService.ts 中 generateDemoData() 只在没有真实数据时作为引导演示，不能和真实数据混合 | ✅ **已完成** - demo data only seeded once when database is empty, not mixed with real tracking |
 | **2-4** | 🔴 真实 AI 分类 | 高 | 基于窗口标题的规则引擎分类（不需要 LLM）。规则：VS Code → 开发，Chrome + stackoverflow → 学习，等等。用户可自定义规则（Settings 中已有 UI） | ✅ **已完成** - rule-based classification implemented in Rust backend, fully integrated |
-| **2-5** | 🔴 自动启动 + 后台运行 | 高 | Tauri 系统托盘图标，开机自启，后台静默追踪 | ✅ **已完成** - `tauri-plugin-autostart` already configured and integrated |
-| **P0-remaining** | 🔴 暗色模式文字对比度修复 | 高 | 修复暗色模式下文字/图标颜色对比度不够看不清 | ✅ **已完成** - lightened muted text `#a19787` → `#b5a998` improved contrast ratio 4.5:1 → 5.2:1 (WCAG AA compliant) |
-| **P0-remaining** | 🔴 修复未保护 console.error | P0 | Dashboard.tsx 第 655 行，添加 `if (import.meta.env.DEV) 保护 | ✅ 已完成 |
+| **2-5** | 🔴 自动启动 + 后台运行 | 最高 | Tauri 系统托盘图标，开机自启，后台静默追踪 | ✅ **已完成** - `tauri-plugin-autostart` already configured and integrated |
+| **2-6** | 🔴 隐私合规 - 首次使用告知 | 最高 | 根据《个人信息保护法》要求，首次启动必须弹窗告知用户本应用会记录窗口活动信息，获取用户同意。提供隐私政策链接和排除应用列表 | ✅ **已完成** - Onboarding 向导第一步后新增隐私同意步骤，明确告知数据收集范围和用户权利，必须勾选同意才能继续 |
+| **P0-remaining** | 🔴 暗色模式文字对比度修复 | 最高 | 修复暗色模式下文字/图标颜色对比度不够看不清 | ✅ **已完成** - lightened muted text `#a19787` → `#b5a998` improved contrast ratio 4.5:1 → 5.2:1 (WCAG AA compliant) |
+| **P0-remaining** | 🔴 修复未保护 console.error | 最高 | Dashboard.tsx 第 655 行，添加 `if (import.meta.env.DEV) 保护 | ✅ 已完成 |
 
 ---
 
@@ -161,7 +162,7 @@ src/
   - FocusMode remains 1133 lines (acceptable, under 1500) |
 | **3-2** | 高 | 响应式适配，至少保证 1024px+ 桌面端正常显示 | ✅ 已完成 - already responsive |
 | **3-3** | 中 | CSV 导出活动数据导出（PDF 可以后做） | ✅ 已完成 - Settings already has full CSV/PDF export with custom date range |
-| **3-4** | 中 | 隐私合规：添加隐私政策页面。首次使用弹窗告知用户会追踪窗口信息。提供排除应用列表 | ⏳ Pending |
+| **3-4** | 中 | 隐私政策页面 | ✅ **已完成** - 独立隐私政策页面已创建，Settings 添加链接，中英文翻译齐全 |
 | **3-5** | 中 | 全局 ErrorBoundary，数据库写入失败恢复机制 | ⏳ Pending |
 | **3-6** | 中 | Tauri 内置 updater 配置自动更新 | ⏳ Pending |
 
@@ -171,16 +172,16 @@ src/
 
 | Task | 优先级 | 描述 | 状态 |
 |------|----------|------|------|
-| **P2-1** | 中 | 自定义分心拦截 | ✅ 已完成，等待桌面端集成 |
-| **P2-2** | 中 | 自定义 AI 分类规则 | ✅ 已完成，等待桌面端集成 |
-| **P2-3** | 中 | 日历同步自动会议追踪 | ✅ 已完成前端配置，**延后 P3**（桌面端实现日历读取需要 native API） |
-| **P2-4** | 中 | AI 生产力教练（每日/每周个性化洞察 | ✅ 已完成后端 API，保留，**不做为 V1.0 卖点** |
-| **P2-5** | 中 | 专注质量分数 | ✅ 已实现 Dashboard 实现 |
-| **P2-6** | 低 | 专注背景音快捷打开 | **砍掉**，不需要做 |
-| **P2-7** | 中 | AI 个性化休息提醒 | ✅ 已实现可配置 |
-| **P2-8** | 中 | 时间线快速 AI 分类审核 | ✅ 已实现 |
-| **P2-9** | 中 | 自定义日期范围导出 | ✅ 已实现 |
-| **P2-10** | 中 | 多 AI 服务商支持 | ✅ 已完成 |
+| **P2-1** | 中 | 自定义分心拦截 | ✅ **UI Ready** - 前端配置完成，等待桌面端 native 拦截实现 |
+| **P2-2** | 中 | 自定义 AI 分类规则 | ✅ **UI Ready** - 前端规则管理 UI 完成，规则引擎已集成到 Rust 后端 |
+| **P2-3** | 中 | 日历同步自动会议追踪 | ⏸️ **UI Ready** - 前端配置完成，**延后 P3**（桌面端实现日历读取需要 native API） |
+| **P2-4** | 中 | AI 生产力教练（每日/每周个性化洞察 | ✅ **Backend API Ready** - 云端后端 API 已就绪，前端 UI 完成，不做为 V1.0 核心卖点 |
+| **P2-5** | 中 | 专注质量分数 | ✅ 已完成 - Dashboard 实现完整 |
+| **P2-6** | 低 | 专注背景音快捷打开 | **❌ 砍掉** - 不需要做 |
+| **P2-7** | 中 | AI 个性化休息提醒 | ✅ 已完成 - 可配置自适应提醒 |
+| **P2-8** | 中 | 时间线快速 AI 分类审核 | ✅ 已完成 - 直接在时间线 toggle approve/reject |
+| **P2-9** | 中 | 自定义日期范围导出 | ✅ 已完成 - CSV/PDF 支持自定义范围 |
+| **P2-10** | 中 | 多 AI 服务商支持 | ✅ 已完成 - 支持文心/豆包/通义千问/智谱/OpenAI/Claude/Gemini 等 |
 
 ---
 

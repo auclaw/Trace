@@ -24,9 +24,10 @@ interface OnboardingState {
   darkMode: boolean
   activeModules: string[]
   privacyLevel: 'basic' | 'standard' | 'detailed'
+  privacyConsentGiven: boolean
 }
 
-const TOTAL_STEPS = 7
+const TOTAL_STEPS = 8
 const THEME_KEYS = Object.keys(colorThemeConfigs) as ColorTheme[]
 
 const PET_OPTIONS: { type: PetType; emoji: string; labelKey: string; defaultName: string }[] = [
@@ -70,12 +71,19 @@ export default function Onboarding() {
     darkMode: false,
     activeModules: DEFAULT_MODULES.filter((m) => !['dashboard', 'settings'].includes(m)),
     privacyLevel: 'standard',
+    privacyConsentGiven: false,
   })
 
   const store = useAppStore()
+  const addToast = store.addToast
 
   const goNext = () => {
     if (animating || step >= TOTAL_STEPS - 1) return
+    // Check privacy consent on step 1
+    if (step === 1 && !state.privacyConsentGiven) {
+      addToast('error', t('onboarding.pleaseConsent'))
+      return
+    }
     setDirection('next')
     setAnimating(true)
     setTimeout(() => { setStep((s) => s + 1); setAnimating(false) }, 300)
@@ -118,12 +126,13 @@ export default function Onboarding() {
   const renderStep = () => {
     switch (step) {
       case 0: return <StepWelcome onStart={goNext} accent={accent} />
-      case 1: return <StepPet state={state} setState={setState} />
-      case 2: return <StepGoal state={state} setState={setState} accent={accent} />
-      case 3: return <StepTheme state={state} setState={setState} />
-      case 4: return <StepModules state={state} setState={setState} accent={accent} />
-      case 5: return <StepPrivacy state={state} setState={setState} accent={accent} />
-      case 6: return <StepDone state={state} onComplete={handleComplete} accent={accent} />
+      case 1: return <StepPrivacyConsent state={state} setState={setState} accent={accent} />
+      case 2: return <StepPet state={state} setState={setState} />
+      case 3: return <StepGoal state={state} setState={setState} accent={accent} />
+      case 4: return <StepTheme state={state} setState={setState} />
+      case 5: return <StepModules state={state} setState={setState} accent={accent} />
+      case 6: return <StepPrivacyLevel state={state} setState={setState} accent={accent} />
+      case 7: return <StepDone state={state} onComplete={handleComplete} accent={accent} />
       default: return null
     }
   }
@@ -694,8 +703,81 @@ function StepModules({
   )
 }
 
-/* ── Step 6: Privacy ── */
-function StepPrivacy({
+/* ── Step 2: Privacy Consent (Legal requirement for PIPL) ── */
+function StepPrivacyConsent({
+  state,
+  setState,
+  accent,
+}: {
+  state: OnboardingState
+  setState: React.Dispatch<React.SetStateAction<OnboardingState>>
+  accent: string
+}) {
+  const { t } = useTranslation()
+  return (
+    <div className="flex-1 flex flex-col gap-5">
+      <div className="text-center">
+        <h2 className="text-xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
+          {t('onboarding.privacyConsentTitle')} 📜
+        </h2>
+        <p className="mt-1.5 text-sm" style={{ color: 'var(--color-text-muted)' }}>
+          {t('onboarding.privacyConsentSubtitle')}
+        </p>
+      </div>
+
+      {/* Shield icon */}
+      <div className="flex justify-center my-2">
+        <div
+          className="w-16 h-16 flex items-center justify-center"
+          style={{ animation: 'onb-shield-pulse 2s ease-in-out infinite', color: 'var(--color-accent)' }}
+        >
+          <Shield size={32} />
+        </div>
+      </div>
+
+      {/* Consent content */}
+      <div
+        className="bg-[var(--color-bg-surface-2)] rounded-xl p-4 text-sm leading-relaxed space-y-3"
+        style={{ color: 'var(--color-text-primary)' }}
+      >
+        <p>{t('onboarding.privacyConsentPoint1')}</p>
+        <p>{t('onboarding.privacyConsentPoint2')}</p>
+        <p>{t('onboarding.privacyConsentPoint3')}</p>
+        <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+          {t('onboarding.privacyConsentNote')}
+        </p>
+      </div>
+
+      {/* Checkbox consent */}
+      <button
+        onClick={() => setState((s) => ({ ...s, privacyConsentGiven: !s.privacyConsentGiven }))}
+        className="flex items-start gap-3 p-3 rounded-lg transition-colors hover:bg-[var(--color-bg-surface-2)]"
+      >
+        <div
+          className="w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-all"
+          style={{
+            borderColor: state.privacyConsentGiven ? accent : 'var(--color-border-default)',
+            background: state.privacyConsentGiven ? accent : 'transparent',
+          }}
+        >
+          {state.privacyConsentGiven && (
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 6l4 4 6-7" />
+            </svg>
+          )}
+        </div>
+        <div className="text-left">
+          <p className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
+            {t('onboarding.privacyConsentAgree')}
+          </p>
+        </div>
+      </button>
+    </div>
+  )
+}
+
+/* ── Step 6: Privacy Level ── */
+function StepPrivacyLevel({
   state,
   setState,
   accent,

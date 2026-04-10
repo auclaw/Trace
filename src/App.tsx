@@ -27,6 +27,7 @@ const Habits = React.lazy(() => import('./pages/Habits'))
 const VirtualPet = React.lazy(() => import('./pages/VirtualPet'))
 const Settings = React.lazy(() => import('./pages/Settings'))
 const Team = React.lazy(() => import('./pages/Team'))
+const PrivacyPolicy = React.lazy(() => import('./pages/PrivacyPolicy'))
 
 /* ── Loading fallback ── */
 function PageLoader() {
@@ -180,6 +181,7 @@ function AppContent() {
                 <Route path="/pet" element={<VirtualPet />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/team" element={<Team />} />
+                <Route path="/privacy" element={<PrivacyPolicy />} />
               </Routes>
             </div>
           </Suspense>

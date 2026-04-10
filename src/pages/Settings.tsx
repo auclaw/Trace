@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { changeLanguage, getCurrentLanguage } from '../i18n'
 import { useAppStore } from '../store/useAppStore'
 import useTheme from '../hooks/useTheme'
@@ -35,6 +36,7 @@ const MODULE_LABELS: Record<string, string> = {
 
 export default function Settings() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const { isDark, colorTheme, backgroundSkin } = useTheme()
 
   const setTheme = useAppStore((s) => s.setTheme)
@@ -1722,7 +1724,7 @@ export default function Settings() {
             >
               {t('settings.links')}
             </p>
-            <div className="flex gap-3">
+            <div className="flex gap-3 flex-wrap">
               <a
                 href="#docs"
                 onClick={(e) => {
@@ -1752,6 +1754,21 @@ export default function Settings() {
                 }}
               >
                 {t('settings.changelog')}
+              </a>
+              <a
+                href="#privacy"
+                onClick={(e) => {
+                  e.preventDefault()
+                  navigate('/privacy')
+                }}
+                className="text-xs font-medium"
+                style={{
+                  color: 'var(--color-accent)',
+                  textDecoration: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                {t('privacy.title')}
               </a>
               <a
                 href="#feedback"
