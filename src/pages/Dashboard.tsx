@@ -652,7 +652,7 @@ export default function Dashboard() {
         addToast('error', t('dashboard.insightsFailed'))
       }
     } catch (e) {
-      console.error('Failed to generate insights:', e)
+      if (import.meta.env.DEV) console.error('Failed to generate insights:', e)
       addToast('error', t('dashboard.insightsFailed'))
     } finally {
       setGeneratingInsights(false)

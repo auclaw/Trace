@@ -1,8 +1,9 @@
-// Rize 中文本地化 - Rust 后端主程序
+// Trace 时迹 - Rust 后端主程序
 // AI自动时间追踪 + 今日计划
 
 // 新模块 - 功能特性
 pub mod broadcast;
+pub mod database;
 pub mod feature_flags;
 pub mod pomodoro;
 pub mod idle_detection;
@@ -1292,6 +1293,10 @@ fn main() {
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None
         ))
+        .plugin(tauri_plugin_sql::Builder::default()
+            .add_migrations("sqlite", database::get_migrations())
+            .build()
+        )
         .manage(state)
         .setup(move |app| {
             // state is cloned for setup because state was moved into .manage()

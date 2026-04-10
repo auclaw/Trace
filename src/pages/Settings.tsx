@@ -8,13 +8,14 @@ import { trackingService } from '../services/trackingService'
 import type { Settings as AiSettings } from '../utils/tracking'
 import type { PrivacyLevel, TrackingRule } from '../services/trackingService'
 import type { ActivityCategory, BlockedPattern } from '../services/dataService'
-import { Card, Button, Badge } from '../components/ui'
-import {
-  colorThemeConfigs,
-  backgroundSkinConfigs,
-  DEFAULT_MODULES,
-} from '../config/themes'
-import type { ColorTheme, BackgroundSkin } from '../config/themes'
+import { Button, Badge } from '../components/ui'
+import { DEFAULT_MODULES } from '../config/themes'
+
+// Import split components
+import { Section, Toggle, NumberField } from '../components/Settings/components'
+import AppearanceSection from '../components/Settings/AppearanceSection'
+import FocusSettingsSection from '../components/Settings/FocusSettingsSection'
+import DistractionBlockingSection from '../components/Settings/DistractionBlockingSection'
 
 /* ── Module display names ── */
 const MODULE_LABELS: Record<string, string> = {
@@ -26,201 +27,6 @@ const MODULE_LABELS: Record<string, string> = {
   statistics: 'nav.statistics',
   pet: 'nav.pet',
   settings: 'nav.settings',
-}
-
-/* ── Fade-in animation keyframes (injected once) ── */
-const STYLE_ID = 'settings-animations'
-if (typeof document !== 'undefined' && !document.getElementById(STYLE_ID)) {
-  const style = document.createElement('style')
-  style.id = STYLE_ID
-  style.textContent = `
-    @keyframes settingsFadeInUp {
-      from { opacity: 0; transform: translateY(12px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-    .settings-section-fade {
-      animation: settingsFadeInUp 0.45s ease-out both;
-    }
-    @keyframes settingsCheckPop {
-      0%   { transform: scale(0); }
-      60%  { transform: scale(1.2); }
-      100% { transform: scale(1); }
-    }
-    .settings-check-pop {
-      animation: settingsCheckPop 0.25s ease-out both;
-    }
-  `
-  document.head.appendChild(style)
-}
-
-/* ── Section wrapper — warm gradient card ── */
-function Section({
-  title,
-  children,
-  index = 0,
-}: {
-  title: string
-  children: React.ReactNode
-  index?: number
-}) {
-  return (
-    <div
-      className="settings-section-fade"
-      style={{ animationDelay: `${index * 80}ms` }}
-    >
-      <Card padding="md" className="!p-0 overflow-hidden">
-        <div
-          className="p-6 space-y-5"
-          style={{
-            background:
-              'linear-gradient(135deg, var(--color-bg-surface-1) 0%, var(--color-bg-surface-2) 100%)',
-            border: '1px solid var(--color-border-subtle)',
-            borderRadius: 'var(--radius-xl)',
-            boxShadow: 'var(--shadow-card), 0 2px 8px rgba(44,24,16,0.04)',
-          }}
-        >
-          {/* Section title with accent left border */}
-          <div className="flex items-center gap-3">
-            <div
-              style={{
-                width: 4,
-                height: 22,
-                borderRadius: 4,
-                backgroundColor: 'var(--color-accent)',
-                flexShrink: 0,
-              }}
-            />
-            <h3
-              className="text-base font-bold"
-              style={{ color: 'var(--color-text-primary)' }}
-            >
-              {title}
-            </h3>
-          </div>
-          {children}
-        </div>
-      </Card>
-    </div>
-  )
-}
-
-/* ── Toggle switch — pill-shaped with smooth transitions ── */
-function Toggle({
-  checked,
-  onChange,
-}: {
-  checked: boolean
-  onChange: (v: boolean) => void
-}) {
-  return (
-    <button
-      role="switch"
-      aria-checked={checked}
-      onClick={() => onChange(!checked)}
-      style={{
-        position: 'relative',
-        display: 'inline-flex',
-        alignItems: 'center',
-        width: 48,
-        height: 26,
-        borderRadius: 9999,
-        cursor: 'pointer',
-        border: 'none',
-        padding: 0,
-        backgroundColor: checked
-          ? 'var(--color-accent)'
-          : 'var(--color-border-subtle)',
-        transition: 'background-color 0.3s ease, box-shadow 0.3s ease',
-        boxShadow: checked
-          ? '0 0 0 2px rgba(44,24,16,0.04), inset 0 1px 2px rgba(44,24,16,0.08)'
-          : 'inset 0 1px 3px rgba(44,24,16,0.1)',
-        flexShrink: 0,
-      }}
-    >
-      <span
-        style={{
-          position: 'absolute',
-          top: 3,
-          left: checked ? 24 : 3,
-          width: 20,
-          height: 20,
-          borderRadius: '50%',
-          backgroundColor: '#fff',
-          boxShadow: '0 1px 4px rgba(44,24,16,0.15)',
-          transition: 'left 0.3s cubic-bezier(0.34,1.56,0.64,1)',
-        }}
-      />
-    </button>
-  )
-}
-
-/* ── Number input helper — clean with accent focus ring ── */
-function NumberField({
-  label,
-  value,
-  onChange,
-  min = 1,
-  max = 120,
-  suffix,
-}: {
-  label: string
-  value: number
-  onChange: (v: number) => void
-  min?: number
-  max?: number
-  suffix?: string
-}) {
-  return (
-    <div className="flex items-center justify-between">
-      <span
-        className="text-sm"
-        style={{ color: 'var(--color-text-secondary)' }}
-      >
-        {label}
-      </span>
-      <div className="flex items-center gap-2">
-        <input
-          type="number"
-          min={min}
-          max={max}
-          value={value}
-          onChange={(e) => {
-            const n = parseInt(e.target.value, 10)
-            if (!isNaN(n) && n >= min && n <= max) onChange(n)
-          }}
-          style={{
-            width: 72,
-            padding: '6px 10px',
-            fontSize: 14,
-            textAlign: 'center' as const,
-            borderRadius: 'var(--radius-md)',
-            backgroundColor: 'var(--color-bg-surface-2)',
-            color: 'var(--color-text-primary)',
-            border: '1.5px solid var(--color-border-subtle)',
-            outline: 'none',
-            transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
-          }}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'var(--color-accent)'
-            e.currentTarget.style.boxShadow =
-              '0 0 0 3px var(--color-accent-soft)'
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'var(--color-border-subtle)'
-            e.currentTarget.style.boxShadow = 'none'
-          }}
-        />
-        {suffix && (
-          <span
-            className="text-xs"
-            style={{ color: 'var(--color-text-muted)' }}
-          >
-            {suffix}
-          </span>
-        )}
-      </div>
-    </div>
-  )
 }
 
 /* ══════════════════════════════════════════════════
@@ -909,193 +715,15 @@ export default function Settings() {
       </div>
 
       {/* ─── 1. Appearance ─── */}
-      <Section title={t('settings.sections.appearance')} index={1}>
-        {/* Theme toggle */}
-        <div
-          className="flex items-center justify-between"
-          style={{
-            padding: '12px 16px',
-            borderRadius: 'var(--radius-lg)',
-            backgroundColor: 'var(--color-bg-surface-2)',
-            border: '1px solid var(--color-border-subtle)',
-          }}
-        >
-          <div className="flex items-center gap-3">
-            <span className="text-xl">{isDark ? '🌙' : '☀️'}</span>
-            <div>
-              <p
-                className="text-sm font-semibold"
-                style={{ color: 'var(--color-text-primary)' }}
-              >
-                {isDark ? t('settings.darkMode') : t('settings.lightMode')}
-              </p>
-              <p
-                className="text-xs"
-                style={{ color: 'var(--color-text-muted)' }}
-              >
-                {t('settings.themeToggleHint')}
-              </p>
-            </div>
-          </div>
-          <Toggle
-            checked={isDark}
-            onChange={(v) => setTheme(v ? 'dark' : 'light')}
-          />
-        </div>
-
-        {/* Color theme grid */}
-        <div>
-          <p
-            className="text-xs mb-3 font-medium"
-            style={{ color: 'var(--color-text-muted)' }}
-          >
-            {t('settings.colorTheme')}
-          </p>
-          <div className="grid grid-cols-5 gap-4">
-            {(Object.entries(colorThemeConfigs) as [ColorTheme, (typeof colorThemeConfigs)[ColorTheme]][]).map(
-              ([key, cfg]) => {
-                const selected = colorTheme === key
-                return (
-                  <button
-                    key={key}
-                    onClick={() => setColorTheme(key)}
-                    title={cfg.name}
-                    style={{
-                      width: 44,
-                      height: 44,
-                      borderRadius: '50%',
-                      backgroundColor: cfg.accent,
-                      border: 'none',
-                      cursor: 'pointer',
-                      transition: 'transform 0.25s ease, box-shadow 0.25s ease',
-                      transform: selected ? 'scale(1.15)' : 'scale(1)',
-                      boxShadow: selected
-                        ? '0 0 0 3px var(--color-bg-surface-1), 0 0 0 5px var(--color-accent), 0 4px 12px rgba(44,24,16,0.15)'
-                        : '0 2px 6px rgba(44,24,16,0.08)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      position: 'relative',
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!selected) e.currentTarget.style.transform = 'scale(1.08) translateY(-2px)'
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = selected ? 'scale(1.15)' : 'scale(1)'
-                    }}
-                  >
-                    {selected && (
-                      <svg
-                        className="settings-check-pop"
-                        width="18"
-                        height="18"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="#fff"
-                        strokeWidth="3"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                    )}
-                  </button>
-                )
-              },
-            )}
-          </div>
-          <p
-            className="text-xs mt-3"
-            style={{ color: 'var(--color-text-muted)' }}
-          >
-            当前: {colorThemeConfigs[colorTheme].name} — {colorThemeConfigs[colorTheme].description}
-          </p>
-        </div>
-
-        {/* Background skin */}
-        <div>
-          <p
-            className="text-xs mb-3 font-medium"
-            style={{ color: 'var(--color-text-muted)' }}
-          >
-            {t('settings.backgroundSkin')}
-          </p>
-          <div className="space-y-2">
-            {(Object.entries(backgroundSkinConfigs) as [BackgroundSkin, (typeof backgroundSkinConfigs)[BackgroundSkin]][]).map(
-              ([key, cfg]) => {
-                const selected = backgroundSkin === key
-                return (
-                  <button
-                    key={key}
-                    onClick={() => setBackgroundSkin(key)}
-                    className="w-full flex items-center gap-4 text-left cursor-pointer"
-                    style={{
-                      padding: '14px 16px',
-                      borderRadius: 'var(--radius-lg)',
-                      border: selected
-                        ? '2px solid var(--color-accent)'
-                        : '1.5px solid var(--color-border-subtle)',
-                      backgroundColor: selected
-                        ? 'var(--color-accent-soft)'
-                        : 'transparent',
-                      transition: 'all 0.25s ease',
-                      boxShadow: selected
-                        ? '0 0 0 3px var(--color-accent-soft), 0 2px 8px rgba(44,24,16,0.06)'
-                        : 'none',
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!selected) {
-                        e.currentTarget.style.borderColor = 'var(--color-accent)'
-                        e.currentTarget.style.backgroundColor = 'var(--color-bg-surface-2)'
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!selected) {
-                        e.currentTarget.style.borderColor = 'var(--color-border-subtle)'
-                        e.currentTarget.style.backgroundColor = 'transparent'
-                      }
-                    }}
-                  >
-                    {/* Preview swatch */}
-                    <div
-                      className={cfg.getBgClass(isDark)}
-                      style={{
-                        width: 48,
-                        height: 48,
-                        borderRadius: 'var(--radius-md)',
-                        flexShrink: 0,
-                        border: selected
-                          ? '2px solid var(--color-accent)'
-                          : '1.5px solid var(--color-border-subtle)',
-                        boxShadow: '0 2px 6px rgba(44,24,16,0.06)',
-                      }}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p
-                        className="text-sm font-semibold"
-                        style={{ color: 'var(--color-text-primary)' }}
-                      >
-                        {cfg.name}
-                      </p>
-                      <p
-                        className="text-xs"
-                        style={{ color: 'var(--color-text-muted)' }}
-                      >
-                        {cfg.description}
-                      </p>
-                    </div>
-                    {selected && (
-                      <Badge variant="accent" size="sm" className="ml-auto shrink-0">
-                        {t('common.current')}
-                      </Badge>
-                    )}
-                  </button>
-                )
-              },
-            )}
-          </div>
-        </div>
-      </Section>
+      <AppearanceSection
+        index={1}
+        isDark={isDark}
+        colorTheme={colorTheme}
+        backgroundSkin={backgroundSkin}
+        setTheme={setTheme}
+        setColorTheme={setColorTheme}
+        setBackgroundSkin={setBackgroundSkin}
+      />
 
       {/* ─── 2. Feature Modules ─── */}
       <Section title={t('settings.sections.modules')} index={2}>
@@ -1142,168 +770,25 @@ export default function Settings() {
       </Section>
 
       {/* ─── 3. Focus Settings ─── */}
-      <Section title={t('settings.sections.focus')} index={3}>
-        <div className="space-y-4">
-          <NumberField
-            label={t('focus.workMinutes')}
-            value={focusSettings.workMinutes}
-            onChange={(v) => updateFocusSettings({ workMinutes: v })}
-            min={5}
-            max={120}
-            suffix={t('common.minutes')}
-          />
-          <NumberField
-            label={t('focus.breakMinutes')}
-            value={focusSettings.breakMinutes}
-            onChange={(v) => updateFocusSettings({ breakMinutes: v })}
-            min={1}
-            max={30}
-            suffix={t('common.minutes')}
-          />
-          <NumberField
-            label={t('focus.longBreakMinutes')}
-            value={focusSettings.longBreakMinutes}
-            onChange={(v) => updateFocusSettings({ longBreakMinutes: v })}
-            min={5}
-            max={60}
-            suffix={t('common.minutes')}
-          />
-          <NumberField
-            label={t('focus.longBreakInterval')}
-            value={focusSettings.longBreakInterval}
-            onChange={(v) => updateFocusSettings({ longBreakInterval: v })}
-            min={2}
-            max={10}
-            suffix={t('settings.sessions')}
-          />
-        </div>
-      </Section>
+      <FocusSettingsSection
+        index={3}
+        focusSettings={focusSettings}
+        updateFocusSettings={updateFocusSettings}
+      />
 
       {/* ─── 3.5 Distraction Blocking ─── */}
-      <Section title={t('focus.blockedSites')} index={3.5}>
-        <p
-          className="text-xs"
-          style={{ color: 'var(--color-text-muted)' }}
-        >
-          {t('focus.shieldDescription')}
-        </p>
-        <p
-          className="text-xs"
-          style={{ color: 'var(--color-text-muted)' }}
-        >
-          {t('focus.desktopNote')}
-        </p>
-
-        <div className="mt-4 space-y-3">
-          {/* Blocked list */}
-          {blockedPatterns.length === 0 ? (
-            <p className="text-sm text-[var(--color-text-muted)] py-3">
-              {t('focus.noBlockRules')}
-            </p>
-          ) : (
-            <div className="space-y-2">
-              {blockedPatterns.map((pattern) => (
-                <div
-                  key={pattern.id}
-                  className="flex items-center justify-between p-3 border rounded-lg"
-                  style={{
-                    borderColor: 'var(--color-border-subtle)',
-                    background: pattern.enabled ? 'var(--color-bg-surface-2)' : 'transparent',
-                    opacity: pattern.enabled ? 1 : 0.5,
-                  }}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
-                      {pattern.pattern}
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => {
-                      const newPatterns = blockedPatterns.filter(p => p.id !== pattern.id);
-                      setBlockedPatterns(newPatterns);
-                      saveBlockedPatterns(newPatterns);
-                    }}
-                    className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors dark:bg-red-900/30 dark:text-red-400"
-                  >
-                    {t('common.delete')}
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Add new pattern */}
-          <div className="flex gap-2 items-end">
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-                {t('focus.domain')}
-              </label>
-              <input
-                type="text"
-                value={newPatternInput}
-                onChange={(e) => setNewPatternInput(e.target.value)}
-                placeholder={t('focus.domainPlaceholder')}
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
-                style={{
-                  background: 'var(--color-bg-surface-2)',
-                  borderColor: 'var(--color-border-subtle)',
-                  color: 'var(--color-text-primary)',
-                }}
-              />
-              <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                {t('focus.domainHint')}
-              </p>
-            </div>
-            <button
-              onClick={addNewPattern}
-              disabled={!newPatternInput.trim()}
-              className="px-4 py-2 bg-[var(--color-accent)] text-[#fffefb] rounded-lg hover:opacity-90 transition-colors disabled:opacity-50"
-            >
-              {t('focus.addSite')}
-            </button>
-          </div>
-
-          {/* Schedule mode */}
-          <div>
-            <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
-              {t('focus.scheduleMode')}
-            </label>
-            <div className="space-y-2">
-              {([
-                { value: 'focusOnly', label: t('focus.focusOnly'), desc: t('focus.focusOnlyDesc') },
-                { value: 'always', label: t('focus.always'), desc: t('focus.alwaysDesc') },
-              ] as const).map((opt) => (
-                <button
-                  key={opt.value}
-                  onClick={() => {
-                    setBlockingScheduleMode(opt.value);
-                    saveBlockingScheduleMode(opt.value);
-                  }}
-                  className="w-full text-left cursor-pointer p-3 border rounded-lg transition-all"
-                  style={{
-                    border: blockingScheduleMode === opt.value
-                      ? '2px solid var(--color-accent)'
-                      : '1.5px solid var(--color-border-subtle)',
-                    backgroundColor: blockingScheduleMode === opt.value
-                      ? 'var(--color-accent-soft)'
-                      : 'transparent',
-                  }}
-                >
-                  <div className="font-medium text-sm" style={{ color: 'var(--color-text-primary)' }}>
-                    {opt.label}
-                  </div>
-                  <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                    {opt.desc}
-                  </p>
-                </button>
-              ))}
-            </div>
-            <p className="text-sm font-medium text-[var(--color-text-secondary)] mt-3 mb-1">
-              {t('focus.blockingCount', { count: blockedPatterns.filter(p => p.enabled).length })}
-            </p>
-          </div>
-        </div>
-      </Section>
+      <DistractionBlockingSection
+        index={3.5}
+        blockedPatterns={blockedPatterns}
+        setBlockedPatterns={setBlockedPatterns}
+        blockingScheduleMode={blockingScheduleMode}
+        setBlockingScheduleMode={setBlockingScheduleMode}
+        saveBlockedPatterns={saveBlockedPatterns}
+        saveBlockingScheduleMode={saveBlockingScheduleMode}
+        newPatternInput={newPatternInput}
+        setNewPatternInput={setNewPatternInput}
+        addNewPattern={addNewPattern}
+      />
 
       {/* ─── 4. Daily Goal ─── */}
       <Section title={t('settings.dailyGoal')} index={4}>
