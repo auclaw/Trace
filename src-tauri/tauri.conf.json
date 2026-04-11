@@ -28,5 +28,18 @@
     "macOS": {
       "entitlements": "entitlements.plist"
     }
+  },
+  "plugins": {
+    "updater": {
+      "active": true,
+      "endpoints": [
+        "https://github.com/auclaw/Trace/releases/latest/download/latest.json"
+      ],
+      "dialog": true,
+      "windows": {
+        "installMode": "silent"
+      },
+      "pubkey": ""
+    }
   }
 }

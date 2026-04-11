@@ -4,6 +4,7 @@
 // 新模块 - 功能特性
 pub mod broadcast;
 pub mod database;
+pub mod dns_block;
 pub mod feature_flags;
 pub mod pomodoro;
 pub mod idle_detection;
@@ -128,6 +129,7 @@ pub struct AppState {
     pub pomodoro_timer: pomodoro::PomodoroTimer,
     pub feature_flags: feature_flags::FeatureFlagState,
     pub idle_detector: idle_detection::IdleDetector,
+    pub dns_blocker: dns_block::DnsBlockManager,
 }
 
 // AI分类请求响应
@@ -1231,6 +1233,49 @@ fn classify_by_rules(app_name: &str, window_title: &str) -> String {
     "其他".to_string()
 }
 
+// ── DNS Blocking Commands for Focus Mode ──
+
+/// Update the list of blocked websites and apply blocking based on current schedule
+#[tauri::command]
+fn update_blocked_sites(
+    domains: Vec<String>,
+    schedule_mode: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), String> {
+    let mut blocker = state.dns_blocker.clone();
+    blocker.update_blocked_domains(domains, schedule_mode)
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+/// Enable blocking when focus starts (for focus-only schedule mode)
+#[tauri::command]
+fn enable_focus_blocking(
+    state: tauri::State<'_, AppState>,
+) -> Result<(), String> {
+    let mut blocker = state.dns_blocker.clone();
+    blocker.enable_blocking()
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+/// Disable blocking when focus ends (for focus-only schedule mode)
+#[tauri::command]
+fn disable_focus_blocking(
+    state: tauri::State<'_, AppState>,
+) -> Result<(), String> {
+    let mut blocker = state.dns_blocker.clone();
+    blocker.disable_blocking()
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+/// Check if we have permissions to modify hosts file
+#[tauri::command]
+fn check_blocking_permissions() -> bool {
+    dns_block::check_permissions()
+}
+
 // 主函数
 fn main() {
     // 初始化 tokio runtime 用于异步AI调用
@@ -1253,6 +1298,7 @@ fn main() {
         pomodoro_timer: pomodoro::PomodoroTimer::new(),
         feature_flags: feature_flags::FeatureFlagState::new(),
         idle_detector: idle_detection::IdleDetector::new(),
+        dns_blocker: dns_block::DnsBlockManager::new(),
     });
 
     // 克隆状态用于轮询线程
@@ -1297,6 +1343,7 @@ fn main() {
             .add_migrations("sqlite", database::get_migrations())
             .build()
         )
+        .plugin(tauri_plugin_updater::Builder::default().build())
         .manage(state)
         .setup(move |app| {
             // state is cloned for setup because state was moved into .manage()
@@ -1457,6 +1504,11 @@ fn main() {
             pomodoro::pause_pomodoro,
             pomodoro::reset_pomodoro,
             pomodoro::stop_pomodoro,
+            // DNS blocking for distraction free focus mode
+            update_blocked_sites,
+            enable_focus_blocking,
+            disable_focus_blocking,
+            check_blocking_permissions,
         ])
         .on_tray_icon_event(|_tray, _event| {
             // 默认已经处理点击弹出菜单
