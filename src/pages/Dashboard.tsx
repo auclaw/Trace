@@ -131,19 +131,30 @@ export default function Dashboard() {
   const [showQuickTask, setShowQuickTask] = useState(false)
   const [quickTaskTitle, setQuickTaskTitle] = useState('')
   const [loading, setLoading] = useState(true)
+  const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>([])
   const habitsRef = useRef<HTMLDivElement>(null)
+
+  // Derived stats
+  const today = todayStr()
 
   // Load data on mount
   useEffect(() => {
+    const loadTimeBlocksData = async () => {
+      const blocks = await dataService.getTimeBlocks(today);
+      setTimeBlocks(blocks);
+    };
+
     Promise.all([
       loadActivities(),
       loadTasks(),
       loadHabits(),
       loadPet(),
-    ]).finally(() => {
+    ]).then(() => {
+      loadTimeBlocksData();
+    }).finally(() => {
       setLoading(false)
     })
-  }, [loadActivities, loadTasks, loadHabits, loadPet])
+  }, [loadActivities, loadTasks, loadHabits, loadPet, today])
 
   // Subscribe to tracking service for live updates
   useEffect(() => {
@@ -153,9 +164,6 @@ export default function Dashboard() {
     })
     return unsub
   }, [loadActivities])
-
-  // Derived stats
-  const today = todayStr()
   const dailyStats = useMemo(() => dataService.getDailyStats(today), [today, activities])
 
   const totalHours = Math.floor(dailyStats.totalMinutes / 60)
@@ -238,39 +246,37 @@ export default function Dashboard() {
   }, [quickTaskTitle, addTask])
 
   // ── Plan vs Actual comparison ──
-  const timeBlocks = useMemo(() => dataService.getTimeBlocks(today), [today, activities])
-
   const planComparison = useMemo(() => {
     if (timeBlocks.length === 0) return { items: [] as { block: TimeBlock; actual: Activity | null; match: 'full' | 'partial' | 'miss' }[], adherencePct: 0 }
 
-    const items = timeBlocks.map((block) => {
+    const items = timeBlocks.map((block: TimeBlock) => {
       const blockStart = new Date(`${block.date}T${block.startTime}`).getTime()
       const blockEnd = new Date(`${block.date}T${block.endTime}`).getTime()
 
       // Find overlapping activities
-      const overlapping = sortedActivities.filter((act) => {
+      const overlapping = sortedActivities.filter((act: Activity) => {
         const aStart = new Date(act.startTime).getTime()
         const aEnd = new Date(act.endTime).getTime()
         return aStart < blockEnd && aEnd > blockStart
       })
 
       if (overlapping.length === 0) {
-        return { block, actual: null as Activity | null, match: 'miss' as const }
+        return { block, actual: null, match: 'miss' as const }
       }
 
       // Best match: same category => full, any overlap => partial
-      const categoryMatch = overlapping.find((a) => a.category === block.category)
+      const categoryMatch = overlapping.find((a: Activity) => a.category === block.category);
       if (categoryMatch) {
-        return { block, actual: categoryMatch, match: 'full' as const }
+        return { block, actual: categoryMatch, match: 'full' as const };
       }
-      return { block, actual: overlapping[0], match: 'partial' as const }
-    })
+      return { block, actual: overlapping[0], match: 'partial' as const };
+    });
 
-    const matched = items.filter((i) => i.match === 'full').length
-    const partial = items.filter((i) => i.match === 'partial').length
-    const adherencePct = items.length > 0 ? Math.round(((matched + partial * 0.5) / items.length) * 100) : 0
+    const matched = items.filter((i: { match: string }) => i.match === 'full').length;
+    const partial = items.filter((i: { match: string }) => i.match === 'partial').length;
+    const adherencePct = items.length > 0 ? Math.round(((matched + partial * 0.5) / items.length) * 100) : 0;
 
-    return { items, adherencePct }
+    return { items, adherencePct };
   }, [timeBlocks, sortedActivities])
 
   // ── Focus Quality Score ──
@@ -572,7 +578,7 @@ export default function Dashboard() {
                                 </div>
                               ) : (
                                 <div className="space-y-1.5">
-                                  {planComparison.items.map(({ block, actual, match }) => {
+                                  {planComparison.items.map(({ block, actual, match }: { block: TimeBlock; actual: Activity | null; match: 'full' | 'partial' | 'miss' }) => {
                                     const matchColor = match === 'full'
                                       ? '#22c55e'
                                       : match === 'partial'

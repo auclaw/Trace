@@ -22,9 +22,9 @@ export default function DailyInsightsCard({ dailyStats, today }: DailyInsightsCa
       // Import dynamically to avoid circular dependency
       const dataService = (await import('../../services/dataService')).default
       // Collect daily data
-      const focusSessions = dataService.getFocusSessions(today)
-      const completedFocusSessions = focusSessions.filter(s => s.completed && s.type === 'work')
-      const totalFocusMinutes = completedFocusSessions.reduce((sum, s) => sum + s.duration, 0)
+      const focusSessions = await dataService.getFocusSessions(today)
+      const completedFocusSessions = focusSessions.filter((s: { completed: boolean, type: string }) => s.completed && s.type === 'work')
+      const totalFocusMinutes = completedFocusSessions.reduce((sum: number, s: { duration: number }) => sum + s.duration, 0)
 
       // Convert categories to array format
       const byCategory = Object.entries(dailyStats.categories).map(([category, minutes]) => ({

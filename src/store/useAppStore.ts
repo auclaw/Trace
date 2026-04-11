@@ -87,19 +87,19 @@ export interface AppState {
 
   // Tasks
   tasks: Task[]
-  loadTasks: (date?: string) => void
-  addTask: (task: Omit<Task, 'id'>) => Task
-  updateTask: (id: string, updates: Partial<Task>) => void
-  deleteTask: (id: string) => void
+  loadTasks: (date?: string) => Promise<void>
+  addTask: (task: Omit<Task, 'id'>) => Promise<Task>
+  updateTask: (id: string, updates: Partial<Task>) => Promise<void>
+  deleteTask: (id: string) => Promise<void>
   reorderTasks: (newOrder: Task[]) => void
 
   // Habits
   habits: Habit[]
-  loadHabits: () => void
-  addHabit: (habit: Omit<Habit, 'id'>) => Habit
-  updateHabit: (id: string, updates: Partial<Habit>) => void
-  deleteHabit: (id: string) => void
-  checkinHabit: (id: string, date: string, minutes: number) => void
+  loadHabits: () => Promise<void>
+  addHabit: (habit: Omit<Habit, 'id'>) => Promise<Habit>
+  updateHabit: (id: string, updates: Partial<Habit>) => Promise<void>
+  deleteHabit: (id: string) => Promise<void>
+  checkinHabit: (id: string, date: string, minutes: number) => Promise<void>
 
   // Focus
   focusState: 'idle' | 'working' | 'break' | 'longBreak'
@@ -109,19 +109,19 @@ export interface AppState {
   startFocus: () => void
   pauseFocus: () => void
   resetFocus: () => void
-  tickFocus: () => void
+  tickFocus: () => Promise<void>
   skipBreak: () => void
   updateFocusSettings: (settings: Partial<FocusSettings>) => void
 
   // Pet
   pet: Pet
-  loadPet: () => void
-  feedPet: () => void
-  interactPet: () => void
-  renamePet: (name: string) => void
-  setPetType: (type: string) => void
-  setPetDecoration: (decoration: string) => void
-  updatePetStats: (updates: Partial<Pet>) => void
+  loadPet: () => Promise<void>
+  feedPet: () => Promise<void>
+  interactPet: () => Promise<void>
+  renamePet: (name: string) => Promise<void>
+  setPetType: (type: string) => Promise<void>
+  setPetDecoration: (decoration: string) => Promise<void>
+  updatePetStats: (updates: Partial<Pet>) => Promise<void>
 
   // UI State
   sidebarCollapsed: boolean
@@ -140,7 +140,7 @@ export interface AppState {
 
   // Initialization
   initialized: boolean
-  initialize: () => void
+  initialize: () => Promise<void>
 
   // Daily stats helpers
   dailyGoalMinutes: number
@@ -177,7 +177,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
     set({ backgroundSkin })
   },
 
-  // ── Activities (localStorage via dataService) ──
+  // ── Activities (still uses localStorage via dataService for now) ──
   activities: [],
 
   loadActivities: (date) => {
@@ -210,32 +210,32 @@ export const useAppStore = create<AppState>()((set, get) => ({
   // ── Tasks ──
   tasks: [],
 
-  loadTasks: (date) => {
-    const data = date ? dataService.getTasks(date) : dataService.getTasks()
+  loadTasks: async (date) => {
+    const data = date ? await dataService.getTasks(date) : await dataService.getTasks()
     set({ tasks: data })
   },
 
-  addTask: (task) => {
-    const created = dataService.addTask(task)
+  addTask: async (task) => {
+    const created = await dataService.addTask(task)
     set((s) => ({ tasks: [...s.tasks, created] }))
     get().addToast('success', '任务已创建')
     return created
   },
 
-  updateTask: (id, updates) => {
-    dataService.updateTask(id, updates)
+  updateTask: async (id, updates) => {
+    await dataService.updateTask(id, updates)
     set((s) => ({
       tasks: s.tasks.map((t) => (t.id === id ? { ...t, ...updates } : t)),
     }))
   },
 
-  deleteTask: (id) => {
-    dataService.deleteTask(id)
+  deleteTask: async (id) => {
+    await dataService.deleteTask(id)
     set((s) => ({ tasks: s.tasks.filter((t) => t.id !== id) }))
     get().addToast('info', '任务已删除')
   },
 
-  reorderTasks: (newOrder: Task[]) => {
+  reorderTasks: (newOrder) => {
     dataService.saveTasks(newOrder)
     set({ tasks: newOrder })
   },
@@ -243,33 +243,33 @@ export const useAppStore = create<AppState>()((set, get) => ({
   // ── Habits ──
   habits: [],
 
-  loadHabits: () => {
-    const data = dataService.getHabits()
+  loadHabits: async () => {
+    const data = await dataService.getHabits()
     set({ habits: data })
   },
 
-  addHabit: (habit) => {
-    const created = dataService.addHabit(habit)
+  addHabit: async (habit) => {
+    const created = await dataService.addHabit(habit)
     set((s) => ({ habits: [...s.habits, created] }))
     get().addToast('success', '习惯已创建')
     return created
   },
 
-  updateHabit: (id, updates) => {
-    dataService.updateHabit(id, updates)
+  updateHabit: async (id, updates) => {
+    await dataService.updateHabit(id, updates)
     set((s) => ({
       habits: s.habits.map((h) => (h.id === id ? { ...h, ...updates } : h)),
     }))
   },
 
-  deleteHabit: (id) => {
-    dataService.deleteHabit(id)
+  deleteHabit: async (id) => {
+    await dataService.deleteHabit(id)
     set((s) => ({ habits: s.habits.filter((h) => h.id !== id) }))
     get().addToast('info', '习惯已删除')
   },
 
-  checkinHabit: (id, date, minutes) => {
-    const updated = dataService.checkinHabit(id, date, minutes)
+  checkinHabit: async (id, date, minutes) => {
+    const updated = await dataService.checkinHabit(id, date, minutes)
     set((s) => ({
       habits: s.habits.map((h) => (h.id === id ? updated : h)),
     }))
@@ -305,16 +305,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
     })
   },
 
-  skipBreak: () => {
-    const { focusSettings } = get()
-    set({
-      focusState: 'idle',
-      focusTimeLeft: focusSettings.workMinutes * 60,
-    })
-    get().addToast('info', '休息已跳过，准备开始新一轮！')
-  },
-
-  tickFocus: () => {
+  tickFocus: async () => {
     const { focusState, focusTimeLeft, focusSessions, focusSettings, pet } = get()
     if (focusState === 'idle') return
 
@@ -330,7 +321,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
         // Record focus session
         const now = new Date()
         const startTime = new Date(now.getTime() - focusSettings.workMinutes * 60000)
-        dataService.addFocusSession({
+        await dataService.addFocusSession({
           startTime: startTime.toISOString(),
           endTime: now.toISOString(),
           duration: focusSettings.workMinutes,
@@ -350,7 +341,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
           get().addToast('success', `宠物升级到 ${newLevel} 级！`)
         }
         const newCoins = pet.coins + Math.floor(focusSettings.workMinutes / 5)
-        dataService.updatePet({ xp: remainingXp, level: newLevel, coins: newCoins })
+        await dataService.updatePet({ xp: remainingXp, level: newLevel, coins: newCoins })
         set({
           pet: { ...pet, xp: remainingXp, level: newLevel, coins: newCoins },
           focusState: isLong ? 'longBreak' : 'break',
@@ -372,6 +363,15 @@ export const useAppStore = create<AppState>()((set, get) => ({
     }
   },
 
+  skipBreak: () => {
+    const { focusSettings } = get()
+    set({
+      focusState: 'idle',
+      focusTimeLeft: focusSettings.workMinutes * 60,
+    })
+    get().addToast('info', '休息已跳过，准备开始新一轮！')
+  },
+
   updateFocusSettings: (updates) => {
     set((s) => {
       const focusSettings = { ...s.focusSettings, ...updates }
@@ -386,12 +386,12 @@ export const useAppStore = create<AppState>()((set, get) => ({
   // ── Pet ──
   pet: { ...DEFAULT_PET },
 
-  loadPet: () => {
-    const data = dataService.getPet()
+  loadPet: async () => {
+    const data = await dataService.getPet()
     set({ pet: data })
   },
 
-  feedPet: () => {
+  feedPet: async () => {
     const { pet } = get()
     if (pet.hunger >= 100) {
       get().addToast('warning', '宠物已经吃饱了！')
@@ -401,7 +401,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
       get().addToast('warning', '金币不足（需要5枚）')
       return
     }
-    const updated = dataService.updatePet({
+    const updated = await dataService.updatePet({
       hunger: Math.min(100, pet.hunger + 15),
       mood: Math.min(100, pet.mood + 5),
       coins: pet.coins - 5,
@@ -411,13 +411,13 @@ export const useAppStore = create<AppState>()((set, get) => ({
     get().addToast('success', '喂食成功！')
   },
 
-  interactPet: () => {
+  interactPet: async () => {
     const { pet } = get()
     if (pet.mood >= 100) {
       get().addToast('warning', '宠物已经很开心了！')
       return
     }
-    const updated = dataService.updatePet({
+    const updated = await dataService.updatePet({
       mood: Math.min(100, pet.mood + 10),
       lastInteracted: new Date().toISOString(),
     })
@@ -425,24 +425,24 @@ export const useAppStore = create<AppState>()((set, get) => ({
     get().addToast('success', '互动成功！')
   },
 
-  renamePet: (name) => {
-    const updated = dataService.updatePet({ name })
+  renamePet: async (name) => {
+    const updated = await dataService.updatePet({ name })
     set({ pet: updated })
     get().addToast('success', '重命名成功！')
   },
 
-  setPetType: (type) => {
-    const updated = dataService.updatePet({ type })
+  setPetType: async (type) => {
+    const updated = await dataService.updatePet({ type })
     set({ pet: updated })
   },
 
-  setPetDecoration: (decoration) => {
-    const updated = dataService.updatePet({ decoration })
+  setPetDecoration: async (decoration) => {
+    const updated = await dataService.updatePet({ decoration })
     set({ pet: updated })
   },
 
-  updatePetStats: (updates) => {
-    const updated = dataService.updatePet(updates)
+  updatePetStats: async (updates) => {
+    const updated = await dataService.updatePet(updates)
     set({ pet: updated })
   },
 
@@ -504,7 +504,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
 
   // ── Init ──
   initialized: false,
-  initialize: () => {
+  initialize: async () => {
     if (get().initialized) return
     const state = get()
     // Apply theme to DOM
@@ -514,9 +514,9 @@ export const useAppStore = create<AppState>()((set, get) => ({
     document.documentElement.style.setProperty('--color-accent-soft', config.accentSoft)
     // Load data
     state.loadActivities()
-    state.loadTasks()
-    state.loadHabits()
-    state.loadPet()
+    await state.loadTasks()
+    await state.loadHabits()
+    await state.loadPet()
     set({ initialized: true })
   },
 }))

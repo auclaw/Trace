@@ -1,8 +1,9 @@
-import { useMemo, useCallback } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { Modal, Button, Badge, Progress } from '../components/ui';
 import dataService from '../services/dataService';
 import { useAppStore } from '../store/useAppStore';
-import type { AppState, FocusSession } from '../store/useAppStore';
+import type { AppState, FocusSession, Pet } from '../store/useAppStore';
+import type { Activity } from '../services/dataService';
 import { CATEGORY_COLORS } from '../config/themes';
 
 // ─── Types ───
@@ -10,6 +11,24 @@ interface DailySummaryProps {
   isOpen: boolean;
   onClose: () => void;
   date?: string;
+}
+
+interface CalculatedData {
+  totalMinutes: number;
+  activityCount: number;
+  categories: Record<string, number>;
+  focusMinutes: number;
+  breakMinutes: number;
+  goalPct: number;
+  completedTasks: number;
+  totalTasks: number;
+  habitsCompleted: number;
+  habitsTotal: number;
+  segments: { label: string; value: number; color: string }[];
+  pet: Pet;
+  aiSummary: string;
+  suggestions: string[];
+  activities: Activity[];
 }
 
 // ─── Helpers ───
@@ -186,66 +205,78 @@ export default function DailySummary({ isOpen, onClose, date }: DailySummaryProp
   const dailyGoalMinutes = useAppStore((s: AppState) => s.dailyGoalMinutes);
   const addToast = useAppStore((s: AppState) => s.addToast);
 
-  const data = useMemo(() => {
-    if (!isOpen) return null;
+  const [data, setData] = useState<CalculatedData | null>(null);
+  const [loading, setLoading] = useState(false);
 
-    const stats = dataService.getDailyStats(dateStr);
-    const activities = dataService.getActivities(dateStr);
-    const focusSessions = dataService.getFocusSessions(dateStr);
-    const pet = dataService.getPet();
+  useEffect(() => {
+    if (!isOpen) {
+      setData(null);
+      return;
+    }
 
-    // Focus / break time
-    const focusMinutes = focusSessions
-      .filter((s: FocusSession) => s.type === 'work' && s.completed)
-      .reduce((sum: number, s: FocusSession) => sum + s.duration, 0);
-    const breakMinutes = focusSessions
-      .filter((s: FocusSession) => s.type === 'break' || s.type === 'longBreak')
-      .reduce((sum: number, s: FocusSession) => sum + s.duration, 0);
+    async function calculateData() {
+      setLoading(true);
+      const stats = dataService.getDailyStats(dateStr);
+      const activities = dataService.getActivities(dateStr);
+      const focusSessions = await dataService.getFocusSessions(dateStr);
+      const pet = await dataService.getPet();
 
-    // Goal completion
-    const goalPct = dailyGoalMinutes > 0 ? Math.round((stats.totalMinutes / dailyGoalMinutes) * 100) : 0;
+      // Focus / break time
+      const focusMinutes = focusSessions
+        .filter((s: FocusSession) => s.type === 'work' && s.completed)
+        .reduce((sum: number, s: FocusSession) => sum + s.duration, 0);
+      const breakMinutes = focusSessions
+        .filter((s: FocusSession) => s.type === 'break' || s.type === 'longBreak')
+        .reduce((sum: number, s: FocusSession) => sum + s.duration, 0);
 
-    // Task stats
-    const completedTasks = tasks.filter((t) => t.status === 'completed').length;
-    const totalTasks = tasks.length;
+      // Goal completion
+      const goalPct = dailyGoalMinutes > 0 ? Math.round((stats.totalMinutes / dailyGoalMinutes) * 100) : 0;
 
-    // Habits for today
-    const habitsCompleted = habits.filter((h) => {
-      const checkin = h.checkins[dateStr];
-      if (!checkin) return false;
-      if (h.targetCount > 1) return checkin >= h.targetCount;
-      if (h.targetMinutes > 0) return checkin >= h.targetMinutes;
-      return checkin > 0;
-    }).length;
+      // Task stats
+      const completedTasks = tasks.filter((t) => t.status === 'completed').length;
+      const totalTasks = tasks.length;
 
-    // Category segments for donut
-    const segments = Object.entries(stats.categories)
-      .map(([label, value]) => ({
-        label,
-        value,
-        color: CATEGORY_COLORS[label] || '#94a3b8',
-      }))
-      .sort((a, b) => b.value - a.value);
+      // Habits for today
+      const habitsCompleted = habits.filter((h) => {
+        const checkin = h.checkins[dateStr];
+        if (!checkin) return false;
+        if (h.targetCount > 1) return checkin >= h.targetCount;
+        if (h.targetMinutes > 0) return checkin >= h.targetMinutes;
+        return checkin > 0;
+      }).length;
 
-    // AI summary
-    const aiSummary = generateAISummary(stats.totalMinutes, stats.categories, goalPct, completedTasks);
-    const suggestions = generateSuggestions(stats.categories, goalPct);
+      // Category segments for donut
+      const segments = Object.entries(stats.categories)
+        .map(([label, value]) => ({
+          label,
+          value,
+          color: CATEGORY_COLORS[label] || '#94a3b8',
+        }))
+        .sort((a, b) => b.value - a.value);
 
-    return {
-      ...stats,
-      focusMinutes,
-      breakMinutes,
-      goalPct,
-      completedTasks,
-      totalTasks,
-      habitsCompleted,
-      habitsTotal: habits.length,
-      segments,
-      pet,
-      aiSummary,
-      suggestions,
-      activities,
-    };
+      // AI summary
+      const aiSummary = generateAISummary(stats.totalMinutes, stats.categories, goalPct, completedTasks);
+      const suggestions = generateSuggestions(stats.categories, goalPct);
+
+      setData({
+        ...stats,
+        focusMinutes,
+        breakMinutes,
+        goalPct,
+        completedTasks,
+        totalTasks,
+        habitsCompleted,
+        habitsTotal: habits.length,
+        segments,
+        pet,
+        aiSummary,
+        suggestions,
+        activities,
+      });
+      setLoading(false);
+    }
+
+    calculateData();
   }, [isOpen, dateStr, tasks, habits, dailyGoalMinutes]);
 
   const handleExportJSON = useCallback(() => {
@@ -295,7 +326,7 @@ export default function DailySummary({ isOpen, onClose, date }: DailySummaryProp
     }
   }, [data, dateStr, addToast]);
 
-  if (!data) return null;
+  if (loading || !data) return null;
 
   const displayDate = new Date(dateStr + 'T00:00:00');
   const dateLabel = displayDate.toLocaleDateString('zh-CN', {
@@ -498,7 +529,7 @@ export default function DailySummary({ isOpen, onClose, date }: DailySummaryProp
           }}
         >
           <div className="text-3xl flex-shrink-0">
-            {data.pet.type === 'cat' ? '\uD83D\uDC31' : data.pet.type === 'dog' ? '\uD83D\uDC36' : '\uD83D\uDC30'}
+            {data.pet.type === 'cat' ? '\u{1F431}' : data.pet.type === 'dog' ? '\u{1F436}' : '\u{1F430}'}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">

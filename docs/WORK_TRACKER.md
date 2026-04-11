@@ -165,8 +165,8 @@ src/
 | **3-2** | 高 | 响应式适配，至少保证 1024px+ 桌面端正常显示 | ✅ 已完成 - already responsive |
 | **3-3** | 中 | CSV 导出活动数据导出（PDF 可以后做） | ✅ 已完成 - Settings already has full CSV/PDF export with custom date range |
 | **3-4** | 中 | 隐私政策页面 | ✅ **已完成** - 独立隐私政策页面已创建，Settings 添加链接，中英文翻译齐全 |
-| **3-5** | 中 | 全局 ErrorBoundary，数据库写入失败恢复机制 | ⏳ Pending |
-| **3-6** | 中 | Tauri 内置 updater 配置自动更新 | ⏳ Pending |
+| **3-5** | 中 | 全局 ErrorBoundary，数据库写入失败恢复机制 | ✅ **已完成** - React Error Boundary 全局错误捕获已实现，提供友好错误页面和刷新按钮 |
+| **3-6** | 中 | Tauri 内置 updater 配置自动更新 | ✅ **已完成** - Tauri updater plugin 已配置，端点指向 GitHub Releases |
 
 ---
 
@@ -174,7 +174,7 @@ src/
 
 | Task | 优先级 | 描述 | 状态 |
 |------|----------|------|------|
-| **P2-1** | 中 | 自定义分心拦截 | ✅ **UI Ready** - 前端配置完成，等待桌面端 native 拦截实现 |
+| **P2-1** | 中 | 自定义分心拦截 | ✅ **已完成** - 完整 native DNS hosts 拦截已实现，支持三种调度模式（专注时/始终/自定义） |
 | **P2-2** | 中 | 自定义 AI 分类规则 | ✅ **UI Ready** - 前端规则管理 UI 完成，规则引擎已集成到 Rust 后端 |
 | **P2-3** | 中 | 日历同步自动会议追踪 | ⏸️ **UI Ready** - 前端配置完成，**延后 P3**（桌面端实现日历读取需要 native API） |
 | **P2-4** | 中 | AI 生产力教练（每日/每周个性化洞察 | ✅ **Backend API Ready** - 云端后端 API 已就绪，前端 UI 完成，不做为 V1.0 核心卖点 |

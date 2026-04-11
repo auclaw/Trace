@@ -306,8 +306,12 @@ export default function Timeline() {
 
   // Load data
   useEffect(() => {
-    setActivities(dataService.getActivities(today))
-    setTimeBlocks(dataService.getTimeBlocks(today))
+    async function loadTimeBlocks() {
+      setActivities(dataService.getActivities(today))
+      const blocks = await dataService.getTimeBlocks(today)
+      setTimeBlocks(blocks)
+    }
+    loadTimeBlocks()
   }, [today])
 
   // Tick clock every 30s

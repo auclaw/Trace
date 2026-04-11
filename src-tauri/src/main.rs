@@ -1276,6 +1276,421 @@ fn check_blocking_permissions() -> bool {
     dns_block::check_permissions()
 }
 
+// ── SQLite Data Access Commands ──
+// All non-activity data now stored in SQLite on desktop instead of localStorage
+
+#[tauri::command]
+async fn get_all_tasks(db: tauri_plugin_sql::DbInstance) -> Result<Vec<database::DbTask>, String> {
+    let tasks = db
+        .query("SELECT * FROM tasks WHERE user_id = 1", ())
+        .await
+        .map_err(|e| e.to_string())?;
+    serde_json::from_value::<Vec<database::DbTask>>(tasks)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn create_task(
+    task: database::DbTask,
+    db: tauri_plugin_sql::DbInstance,
+) -> Result<(), String> {
+    db.execute(
+        "INSERT INTO tasks (id, title, description, category, priority, estimated_minutes, actual_minutes, status, due_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            task.id,
+            task.title,
+            task.description,
+            task.category,
+            task.priority as i32,
+            task.estimated_minutes,
+            task.actual_minutes,
+            task.status,
+            task.due_date,
+        ),
+    )
+    .await
+    .map(|_| ())
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn update_task(
+    task: database::DbTask,
+    db: tauri_plugin_sql::DbInstance,
+) -> Result<(), String> {
+    db.execute(
+        "UPDATE tasks SET title = ?, description = ?, category = ?, priority = ?, estimated_minutes = ?, actual_minutes = ?, status = ?, due_date = ? WHERE id = ? AND user_id = 1",
+        (
+            task.title,
+            task.description,
+            task.category,
+            task.priority as i32,
+            task.estimated_minutes,
+            task.actual_minutes,
+            task.status,
+            task.due_date,
+            task.id,
+        ),
+    )
+    .await
+    .map(|_| ())
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn delete_task(id: String, db: tauri_plugin_sql::DbInstance) -> Result<(), String> {
+    db.execute("DELETE FROM tasks WHERE id = ? AND user_id = 1", (id,))
+        .await
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn get_today_tasks(date: String, db: tauri_plugin_sql::DbInstance) -> Result<Vec<database::DbTask>, String> {
+    let tasks = db
+        .query(
+            "SELECT * FROM tasks WHERE user_id = 1 AND due_date = ?",
+            (date,)
+        )
+        .await
+        .map_err(|e| e.to_string())?;
+    serde_json::from_value::<Vec<database::DbTask>>(tasks)
+        .map_err(|e| e.to_string())
+}
+
+// --- Habits SQLite commands ---
+
+#[tauri::command]
+async fn get_all_habits(db: tauri_plugin_sql::DbInstance) -> Result<Vec<database::DbHabit>, String> {
+    let habits = db
+        .query("SELECT * FROM habits WHERE user_id = 1", ())
+        .await
+        .map_err(|e| e.to_string())?;
+    serde_json::from_value::<Vec<database::DbHabit>>(habits)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn create_habit(
+    habit: database::DbHabit,
+    db: tauri_plugin_sql::DbInstance,
+) -> Result<(), String> {
+    db.execute(
+        "INSERT INTO habits (id, name, icon, target_minutes, target_count, color, streak, category, reminders) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            habit.id,
+            habit.name,
+            habit.icon,
+            habit.target_minutes,
+            habit.target_count,
+            habit.color,
+            habit.streak,
+            habit.category,
+            habit.reminders,
+        ),
+    )
+    .await
+    .map(|_| ())
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn update_habit(
+    habit: database::DbHabit,
+    db: tauri_plugin_sql::DbInstance,
+) -> Result<(), String> {
+    db.execute(
+        "UPDATE habits SET name = ?, icon = ?, target_minutes = ?, target_count = ?, color = ?, streak = ?, category = ?, reminders = ? WHERE id = ? AND user_id = 1",
+        (
+            habit.name,
+            habit.icon,
+            habit.target_minutes,
+            habit.target_count,
+            habit.color,
+            habit.streak,
+            habit.category,
+            habit.reminders,
+            habit.id,
+        ),
+    )
+    .await
+    .map(|_| ())
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn delete_habit(id: String, db: tauri_plugin_sql::DbInstance) -> Result<(), String> {
+    // First delete all checkins for this habit
+    let _ = db.execute("DELETE FROM habit_checkins WHERE habit_id = ? AND user_id = 1", (id,)).await;
+    // Then delete the habit
+    db.execute("DELETE FROM habits WHERE id = ? AND user_id = 1", (id,))
+        .await
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn get_habit_checkins(habit_id: String, db: tauri_plugin_sql::DbInstance) -> Result<Vec<database::DbHabitCheckin>, String> {
+    let checkins = db
+        .query(
+            "SELECT * FROM habit_checkins WHERE habit_id = ? AND user_id = 1",
+            (habit_id,)
+        )
+        .await
+        .map_err(|e| e.to_string())?;
+    serde_json::from_value::<Vec<database::DbHabitCheckin>>(checkins)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn add_habit_checkin(
+    checkin: database::DbHabitCheckin,
+    db: tauri_plugin_sql::DbInstance,
+) -> Result<(), String> {
+    db.execute(
+        "INSERT OR REPLACE INTO habit_checkins (habit_id, checkin_date, value, user_id) VALUES (?, ?, ?, 1)",
+        (
+            checkin.habit_id,
+            checkin.checkin_date,
+            checkin.value,
+        ),
+    )
+    .await
+    .map(|_| ())
+    .map_err(|e| e.to_string())
+}
+
+// --- Focus Sessions SQLite commands ---
+
+#[tauri::command]
+async fn get_all_focus_sessions(db: tauri_plugin_sql::DbInstance) -> Result<Vec<database::DbFocusSession>, String> {
+    let sessions = db
+        .query("SELECT * FROM focus_sessions WHERE user_id = 1", ())
+        .await
+        .map_err(|e| e.to_string())?;
+    serde_json::from_value::<Vec<database::DbFocusSession>>(sessions)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn get_focus_sessions_by_date(date_prefix: String, db: tauri_plugin_sql::DbInstance) -> Result<Vec<database::DbFocusSession>, String> {
+    let sessions = db
+        .query(
+            "SELECT * FROM focus_sessions WHERE user_id = 1 AND start_time LIKE ?",
+            (format!("{}%", date_prefix),)
+        )
+        .await
+        .map_err(|e| e.to_string())?;
+    serde_json::from_value::<Vec<database::DbFocusSession>>(sessions)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn create_focus_session(
+    session: database::DbFocusSession,
+    db: tauri_plugin_sql::DbInstance,
+) -> Result<(), String> {
+    db.execute(
+        "INSERT INTO focus_sessions (id, start_time, end_time, duration, type, completed) VALUES (?, ?, ?, ?, ?, ?)",
+        (
+            session.id,
+            session.start_time,
+            session.end_time,
+            session.duration,
+            session.r#type,
+            session.completed,
+        ),
+    )
+    .await
+    .map(|_| ())
+    .map_err(|e| e.to_string())
+}
+
+// --- Pet SQLite commands ---
+
+#[tauri::command]
+async fn get_pet(db: tauri_plugin_sql::DbInstance) -> Result<database::DbPet, String> {
+    let pet = db
+        .query("SELECT * FROM pets WHERE user_id = 1", ())
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let pets: Vec<database::DbPet> = serde_json::from_value(pet)
+        .map_err(|e| e.to_string())?;
+
+    if pets.is_empty() {
+        // Return default if no record exists (shouldn't happen since migration inserts default)
+        Ok(database::DbPet {
+            pet_type: "cat".to_string(),
+            name: "小橘".to_string(),
+            level: 1,
+            experience: 0,
+            hunger: 100,
+            mood: 100,
+            coins: 0,
+            last_fed: chrono::Utc::now().to_rfc3339(),
+            last_interacted: chrono::Utc::now().to_rfc3339(),
+            decoration: None,
+        })
+    } else {
+        Ok(pets[0].clone())
+    }
+}
+
+#[tauri::command]
+async fn update_pet(
+    pet: database::DbPet,
+    db: tauri_plugin_sql::DbInstance,
+) -> Result<(), String> {
+    db.execute(
+        "UPDATE pets SET pet_type = ?, name = ?, level = ?, experience = ?, hunger = ?, mood = ?, coins = ?, last_fed = ?, last_interacted = ?, decoration = ? WHERE user_id = 1",
+        (
+            pet.pet_type,
+            pet.name,
+            pet.level,
+            pet.experience,
+            pet.hunger,
+            pet.mood,
+            pet.coins,
+            pet.last_fed,
+            pet.last_interacted,
+            pet.decoration,
+        ),
+    )
+    .await
+    .map(|_| ())
+    .map_err(|e| e.to_string())
+}
+
+// --- Settings SQLite commands ---
+
+#[tauri::command]
+async fn get_app_settings(db: tauri_plugin_sql::DbInstance) -> Result<database::DbSettings, String> {
+    let settings = db
+        .query("SELECT * FROM settings WHERE user_id = 1", ())
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let settings_list: Vec<database::DbSettings> = serde_json::from_value(settings)
+        .map_err(|e| e.to_string())?;
+
+    if settings_list.is_empty() {
+        // Return default if no record exists
+        Ok(database::DbSettings {
+            theme: "light".to_string(),
+            color_theme: "blue".to_string(),
+            background_skin: "default".to_string(),
+            daily_goal_minutes: 480,
+            language: "zh-CN".to_string(),
+            ai_api_key: None,
+            ai_provider: Some("ernie".to_string()),
+            auto_start_on_boot: 1,
+            blocked_patterns: None,
+            feature_flags: None,
+        })
+    } else {
+        Ok(settings_list[0].clone())
+    }
+}
+
+#[tauri::command]
+async fn update_app_settings(
+    settings: database::DbSettings,
+    db: tauri_plugin_sql::DbInstance,
+) -> Result<(), String> {
+    db.execute(
+        "UPDATE settings SET theme = ?, color_theme = ?, background_skin = ?, daily_goal_minutes = ?, language = ?, ai_api_key = ?, ai_provider = ?, auto_start_on_boot = ?, blocked_patterns = ?, feature_flags = ? WHERE user_id = 1",
+        (
+            settings.theme,
+            settings.color_theme,
+            settings.background_skin,
+            settings.daily_goal_minutes,
+            settings.language,
+            settings.ai_api_key,
+            settings.ai_provider,
+            settings.auto_start_on_boot,
+            settings.blocked_patterns,
+            settings.feature_flags,
+        ),
+    )
+    .await
+    .map(|_| ())
+    .map_err(|e| e.to_string())
+}
+
+// --- Time Blocks SQLite commands ---
+
+#[tauri::command]
+async fn get_time_blocks_by_date(date: String, db: tauri_plugin_sql::DbInstance) -> Result<Vec<database::DbTimeBlock>, String> {
+    let blocks = db
+        .query(
+            "SELECT * FROM time_blocks WHERE user_id = 1 AND date = ?",
+            (date,)
+        )
+        .await
+        .map_err(|e| e.to_string())?;
+    serde_json::from_value::<Vec<database::DbTimeBlock>>(blocks)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn create_time_block(
+    block: database::DbTimeBlock,
+    db: tauri_plugin_sql::DbInstance,
+) -> Result<(), String> {
+    db.execute(
+        "INSERT INTO time_blocks (id, task_id, title, start_time, end_time, duration_minutes, category, notes, date, is_completed) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            block.id,
+            block.task_id,
+            block.title,
+            block.start_time,
+            block.end_time,
+            block.duration_minutes,
+            block.category,
+            block.notes,
+            block.date,
+            block.is_completed,
+        ),
+    )
+    .await
+    .map(|_| ())
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn update_time_block(
+    block: database::DbTimeBlock,
+    db: tauri_plugin_sql::DbInstance,
+) -> Result<(), String> {
+    db.execute(
+        "UPDATE time_blocks SET task_id = ?, title = ?, start_time = ?, end_time = ?, duration_minutes = ?, category = ?, notes = ?, date = ?, is_completed = ? WHERE id = ? AND user_id = 1",
+        (
+            block.task_id,
+            block.title,
+            block.start_time,
+            block.end_time,
+            block.duration_minutes,
+            block.category,
+            block.notes,
+            block.date,
+            block.is_completed,
+            block.id,
+        ),
+    )
+    .await
+    .map(|_| ())
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn delete_time_block(id: String, db: tauri_plugin_sql::DbInstance) -> Result<(), String> {
+    db.execute("DELETE FROM time_blocks WHERE id = ? AND user_id = 1", (id,))
+        .await
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+}
+
 // 主函数
 fn main() {
     // 初始化 tokio runtime 用于异步AI调用
@@ -1509,6 +1924,34 @@ fn main() {
             enable_focus_blocking,
             disable_focus_blocking,
             check_blocking_permissions,
+            // SQLite data access for non-activity data
+            get_all_tasks,
+            create_task,
+            update_task,
+            delete_task,
+            get_today_tasks,
+            // Habits
+            get_all_habits,
+            create_habit,
+            update_habit,
+            delete_habit,
+            get_habit_checkins,
+            add_habit_checkin,
+            // Focus sessions
+            get_all_focus_sessions,
+            get_focus_sessions_by_date,
+            create_focus_session,
+            // Pet
+            get_pet,
+            update_pet,
+            // Settings
+            get_app_settings,
+            update_app_settings,
+            // Time blocks
+            get_time_blocks_by_date,
+            create_time_block,
+            update_time_block,
+            delete_time_block,
         ])
         .on_tray_icon_event(|_tray, _event| {
             // 默认已经处理点击弹出菜单

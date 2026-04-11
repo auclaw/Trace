@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
+import { invoke } from '@tauri-apps/api/core'
 import { Button, Badge, Input, Modal, EmptyState } from '../components/ui'
 import { useAppStore } from '../store/useAppStore'
 import useTheme from '../hooks/useTheme'
@@ -198,9 +199,11 @@ export default function FocusMode() {
 
   // ── Load today sessions ──
   useEffect(() => {
-    setTodaySessions(
-      dataService.getFocusSessions(todayStr()).filter((s) => s.type === 'work' && s.completed)
-    )
+    async function loadTodaySessions() {
+      const allSessions = await dataService.getFocusSessions(todayStr())
+      setTodaySessions(allSessions.filter((s: FocusSession) => s.type === 'work' && s.completed))
+    }
+    loadTodaySessions()
   }, [focusSessions])
 
   // ── Rotate motivational message every 30s ──
@@ -369,6 +372,40 @@ export default function FocusMode() {
   )
 
   const enabledCount = sites.filter((s) => s.enabled).length
+
+  // ── Sync blocked sites to backend ──
+  useEffect(() => {
+    const enabledDomains = sites
+      .filter(s => s.enabled)
+      .map(s => s.domain);
+
+    // Only send to backend in Tauri desktop app
+    if ((window as any).__TAURI__) {
+      invoke('update_blocked_sites', { domains: enabledDomains, schedule_mode: schedule })
+        .catch(err => {
+          console.error('Failed to update blocked sites:', err);
+        });
+    }
+  }, [sites, schedule]);
+
+  // ── Enable/disable blocking when focus state changes ──
+  useEffect(() => {
+    if (!(window as any).__TAURI__) return;
+
+    if (focusState === 'working') {
+      // Enable blocking when focus starts
+      invoke('enable_focus_blocking')
+        .catch(err => {
+          console.error('Failed to enable focus blocking:', err);
+        });
+    } else {
+      // Disable blocking when focus ends
+      invoke('disable_focus_blocking')
+        .catch(err => {
+          console.error('Failed to disable focus blocking:', err);
+        });
+    }
+  }, [focusState]);
 
   // ── Computed stats ──
   const totalFocusToday = todaySessions.reduce((sum, s) => sum + s.duration, 0)

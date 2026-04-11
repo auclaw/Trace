@@ -146,6 +146,7 @@ const TimeBlockPlanner: React.FC<TimeBlockPlannerProps> = ({ selectedDate, theme
       date: dateStr,
       endTime,
       startTime,
+      durationMinutes: duration,
     }
 
     try {
@@ -215,6 +216,7 @@ const TimeBlockPlanner: React.FC<TimeBlockPlannerProps> = ({ selectedDate, theme
           date: dateStr,
           startTime: startTime.toISOString().slice(0, 19),
           endTime: endTime.toISOString().slice(0, 19),
+          durationMinutes: duration,
           completed: false,
         })
 

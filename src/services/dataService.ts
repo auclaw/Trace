@@ -1,5 +1,13 @@
-// Trace Data Service - localStorage-based data layer for web demo
+// Trace Data Service
+// - Desktop: All data stored in native SQLite database via Tauri
+// - Web demo: Falls back to localStorage for demo mode
 // All localStorage keys prefixed with 'trace-'
+
+// ============================================================
+// Imports
+// ============================================================
+
+import { invoke } from '@tauri-apps/api/core';
 
 // ============================================================
 // Types
@@ -131,6 +139,7 @@ export interface TimeBlock {
   title: string;
   startTime: string;
   endTime: string;
+  durationMinutes: number;
   category: ActivityCategory;
   date: string;
   completed: boolean;
@@ -144,7 +153,7 @@ export interface DailyStat {
 }
 
 // ============================================================
-// Storage helpers
+// Storage helpers (fallback for web demo mode)
 // ============================================================
 
 const KEYS = {
@@ -182,7 +191,9 @@ function toDateStr(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-
+function isDesktop(): boolean {
+  return typeof (window as any).__TAURI__ !== 'undefined';
+}
 
 // ============================================================
 // Demo data generators (placeholder - filled in below)
@@ -491,21 +502,21 @@ function seedTimeBlocks(): TimeBlock[] {
   const tomorrow = toDateStr(new Date(now.getTime() + 86400000));
 
   const todayBlocks: Omit<TimeBlock, 'id'>[] = [
-    { title: '晨间代码审查', startTime: `${today}T09:00:00`, endTime: `${today}T09:45:00`, category: '工作', date: today, completed: true },
-    { title: '前端开发 - 新功能', startTime: `${today}T10:00:00`, endTime: `${today}T12:00:00`, category: '开发', date: today, completed: true },
-    { title: '午休', startTime: `${today}T12:00:00`, endTime: `${today}T13:00:00`, category: '休息', date: today, completed: true },
-    { title: '产品需求评审', startTime: `${today}T14:00:00`, endTime: `${today}T15:00:00`, category: '会议', date: today, completed: false },
-    { title: '接口联调', startTime: `${today}T15:00:00`, endTime: `${today}T17:00:00`, category: '开发', date: today, completed: false },
-    { title: '英语学习', startTime: `${today}T19:00:00`, endTime: `${today}T19:30:00`, category: '学习', date: today, completed: false },
-    { title: '阅读时间', startTime: `${today}T21:00:00`, endTime: `${today}T21:45:00`, category: '阅读', date: today, completed: false },
+    { title: '晨间代码审查', startTime: `${today}T09:00:00`, endTime: `${today}T09:45:00`, durationMinutes: 45, category: '工作', date: today, completed: true },
+    { title: '前端开发 - 新功能', startTime: `${today}T10:00:00`, endTime: `${today}T12:00:00`, durationMinutes: 120, category: '开发', date: today, completed: true },
+    { title: '午休', startTime: `${today}T12:00:00`, endTime: `${today}T13:00:00`, durationMinutes: 60, category: '休息', date: today, completed: true },
+    { title: '产品需求评审', startTime: `${today}T14:00:00`, endTime: `${today}T15:00:00`, durationMinutes: 60, category: '会议', date: today, completed: false },
+    { title: '接口联调', startTime: `${today}T15:00:00`, endTime: `${today}T17:00:00`, durationMinutes: 120, category: '开发', date: today, completed: false },
+    { title: '英语学习', startTime: `${today}T19:00:00`, endTime: `${today}T19:30:00`, durationMinutes: 30, category: '学习', date: today, completed: false },
+    { title: '阅读时间', startTime: `${today}T21:00:00`, endTime: `${today}T21:45:00`, durationMinutes: 45, category: '阅读', date: today, completed: false },
   ];
 
   const tomorrowBlocks: Omit<TimeBlock, 'id'>[] = [
-    { title: '站会', startTime: `${tomorrow}T09:30:00`, endTime: `${tomorrow}T09:45:00`, category: '会议', date: tomorrow, completed: false },
-    { title: '性能优化', startTime: `${tomorrow}T10:00:00`, endTime: `${tomorrow}T12:00:00`, category: '开发', date: tomorrow, completed: false },
-    { title: '午休', startTime: `${tomorrow}T12:00:00`, endTime: `${tomorrow}T13:00:00`, category: '休息', date: tomorrow, completed: false },
-    { title: '技术分享准备', startTime: `${tomorrow}T14:00:00`, endTime: `${tomorrow}T16:00:00`, category: '学习', date: tomorrow, completed: false },
-    { title: '健身', startTime: `${tomorrow}T18:00:00`, endTime: `${tomorrow}T19:00:00`, category: '运动', date: tomorrow, completed: false },
+    { title: '站会', startTime: `${tomorrow}T09:30:00`, endTime: `${tomorrow}T09:45:00`, durationMinutes: 15, category: '会议', date: tomorrow, completed: false },
+    { title: '性能优化', startTime: `${tomorrow}T10:00:00`, endTime: `${tomorrow}T12:00:00`, durationMinutes: 120, category: '开发', date: tomorrow, completed: false },
+    { title: '午休', startTime: `${tomorrow}T12:00:00`, endTime: `${tomorrow}T13:00:00`, durationMinutes: 60, category: '休息', date: tomorrow, completed: false },
+    { title: '技术分享准备', startTime: `${tomorrow}T14:00:00`, endTime: `${tomorrow}T16:00:00`, durationMinutes: 120, category: '学习', date: tomorrow, completed: false },
+    { title: '健身', startTime: `${tomorrow}T18:00:00`, endTime: `${tomorrow}T19:00:00`, durationMinutes: 60, category: '运动', date: tomorrow, completed: false },
   ];
 
   [...todayBlocks, ...tomorrowBlocks].forEach(b => {
@@ -533,6 +544,86 @@ function ensureSeeded(): void {
   localStorage.setItem(KEYS.seeded, 'true');
 }
 
+// Rust database types that match the backend
+interface DbTask {
+  id: string;
+  title: string;
+  description: string | null;
+  category: string | null;
+  priority: number;
+  estimated_minutes: number;
+  actual_minutes: number;
+  status: string;
+  due_date: string | null;
+}
+
+interface DbHabit {
+  id: string;
+  name: string;
+  icon: string | null;
+  target_minutes: number;
+  target_count: number;
+  color: string | null;
+  streak: number;
+  category: string | null;
+  reminders: string | null; // JSON
+}
+
+interface DbHabitCheckin {
+  id: number;
+  habit_id: string;
+  checkin_date: string;
+  value: number;
+}
+
+interface DbFocusSession {
+  id: string;
+  start_time: string;
+  end_time: string | null;
+  duration: number;
+  type: string;
+  completed: number;
+}
+
+interface DbPet {
+  pet_type: string;
+  name: string;
+  level: number;
+  experience: number;
+  hunger: number;
+  mood: number;
+  coins: number;
+  last_fed: string;
+  last_interacted: string;
+  decoration: string | null;
+}
+
+interface DbSettings {
+  theme: string;
+  color_theme: string;
+  background_skin: string;
+  daily_goal_minutes: number;
+  language: string;
+  ai_api_key: string | null;
+  ai_provider: string | null;
+  auto_start_on_boot: number;
+  blocked_patterns: string | null; // JSON
+  feature_flags: string | null; // JSON
+}
+
+interface DbTimeBlock {
+  id: string;
+  task_id: string | null;
+  title: string;
+  start_time: string;
+  end_time: string;
+  duration_minutes: number;
+  category: string | null;
+  notes: string | null;
+  date: string;
+  is_completed: number;
+}
+
 // ============================================================
 // Data service
 // ============================================================
@@ -541,7 +632,7 @@ function ensureSeeded(): void {
 let cachedPet: Pet | null = null;
 
 const dataService = {
-  // --- Activities ---
+  // --- Activities --- (still uses file-based storage in backend for now)
   getActivities(date?: string): Activity[] {
     ensureSeeded();
     const all = load<Activity[]>(KEYS.activities, []);
@@ -581,22 +672,100 @@ const dataService = {
   },
 
   // --- Tasks ---
-  getTasks(date?: string): Task[] {
+  async getTasks(date?: string): Promise<Task[]> {
+    if (isDesktop()) {
+      try {
+        let tasks: DbTask[];
+        if (date) {
+          tasks = await invoke<DbTask[]>('get_today_tasks', { date });
+        } else {
+          tasks = await invoke<DbTask[]>('get_all_tasks');
+        }
+
+        // Convert DbTask to frontend Task type
+        return tasks.map(dbTask => ({
+          id: dbTask.id,
+          title: dbTask.title,
+          priority: dbTask.priority as 1 | 2 | 3 | 4 | 5,
+          status: dbTask.status as TaskStatus,
+          estimatedMinutes: dbTask.estimated_minutes,
+          actualMinutes: dbTask.actual_minutes,
+          project: dbTask.category || '',
+          subtasks: [],
+          dueDate: dbTask.due_date || '',
+          repeatType: 'none',
+          createdAt: new Date().toISOString(),
+        }));
+      } catch (e) {
+        console.error('SQLite getTasks failed, falling back to localStorage', e);
+      }
+    }
+
+    // Fallback for web demo
     ensureSeeded();
     const all = load<Task[]>(KEYS.tasks, []);
     if (!date) return all;
     return all.filter(t => t.dueDate === date);
   },
 
-  addTask(task: Omit<Task, 'id'>): Task {
-    const all = load<Task[]>(KEYS.tasks, []);
+  async addTask(task: Omit<Task, 'id'>): Promise<Task> {
     const entry: Task = { ...task, id: uid() };
+
+    if (isDesktop()) {
+      try {
+        const dbTask: DbTask = {
+          id: entry.id,
+          title: entry.title,
+          description: null,
+          category: entry.project || null,
+          priority: entry.priority,
+          estimated_minutes: entry.estimatedMinutes,
+          actual_minutes: entry.actualMinutes,
+          status: entry.status,
+          due_date: entry.dueDate || null,
+        };
+        await invoke('create_task', { task: dbTask });
+        return entry;
+      } catch (e) {
+        console.error('SQLite createTask failed, falling back to localStorage', e);
+      }
+    }
+
+    // Fallback for web demo
+    const all = load<Task[]>(KEYS.tasks, []);
     all.push(entry);
     save(KEYS.tasks, all);
     return entry;
   },
 
-  updateTask(id: string, updates: Partial<Task>): Task {
+  async updateTask(id: string, updates: Partial<Task>): Promise<Task> {
+    if (isDesktop()) {
+      try {
+        // Get current task first
+        const allTasks = await this.getTasks();
+        const current = allTasks.find(t => t.id === id);
+        if (!current) throw new Error(`Task not found: ${id}`);
+
+        const updated = { ...current, ...updates };
+        const dbTask: DbTask = {
+          id: updated.id,
+          title: updated.title,
+          description: null,
+          category: updated.project || null,
+          priority: updated.priority,
+          estimated_minutes: updated.estimatedMinutes,
+          actual_minutes: updated.actualMinutes,
+          status: updated.status,
+          due_date: updated.dueDate || null,
+        };
+        await invoke('update_task', { task: dbTask });
+        return updated;
+      } catch (e) {
+        console.error('SQLite updateTask failed, falling back to localStorage', e);
+      }
+    }
+
+    // Fallback for web demo
     const all = load<Task[]>(KEYS.tasks, []);
     const idx = all.findIndex(t => t.id === id);
     if (idx === -1) throw new Error(`Task not found: ${id}`);
@@ -605,7 +774,17 @@ const dataService = {
     return all[idx];
   },
 
-  deleteTask(id: string): void {
+  async deleteTask(id: string): Promise<void> {
+    if (isDesktop()) {
+      try {
+        await invoke('delete_task', { id });
+        return;
+      } catch (e) {
+        console.error('SQLite deleteTask failed, falling back to localStorage', e);
+      }
+    }
+
+    // Fallback for web demo
     const all = load<Task[]>(KEYS.tasks, []);
     save(KEYS.tasks, all.filter(t => t.id !== id));
   },
@@ -616,20 +795,126 @@ const dataService = {
   },
 
   // --- Habits ---
-  getHabits(): Habit[] {
+  async getHabits(): Promise<Habit[]> {
+    if (isDesktop()) {
+      try {
+        const habits = await invoke<DbHabit[]>('get_all_habits');
+
+        // Get all checkins for all habits
+        const result: Habit[] = [];
+        for (const dbHabit of habits) {
+          const checkins = await invoke<DbHabitCheckin[]>('get_habit_checkins', { habitId: dbHabit.id });
+          const checkinMap: Record<string, number> = {};
+          for (const c of checkins) {
+            checkinMap[c.checkin_date] = c.value;
+          }
+
+          result.push({
+            id: dbHabit.id,
+            name: dbHabit.name,
+            icon: dbHabit.icon || '📝',
+            targetMinutes: dbHabit.target_minutes,
+            targetCount: dbHabit.target_count,
+            color: dbHabit.color || '#6366f1',
+            streak: dbHabit.streak,
+            reminders: dbHabit.reminders ? JSON.parse(dbHabit.reminders) : [],
+            category: (dbHabit.category as HabitCategory) || 'other',
+            checkins: checkinMap,
+            createdAt: new Date().toISOString(),
+          });
+        }
+        return result;
+      } catch (e) {
+        console.error('SQLite getHabits failed, falling back to localStorage', e);
+      }
+    }
+
+    // Fallback for web demo
     ensureSeeded();
     return load<Habit[]>(KEYS.habits, []);
   },
 
-  addHabit(habit: Omit<Habit, 'id'>): Habit {
-    const all = load<Habit[]>(KEYS.habits, []);
+  async addHabit(habit: Omit<Habit, 'id'>): Promise<Habit> {
     const entry: Habit = { ...habit, id: uid() };
+
+    if (isDesktop()) {
+      try {
+        const dbHabit: DbHabit = {
+          id: entry.id,
+          name: entry.name,
+          icon: entry.icon,
+          target_minutes: entry.targetMinutes,
+          target_count: entry.targetCount,
+          color: entry.color,
+          streak: entry.streak,
+          category: entry.category,
+          reminders: JSON.stringify(entry.reminders),
+        };
+        await invoke('create_habit', { habit: dbHabit });
+
+        // Add initial checkins
+        for (const [date, value] of Object.entries(entry.checkins)) {
+          await invoke('add_habit_checkin', {
+            checkin: {
+              habit_id: entry.id,
+              checkin_date: date,
+              value: value,
+            },
+          });
+        }
+        return entry;
+      } catch (e) {
+        console.error('SQLite createHabit failed, falling back to localStorage', e);
+      }
+    }
+
+    // Fallback for web demo
+    const all = load<Habit[]>(KEYS.habits, []);
     all.push(entry);
     save(KEYS.habits, all);
     return entry;
   },
 
-  updateHabit(id: string, updates: Partial<Habit>): Habit {
+  async updateHabit(id: string, updates: Partial<Habit>): Promise<Habit> {
+    if (isDesktop()) {
+      try {
+        const allHabits = await this.getHabits();
+        const current = allHabits.find(h => h.id === id);
+        if (!current) throw new Error(`Habit not found: ${id}`);
+
+        const updated = { ...current, ...updates };
+        const dbHabit: DbHabit = {
+          id: updated.id,
+          name: updated.name,
+          icon: updated.icon,
+          target_minutes: updated.targetMinutes,
+          target_count: updated.targetCount,
+          color: updated.color,
+          streak: updated.streak,
+          category: updated.category,
+          reminders: JSON.stringify(updated.reminders),
+        };
+        await invoke('update_habit', { habit: dbHabit });
+
+        // Update checkins if they changed
+        if (updates.checkins) {
+          for (const [date, value] of Object.entries(updates.checkins)) {
+            await invoke('add_habit_checkin', {
+              checkin: {
+                habit_id: id,
+                checkin_date: date,
+                value: value,
+              },
+            });
+          }
+        }
+        return updated;
+      } catch (e) {
+        console.error('SQLite updateHabit failed, falling back to localStorage', e);
+      }
+    }
+
+    // Fallback for web demo
     const all = load<Habit[]>(KEYS.habits, []);
     const idx = all.findIndex(h => h.id === id);
     if (idx === -1) throw new Error(`Habit not found: ${id}`);
@@ -638,12 +923,60 @@ const dataService = {
     return all[idx];
   },
 
-  deleteHabit(id: string): void {
+  async deleteHabit(id: string): Promise<void> {
+    if (isDesktop()) {
+      try {
+        await invoke('delete_habit', { id });
+        return;
+      } catch (e) {
+        console.error('SQLite deleteHabit failed, falling back to localStorage', e);
+      }
+    }
+
+    // Fallback for web demo
     const all = load<Habit[]>(KEYS.habits, []);
     save(KEYS.habits, all.filter(h => h.id !== id));
   },
 
-  checkinHabit(id: string, date: string, minutes: number): Habit {
+  async checkinHabit(id: string, date: string, minutes: number): Promise<Habit> {
+    if (isDesktop()) {
+      try {
+        const allHabits = await this.getHabits();
+        const current = allHabits.find(h => h.id === id);
+        if (!current) throw new Error(`Habit not found: ${id}`);
+
+        const habit = { ...current };
+        habit.checkins[date] = (habit.checkins[date] || 0) + minutes;
+
+        // Recalculate streak from today going backwards
+        let streak = 0;
+        const d = new Date();
+        while (true) {
+          const ds = toDateStr(d);
+          if (habit.checkins[ds] && habit.checkins[ds] > 0) {
+            streak++;
+            d.setDate(d.getDate() - 1);
+          } else {
+            break;
+          }
+        }
+        habit.streak = streak;
+
+        await this.updateHabit(id, { streak });
+        await invoke('add_habit_checkin', {
+          checkin: {
+            habit_id: id,
+            checkin_date: date,
+            value: habit.checkins[date],
+          },
+        });
+        return habit;
+      } catch (e) {
+        console.error('SQLite checkinHabit failed, falling back to localStorage', e);
+      }
+    }
+
+    // Fallback for web demo
     const all = load<Habit[]>(KEYS.habits, []);
     const idx = all.findIndex(h => h.id === id);
     if (idx === -1) throw new Error(`Habit not found: ${id}`);
@@ -670,29 +1003,116 @@ const dataService = {
   },
 
   // --- Focus Sessions ---
-  getFocusSessions(date?: string): FocusSession[] {
+  async getFocusSessions(date?: string): Promise<FocusSession[]> {
+    if (isDesktop()) {
+      try {
+        let sessions: DbFocusSession[];
+        if (date) {
+          sessions = await invoke<DbFocusSession[]>('get_focus_sessions_by_date', { datePrefix: date });
+        } else {
+          sessions = await invoke<DbFocusSession[]>('get_all_focus_sessions');
+        }
+
+        return sessions.map(dbSession => ({
+          id: dbSession.id,
+          startTime: dbSession.start_time,
+          endTime: dbSession.end_time || '',
+          duration: dbSession.duration,
+          type: dbSession.type as FocusType,
+          completed: dbSession.completed === 1,
+        }));
+      } catch (e) {
+        console.error('SQLite getFocusSessions failed, falling back to localStorage', e);
+      }
+    }
+
+    // Fallback for web demo
     ensureSeeded();
     const all = load<FocusSession[]>(KEYS.focusSessions, []);
     if (!date) return all;
     return all.filter(s => s.startTime.startsWith(date));
   },
 
-  addFocusSession(session: Omit<FocusSession, 'id'>): FocusSession {
-    const all = load<FocusSession[]>(KEYS.focusSessions, []);
+  async addFocusSession(session: Omit<FocusSession, 'id'>): Promise<FocusSession> {
     const entry: FocusSession = { ...session, id: uid() };
+
+    if (isDesktop()) {
+      try {
+        const dbSession: DbFocusSession = {
+          id: entry.id,
+          start_time: entry.startTime,
+          end_time: entry.endTime || null,
+          duration: entry.duration,
+          type: entry.type,
+          completed: entry.completed ? 1 : 0,
+        };
+        await invoke('create_focus_session', { session: dbSession });
+        return entry;
+      } catch (e) {
+        console.error('SQLite createFocusSession failed, falling back to localStorage', e);
+      }
+    }
+
+    // Fallback for web demo
+    const all = load<FocusSession[]>(KEYS.focusSessions, []);
     all.push(entry);
     save(KEYS.focusSessions, all);
     return entry;
   },
 
   // --- Pet ---
-  getPet(): Pet {
-    ensureSeeded();
+  async getPet(): Promise<Pet> {
     // Return cached version if available - no side effect on repeated reads
     if (cachedPet) {
       return cachedPet;
     }
 
+    if (isDesktop()) {
+      try {
+        const dbPet = await invoke<DbPet>('get_pet');
+
+        let pet: Pet = {
+          name: dbPet.name,
+          type: dbPet.pet_type,
+          level: dbPet.level,
+          xp: dbPet.experience,
+          hunger: dbPet.hunger,
+          mood: dbPet.mood,
+          coins: dbPet.coins,
+          lastFed: dbPet.last_fed,
+          lastInteracted: dbPet.last_interacted,
+          decoration: dbPet.decoration || '',
+        };
+
+        // Natural decay: hunger and mood decrease over time
+        // Only apply once when first loaded from storage
+        const now = new Date();
+        const lastFedDate = new Date(pet.lastFed);
+        const hoursSinceFed = (now.getTime() - lastFedDate.getTime()) / (1000 * 60 * 60);
+        const hungerDecay = Math.floor(hoursSinceFed * 2); // ~2 hunger points per hour
+
+        const lastInteractedDate = new Date(pet.lastInteracted);
+        const hoursSinceInteracted = (now.getTime() - lastInteractedDate.getTime()) / (1000 * 60 * 60);
+        const moodDecay = Math.floor(hoursSinceInteracted * 1); // ~1 mood point per hour
+
+        if (hungerDecay > 0 || moodDecay > 0) {
+          pet = {
+            ...pet,
+            hunger: Math.max(0, pet.hunger - hungerDecay),
+            mood: Math.max(0, pet.mood - moodDecay),
+          };
+          await this.updatePet(pet);
+        }
+
+        cachedPet = pet;
+        return pet;
+      } catch (e) {
+        console.error('SQLite getPet failed, falling back to localStorage', e);
+      }
+    }
+
+    // Fallback for web demo
+    ensureSeeded();
     let pet = load<Pet>(KEYS.pet, seedPet());
 
     // Natural decay: hunger and mood decrease over time
@@ -719,7 +1139,39 @@ const dataService = {
     return pet;
   },
 
-  updatePet(updates: Partial<Pet>): Pet {
+  async updatePet(updates: Partial<Pet>): Promise<Pet> {
+    if (isDesktop()) {
+      try {
+        const current = await this.getPet();
+        const updated: Pet = {
+          ...current,
+          ...updates,
+          // Update timestamps when changing hunger or mood
+          lastFed: 'hunger' in updates ? new Date().toISOString() : current.lastFed,
+          lastInteracted: 'mood' in updates ? new Date().toISOString() : current.lastInteracted,
+        };
+
+        const dbPet: DbPet = {
+          pet_type: updated.type,
+          name: updated.name,
+          level: updated.level,
+          experience: updated.xp,
+          hunger: updated.hunger,
+          mood: updated.mood,
+          coins: updated.coins,
+          last_fed: updated.lastFed,
+          last_interacted: updated.lastInteracted,
+          decoration: updated.decoration || null,
+        };
+        await invoke('update_pet', { pet: dbPet });
+        cachedPet = updated;
+        return updated;
+      } catch (e) {
+        console.error('SQLite updatePet failed, falling back to localStorage', e);
+      }
+    }
+
+    // Fallback for web demo
     const pet = load<Pet>(KEYS.pet, seedPet());
     const updated = {
       ...pet,
@@ -734,21 +1186,90 @@ const dataService = {
   },
 
   // --- Time Blocks ---
-  getTimeBlocks(date: string): TimeBlock[] {
+  async getTimeBlocks(date: string): Promise<TimeBlock[]> {
+    if (isDesktop()) {
+      try {
+        const blocks = await invoke<DbTimeBlock[]>('get_time_blocks_by_date', { date });
+        return blocks.map(dbBlock => ({
+          id: dbBlock.id,
+          title: dbBlock.title,
+          startTime: dbBlock.start_time,
+          endTime: dbBlock.end_time,
+          durationMinutes: dbBlock.duration_minutes,
+          category: (dbBlock.category as ActivityCategory) || '其他',
+          date: dbBlock.date,
+          completed: dbBlock.is_completed === 1,
+        }));
+      } catch (e) {
+        console.error('SQLite getTimeBlocks failed, falling back to localStorage', e);
+      }
+    }
+
+    // Fallback for web demo
     ensureSeeded();
     const all = load<TimeBlock[]>(KEYS.timeBlocks, []);
     return all.filter(b => b.date === date);
   },
 
-  addTimeBlock(block: Omit<TimeBlock, 'id'>): TimeBlock {
-    const all = load<TimeBlock[]>(KEYS.timeBlocks, []);
+  async addTimeBlock(block: Omit<TimeBlock, 'id'>): Promise<TimeBlock> {
     const entry: TimeBlock = { ...block, id: uid() };
+
+    if (isDesktop()) {
+      try {
+        const dbBlock: DbTimeBlock = {
+          id: entry.id,
+          task_id: null,
+          title: entry.title,
+          start_time: entry.startTime,
+          end_time: entry.endTime,
+          duration_minutes: entry.durationMinutes,
+          category: entry.category,
+          notes: null,
+          date: entry.date,
+          is_completed: entry.completed ? 1 : 0,
+        };
+        await invoke('create_time_block', { block: dbBlock });
+        return entry;
+      } catch (e) {
+        console.error('SQLite createTimeBlock failed, falling back to localStorage', e);
+      }
+    }
+
+    // Fallback for web demo
+    const all = load<TimeBlock[]>(KEYS.timeBlocks, []);
     all.push(entry);
     save(KEYS.timeBlocks, all);
     return entry;
   },
 
-  updateTimeBlock(id: string, updates: Partial<TimeBlock>): TimeBlock {
+  async updateTimeBlock(id: string, updates: Partial<TimeBlock>): Promise<TimeBlock> {
+    if (isDesktop()) {
+      try {
+        const blocks = await this.getTimeBlocks(updates.date || '');
+        const current = blocks.find(b => b.id === id);
+        if (!current) throw new Error(`TimeBlock not found: ${id}`);
+
+        const updated = { ...current, ...updates };
+        const dbBlock: DbTimeBlock = {
+          id: updated.id,
+          task_id: null,
+          title: updated.title,
+          start_time: updated.startTime,
+          end_time: updated.endTime,
+          duration_minutes: updated.durationMinutes,
+          category: updated.category,
+          notes: null,
+          date: updated.date,
+          is_completed: updated.completed ? 1 : 0,
+        };
+        await invoke('update_time_block', { block: dbBlock });
+        return updated;
+      } catch (e) {
+        console.error('SQLite updateTimeBlock failed, falling back to localStorage', e);
+      }
+    }
+
+    // Fallback for web demo
     const all = load<TimeBlock[]>(KEYS.timeBlocks, []);
     const idx = all.findIndex(b => b.id === id);
     if (idx === -1) throw new Error(`TimeBlock not found: ${id}`);
@@ -757,18 +1278,81 @@ const dataService = {
     return all[idx];
   },
 
-  deleteTimeBlock(id: string): void {
+  async deleteTimeBlock(id: string): Promise<void> {
+    if (isDesktop()) {
+      try {
+        await invoke('delete_time_block', { id });
+        return;
+      } catch (e) {
+        console.error('SQLite deleteTimeBlock failed, falling back to localStorage', e);
+      }
+    }
+
+    // Fallback for web demo
     const all = load<TimeBlock[]>(KEYS.timeBlocks, []);
     save(KEYS.timeBlocks, all.filter(b => b.id !== id));
   },
 
   // --- Settings ---
-  getSettings(): AppSettings {
+  async getSettings(): Promise<AppSettings> {
+    if (isDesktop()) {
+      try {
+        const dbSettings = await invoke<DbSettings>('get_app_settings');
+
+        const settings: AppSettings = {
+          theme: dbSettings.theme,
+          colorTheme: dbSettings.color_theme,
+          backgroundSkin: dbSettings.background_skin,
+          dailyGoalMinutes: dbSettings.daily_goal_minutes,
+          language: dbSettings.language,
+          aiApiKey: dbSettings.ai_api_key || undefined,
+          aiProvider: (dbSettings.ai_provider as AppSettings['aiProvider']) || 'ernie',
+          autoStartOnBoot: dbSettings.auto_start_on_boot === 1,
+          blockedPatterns: dbSettings.blocked_patterns ? JSON.parse(dbSettings.blocked_patterns) : [],
+          featureFlags: dbSettings.feature_flags ? JSON.parse(dbSettings.feature_flags) : {
+            pet: true,
+            focus: true,
+            habits: true,
+            timeBlocks: true,
+          },
+        };
+        return settings;
+      } catch (e) {
+        console.error('SQLite getSettings failed, falling back to localStorage', e);
+      }
+    }
+
+    // Fallback for web demo
     ensureSeeded();
     return load<AppSettings>(KEYS.settings, seedSettings());
   },
 
-  updateSettings(updates: Partial<AppSettings>): AppSettings {
+  async updateSettings(updates: Partial<AppSettings>): Promise<AppSettings> {
+    if (isDesktop()) {
+      try {
+        const current = await this.getSettings();
+        const updated = { ...current, ...updates };
+
+        const dbSettings: DbSettings = {
+          theme: updated.theme,
+          color_theme: updated.colorTheme,
+          background_skin: updated.backgroundSkin,
+          daily_goal_minutes: updated.dailyGoalMinutes,
+          language: updated.language,
+          ai_api_key: updated.aiApiKey || null,
+          ai_provider: updated.aiProvider || null,
+          auto_start_on_boot: updated.autoStartOnBoot ? 1 : 0,
+          blocked_patterns: updated.blockedPatterns ? JSON.stringify(updated.blockedPatterns) : null,
+          feature_flags: updated.featureFlags ? JSON.stringify(updated.featureFlags) : null,
+        };
+        await invoke('update_app_settings', { settings: dbSettings });
+        return updated;
+      } catch (e) {
+        console.error('SQLite updateSettings failed, falling back to localStorage', e);
+      }
+    }
+
+    // Fallback for web demo
     const settings = load<AppSettings>(KEYS.settings, seedSettings());
     const updated = { ...settings, ...updates };
     save(KEYS.settings, updated);
