@@ -9,11 +9,12 @@ from models.database_models import User
 
 
 def create_token(user_id: int) -> str:
-    """生成JWT token"""
+    """生成JWT token - 兼容旧代码，现在生成2小时有效期的访问令牌"""
     import datetime
+    from datetime import timedelta
     payload = {
         'user_id': user_id,
-        'exp': datetime.datetime.utcnow() + datetime.timedelta(days=30),
+        'exp': datetime.datetime.utcnow() + timedelta(hours=2),
         'iat': datetime.datetime.utcnow()
     }
     return jwt.encode(payload, SECRET_KEY, algorithm='HS256')

@@ -21,6 +21,7 @@ use reqwest::Client;
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 use tauri::AppHandle;
+use tauri_plugin_sql::{Db, markers, Error};
 
 // 数据结构
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -124,6 +125,8 @@ pub struct AppState {
     http_client: Client,
     current_activity: Arc<Mutex<Option<Activity>>>,
     last_activity_check: Arc<Mutex<Instant>>,
+    activities_dirty: Arc<Mutex<bool>>, // 脏标记：活动已修改需要保存
+    last_save_time: Arc<Mutex<Instant>>, // 上次保存时间，用于节流
     // New modules for feature flags and realtime broadcast
     pub broadcast_manager: broadcast::BroadcastManager,
     pub pomodoro_timer: pomodoro::PomodoroTimer,
@@ -186,22 +189,22 @@ fn get_daily_plan_path(date: NaiveDate) -> Result<PathBuf> {
 fn load_activities(state: &AppState, date: NaiveDate) -> Result<()> {
     let path = get_activities_path(date)?;
     if !path.exists() {
-        *state.activities.lock().unwrap() = Vec::new();
+        *state.activities.lock().unwrap_or_else(|e| e.into_inner()) = Vec::new();
         return Ok(());
     }
     let content = fs::read_to_string(&path)?;
     let activities: Vec<Activity> = serde_json::from_str(&content)?;
-    *state.activities.lock().unwrap() = activities;
-    *state.current_loaded_date.lock().unwrap() = date;
+    *state.activities.lock().unwrap_or_else(|e| e.into_inner()) = activities;
+    *state.current_loaded_date.lock().unwrap_or_else(|e| e.into_inner()) = date;
     Ok(())
 }
 
 // 保存活动数据
 fn save_activities(state: &AppState) -> Result<()> {
     let _data_dir = get_data_dir()?;
-    let current_date = *state.current_loaded_date.lock().unwrap();
+    let current_date = *state.current_loaded_date.lock().unwrap_or_else(|e| e.into_inner());
     let path = get_activities_path(current_date)?;
-    let activities = state.activities.lock().unwrap();
+    let activities = state.activities.lock().unwrap_or_else(|e| e.into_inner());
     let json = serde_json::to_string_pretty(&*activities)?;
     fs::write(path, json)?;
     Ok(())
@@ -211,19 +214,19 @@ fn save_activities(state: &AppState) -> Result<()> {
 fn load_settings(state: &AppState) -> Result<()> {
     let path = get_settings_path()?;
     if !path.exists() {
-        *state.settings.lock().unwrap() = Settings::default();
+        *state.settings.lock().unwrap_or_else(|e| e.into_inner()) = Settings::default();
         return Ok(());
     }
     let content = fs::read_to_string(&path)?;
     let settings: Settings = serde_json::from_str(&content)?;
-    *state.settings.lock().unwrap() = settings;
+    *state.settings.lock().unwrap_or_else(|e| e.into_inner()) = settings;
     Ok(())
 }
 
 // 保存设置
 fn save_settings_internal(state: &AppState) -> Result<()> {
     let path = get_settings_path()?;
-    let settings = state.settings.lock().unwrap();
+    let settings = state.settings.lock().unwrap_or_else(|e| e.into_inner());
     let json = serde_json::to_string_pretty(&*settings)?;
     fs::write(path, json)?;
     Ok(())
@@ -234,12 +237,12 @@ fn load_today_tasks(state: &AppState) -> Result<()> {
     let today = Local::now().date_naive();
     let path = get_daily_plan_path(today)?;
     if !path.exists() {
-        *state.planned_tasks.lock().unwrap() = Vec::new();
+        *state.planned_tasks.lock().unwrap_or_else(|e| e.into_inner()) = Vec::new();
         return Ok(());
     }
     let content = fs::read_to_string(&path)?;
     let plan: DailyPlan = serde_json::from_str(&content)?;
-    *state.planned_tasks.lock().unwrap() = plan.tasks;
+    *state.planned_tasks.lock().unwrap_or_else(|e| e.into_inner()) = plan.tasks;
     Ok(())
 }
 
@@ -247,7 +250,7 @@ fn load_today_tasks(state: &AppState) -> Result<()> {
 fn save_today_tasks(state: &AppState) -> Result<()> {
     let today = Local::now().date_naive();
     let path = get_daily_plan_path(today)?;
-    let tasks = state.planned_tasks.lock().unwrap();
+    let tasks = state.planned_tasks.lock().unwrap_or_else(|e| e.into_inner());
     let plan = DailyPlan {
         date: today,
         tasks: tasks.clone(),
@@ -259,12 +262,12 @@ fn save_today_tasks(state: &AppState) -> Result<()> {
 
 // 轮询活动窗口
 fn poll_active_window(state: &AppState) -> Result<Option<(String, String, String)>> {
-    if !*state.is_tracking.lock().unwrap() {
+    if !*state.is_tracking.lock().unwrap_or_else(|e| e.into_inner()) {
         return Ok(None);
     }
 
     let ignored: Vec<String> = {
-        let settings = state.settings.lock().unwrap();
+        let settings = state.settings.lock().unwrap_or_else(|e| e.into_inner());
         settings.ignored_applications.clone()
     };
 
@@ -286,16 +289,21 @@ fn poll_active_window(state: &AppState) -> Result<Option<(String, String, String
     }
 
     let now = Instant::now();
-    let last_check = *state.last_activity_check.lock().unwrap();
+    let last_check = *state.last_activity_check.lock().unwrap_or_else(|e| e.into_inner());
     let elapsed = now.duration_since(last_check).as_secs_f64();
-    *state.last_activity_check.lock().unwrap() = now;
+    *state.last_activity_check.lock().unwrap_or_else(|e| e.into_inner()) = now;
 
-    let mut current_activity = state.current_activity.lock().unwrap();
+    let mut current_activity = state.current_activity.lock().unwrap_or_else(|e| e.into_inner());
     let elapsed_minutes = elapsed / 60.0;
 
     if let Some(ref mut last_activity) = *current_activity {
         // 更新上一个活动时长
-        let mut activities = state.activities.lock().unwrap();
+        let mut activities = state.activities.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some(activity) = activities.iter_mut().find(|a| a.id == last_activity.id) {
+            activity.duration_minutes += elapsed_minutes;
+            // Mark dirty when activity is modified
+            *state.activities_dirty.lock().unwrap_or_else(|e| e.into_inner()) = true;
+        }
         if let Some(activity) = activities.iter_mut().find(|a| a.id == last_activity.id) {
             activity.duration_minutes += elapsed_minutes;
         }
@@ -324,8 +332,10 @@ fn poll_active_window(state: &AppState) -> Result<Option<(String, String, String
 
     let activity_id = activity.id.clone();
 
-    let mut activities = state.activities.lock().unwrap();
+    let mut activities = state.activities.lock().unwrap_or_else(|e| e.into_inner());
     activities.push(activity.clone());
+    // Mark dirty when new activity is added
+    *state.activities_dirty.lock().unwrap_or_else(|e| e.into_inner()) = true;
     drop(activities);
 
     *current_activity = Some(activity);
@@ -341,7 +351,7 @@ async fn ai_auto_match_activity(
     state: &AppState,
 ) -> Result<()> {
     let (api_key, provider) = {
-        let settings = state.settings.lock().unwrap();
+        let settings = state.settings.lock().unwrap_or_else(|e| e.into_inner());
         (settings.ai_api_key.clone(), settings.ai_provider.clone())
     };
 
@@ -362,7 +372,7 @@ async fn ai_auto_match_activity(
     };
 
     if let Ok(category) = category {
-        let mut activities = state.activities.lock().unwrap();
+        let mut activities = state.activities.lock().unwrap_or_else(|e| e.into_inner());
         if let Some(activity) = activities.iter_mut().find(|a| a.id == activity_id) {
             activity.category = Some(category.trim().to_string());
         }
@@ -455,16 +465,16 @@ async fn call_doubao(api_key: &str, prompt: String, client: &Client) -> Result<S
 #[tauri::command]
 fn get_today_activities(state: tauri::State<'_, AppState>) -> Result<Vec<Activity>, String> {
     let today = Local::now().date_naive();
-    let mut current_loaded = state.current_loaded_date.lock().unwrap();
+    let mut current_loaded = state.current_loaded_date.lock().unwrap_or_else(|e| e.into_inner());
     if *current_loaded != today {
         drop(current_loaded);
-        load_activities(&state, today).map_err(|e| e.to_string())?;
-        current_loaded = state.current_loaded_date.lock().unwrap();
+        load_activities(&state, today).map_err(|e: sqlx::Error| e.to_string())?;
+        current_loaded = state.current_loaded_date.lock().unwrap_or_else(|e| e.into_inner());
         *current_loaded = today;
     }
     drop(current_loaded);
 
-    let activities = state.activities.lock().unwrap();
+    let activities = state.activities.lock().unwrap_or_else(|e| e.into_inner());
     Ok(activities.clone())
 }
 
@@ -472,18 +482,18 @@ fn get_today_activities(state: tauri::State<'_, AppState>) -> Result<Vec<Activit
 #[tauri::command]
 fn get_activities_by_date(date_str: String, state: tauri::State<'_, AppState>) -> Result<Vec<Activity>, String> {
     let date = NaiveDate::parse_from_str(&date_str, "%Y-%m-%d")
-        .map_err(|e| e.to_string())?;
+        .map_err(|e: sqlx::Error| e.to_string())?;
 
-    let mut current_loaded = state.current_loaded_date.lock().unwrap();
+    let mut current_loaded = state.current_loaded_date.lock().unwrap_or_else(|e| e.into_inner());
     if *current_loaded != date {
         drop(current_loaded);
-        load_activities(&state, date).map_err(|e| e.to_string())?;
-        current_loaded = state.current_loaded_date.lock().unwrap();
+        load_activities(&state, date).map_err(|e: sqlx::Error| e.to_string())?;
+        current_loaded = state.current_loaded_date.lock().unwrap_or_else(|e| e.into_inner());
         *current_loaded = date;
     }
     drop(current_loaded);
 
-    let activities = state.activities.lock().unwrap();
+    let activities = state.activities.lock().unwrap_or_else(|e| e.into_inner());
     Ok(activities.clone())
 }
 
@@ -493,7 +503,7 @@ fn get_today_stats(state: tauri::State<'_, AppState>) -> Result<DailyStats, Stri
     let mut category_counts: HashMap<String, f64> = HashMap::new();
     let mut total_focus = 0.0;
 
-    let activities = state.activities.lock().unwrap();
+    let activities = state.activities.lock().unwrap_or_else(|e| e.into_inner());
     for activity in activities.iter() {
         total_focus += activity.duration_minutes;
         if let Some(cat) = &activity.category {
@@ -518,14 +528,14 @@ fn get_today_stats(state: tauri::State<'_, AppState>) -> Result<DailyStats, Stri
 #[tauri::command]
 fn get_daily_stats_by_date(date_str: String, state: tauri::State<'_, AppState>) -> Result<DailyStats, String> {
     let date = NaiveDate::parse_from_str(&date_str, "%Y-%m-%d")
-        .map_err(|e| e.to_string())?;
+        .map_err(|e: sqlx::Error| e.to_string())?;
 
     // 确保加载了指定日期的数据
-    let mut current_loaded = state.current_loaded_date.lock().unwrap();
+    let mut current_loaded = state.current_loaded_date.lock().unwrap_or_else(|e| e.into_inner());
     if *current_loaded != date {
         drop(current_loaded);
-        load_activities(&state, date).map_err(|e| e.to_string())?;
-        current_loaded = state.current_loaded_date.lock().unwrap();
+        load_activities(&state, date).map_err(|e: sqlx::Error| e.to_string())?;
+        current_loaded = state.current_loaded_date.lock().unwrap_or_else(|e| e.into_inner());
         *current_loaded = date;
     }
     drop(current_loaded);
@@ -533,7 +543,7 @@ fn get_daily_stats_by_date(date_str: String, state: tauri::State<'_, AppState>) 
     let mut category_counts: HashMap<String, f64> = HashMap::new();
     let mut total_focus = 0.0;
 
-    let activities = state.activities.lock().unwrap();
+    let activities = state.activities.lock().unwrap_or_else(|e| e.into_inner());
     for activity in activities.iter() {
         total_focus += activity.duration_minutes;
         if let Some(cat) = &activity.category {
@@ -571,7 +581,7 @@ fn get_monthly_stats(year: i32, month: u32, _state: tauri::State<'_, AppState>) 
     for day in 1..=num_days {
         let date = NaiveDate::from_ymd_opt(year, month, day)
             .ok_or_else(|| format!("Invalid date: {}-{}-{}", year, month, day))?;
-        let path = get_activities_path(date).map_err(|e| e.to_string())?;
+        let path = get_activities_path(date).map_err(|e: sqlx::Error| e.to_string())?;
 
         // 如果文件不存在，这天没有记录，跳过或者加0
         if !path.exists() {
@@ -603,11 +613,11 @@ fn get_weekly_stats(_state: tauri::State<'_, AppState>) -> Result<Vec<WeeklyStat
     // 遍历最近7天
     for i in 0..7 {
         let date = today - chrono::Days::new(i);
-        let path = get_activities_path(date).map_err(|e| e.to_string())?;
+        let path = get_activities_path(date).map_err(|e: sqlx::Error| e.to_string())?;
 
         if path.exists() {
-            let content = fs::read_to_string(&path).map_err(|e| e.to_string())?;
-            let activities: Vec<Activity> = serde_json::from_str(&content).map_err(|e| e.to_string())?;
+            let content = fs::read_to_string(&path).map_err(|e: sqlx::Error| e.to_string())?;
+            let activities: Vec<Activity> = serde_json::from_str(&content).map_err(|e: sqlx::Error| e.to_string())?;
 
             for activity in activities.iter() {
                 if let Some(cat) = &activity.category {
@@ -643,7 +653,7 @@ fn get_weekly_stats(_state: tauri::State<'_, AppState>) -> Result<Vec<WeeklyStat
 #[tauri::command]
 fn get_all_activities_export(_state: tauri::State<'_, AppState>) -> Result<Vec<Activity>, String> {
     let mut all_activities: Vec<Activity> = Vec::new();
-    let _data_dir = get_data_dir().map_err(|e| e.to_string())?;
+    let _data_dir = get_data_dir().map_err(|e: sqlx::Error| e.to_string())?;
 
     // 读取所有活动文件
     if let Ok(entries) = fs::read_dir(_data_dir) {
@@ -685,11 +695,11 @@ fn create_activity(
         duration_minutes,
     };
 
-    let mut activities = state.activities.lock().unwrap();
+    let mut activities = state.activities.lock().unwrap_or_else(|e| e.into_inner());
     activities.push(activity.clone());
     drop(activities);
 
-    save_activities(&state).map_err(|e| e.to_string())?;
+    save_activities(&state).map_err(|e: sqlx::Error| e.to_string())?;
 
     Ok(activity)
 }
@@ -705,7 +715,7 @@ fn update_activity(
     duration_minutes: Option<f64>,
     state: tauri::State<'_, AppState>,
 ) -> Result<(), String> {
-    let mut activities = state.activities.lock().unwrap();
+    let mut activities = state.activities.lock().unwrap_or_else(|e| e.into_inner());
     if let Some(activity) = activities.iter_mut().find(|a| a.id == id) {
         if let Some(new_name) = name {
             activity.name = new_name;
@@ -723,7 +733,7 @@ fn update_activity(
     }
     drop(activities);
 
-    save_activities(&state).map_err(|e| e.to_string())?;
+    save_activities(&state).map_err(|e: sqlx::Error| e.to_string())?;
 
     Ok(())
 }
@@ -731,11 +741,11 @@ fn update_activity(
 // 删除活动
 #[tauri::command]
 fn delete_activity(id: String, state: tauri::State<'_, AppState>) -> Result<(), String> {
-    let mut activities = state.activities.lock().unwrap();
+    let mut activities = state.activities.lock().unwrap_or_else(|e| e.into_inner());
     activities.retain(|a| a.id != id);
     drop(activities);
 
-    save_activities(&state).map_err(|e| e.to_string())?;
+    save_activities(&state).map_err(|e: sqlx::Error| e.to_string())?;
 
     Ok(())
 }
@@ -743,13 +753,13 @@ fn delete_activity(id: String, state: tauri::State<'_, AppState>) -> Result<(), 
 // 更新活动分类
 #[tauri::command]
 fn update_activity_category(id: String, category: String, state: tauri::State<'_, AppState>) -> Result<(), String> {
-    let mut activities = state.activities.lock().unwrap();
+    let mut activities = state.activities.lock().unwrap_or_else(|e| e.into_inner());
     if let Some(activity) = activities.iter_mut().find(|a| a.id == id) {
         activity.category = Some(category);
     }
     drop(activities);
 
-    save_activities(&state).map_err(|e| e.to_string())?;
+    save_activities(&state).map_err(|e: sqlx::Error| e.to_string())?;
 
     Ok(())
 }
@@ -762,7 +772,7 @@ async fn classify_activity(
     state: tauri::State<'_, AppState>,
 ) -> Result<String, String> {
     let (api_key, provider) = {
-        let settings = state.settings.lock().unwrap();
+        let settings = state.settings.lock().unwrap_or_else(|e| e.into_inner());
         (settings.ai_api_key.clone(), settings.ai_provider.clone())
     };
 
@@ -794,24 +804,24 @@ async fn classify_activity(
 // 获取设置
 #[tauri::command]
 fn get_settings(state: tauri::State<'_, AppState>) -> Result<Settings, String> {
-    let settings = state.settings.lock().unwrap();
+    let settings = state.settings.lock().unwrap_or_else(|e| e.into_inner());
     Ok(settings.clone())
 }
 
 // 保存设置
 #[tauri::command]
 fn save_settings(new_settings: Settings, state: tauri::State<'_, AppState>) -> Result<(), String> {
-    let mut settings = state.settings.lock().unwrap();
+    let mut settings = state.settings.lock().unwrap_or_else(|e| e.into_inner());
     *settings = new_settings;
     drop(settings);
-    save_settings_internal(&state).map_err(|e| e.to_string())?;
+    save_settings_internal(&state).map_err(|e: sqlx::Error| e.to_string())?;
     Ok(())
 }
 
 // 切换追踪状态
 #[tauri::command]
 fn toggle_tracking(enable: bool, state: tauri::State<'_, AppState>) -> Result<bool, String> {
-    let mut is_tracking = state.is_tracking.lock().unwrap();
+    let mut is_tracking = state.is_tracking.lock().unwrap_or_else(|e| e.into_inner());
     *is_tracking = enable;
     Ok(*is_tracking)
 }
@@ -819,7 +829,7 @@ fn toggle_tracking(enable: bool, state: tauri::State<'_, AppState>) -> Result<bo
 // 检查追踪状态
 #[tauri::command]
 fn check_tracking_status(state: tauri::State<'_, AppState>) -> Result<bool, String> {
-    let is_tracking = state.is_tracking.lock().unwrap();
+    let is_tracking = state.is_tracking.lock().unwrap_or_else(|e| e.into_inner());
     Ok(*is_tracking)
 }
 
@@ -837,13 +847,13 @@ fn set_feature_flag(key: String, enabled: bool, state: tauri::State<'_, AppState
         state.feature_flags.set_enabled(flag, enabled);
 
         // Save to settings
-        let mut settings = state.settings.lock().unwrap();
+        let mut settings = state.settings.lock().unwrap_or_else(|e| e.into_inner());
         let mut map = settings.feature_flags.clone().unwrap_or_default();
         map.insert(key, enabled);
         settings.feature_flags = Some(map);
         drop(settings);
 
-        save_settings_internal(&*state).map_err(|e| e.to_string())?;
+        save_settings_internal(&*state).map_err(|e: sqlx::Error| e.to_string())?;
         Ok(())
     } else {
         Err(format!("Unknown feature flag: {}", key))
@@ -855,7 +865,7 @@ fn set_feature_flag(key: String, enabled: bool, state: tauri::State<'_, AppState
 // 获取今日计划任务
 #[tauri::command]
 fn get_today_planned_tasks(state: tauri::State<'_, AppState>) -> Result<Vec<PlannedTask>, String> {
-    let tasks = state.planned_tasks.lock().unwrap();
+    let tasks = state.planned_tasks.lock().unwrap_or_else(|e| e.into_inner());
     Ok(tasks.clone())
 }
 
@@ -883,11 +893,11 @@ fn add_planned_task(
         due_date: None,
     };
 
-    let mut tasks = state.planned_tasks.lock().unwrap();
+    let mut tasks = state.planned_tasks.lock().unwrap_or_else(|e| e.into_inner());
     tasks.push(task.clone());
     drop(tasks);
 
-    save_today_tasks(&state).map_err(|e| e.to_string())?;
+    save_today_tasks(&state).map_err(|e: sqlx::Error| e.to_string())?;
 
     Ok(task)
 }
@@ -906,7 +916,7 @@ fn update_planned_task(
     subtasks: Option<Option<Vec<SubTask>>>,
     state: tauri::State<'_, AppState>,
 ) -> Result<(), String> {
-    let mut tasks = state.planned_tasks.lock().unwrap();
+    let mut tasks = state.planned_tasks.lock().unwrap_or_else(|e| e.into_inner());
     if let Some(task) = tasks.iter_mut().find(|t| t.id == id) {
         if let Some(new_title) = title {
             task.title = new_title;
@@ -935,7 +945,7 @@ fn update_planned_task(
     }
     drop(tasks);
 
-    save_today_tasks(&state).map_err(|e| e.to_string())?;
+    save_today_tasks(&state).map_err(|e: sqlx::Error| e.to_string())?;
 
     Ok(())
 }
@@ -943,11 +953,11 @@ fn update_planned_task(
 // 删除计划任务
 #[tauri::command]
 fn delete_planned_task(id: String, state: tauri::State<'_, AppState>) -> Result<(), String> {
-    let mut tasks = state.planned_tasks.lock().unwrap();
+    let mut tasks = state.planned_tasks.lock().unwrap_or_else(|e| e.into_inner());
     tasks.retain(|t| t.id != id);
     drop(tasks);
 
-    save_today_tasks(&state).map_err(|e| e.to_string())?;
+    save_today_tasks(&state).map_err(|e: sqlx::Error| e.to_string())?;
 
     Ok(())
 }
@@ -959,13 +969,13 @@ fn match_activity_to_task(
     task_id: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<(), String> {
-    let mut activities = state.activities.lock().unwrap();
+    let mut activities = state.activities.lock().unwrap_or_else(|e| e.into_inner());
     if let Some(activity) = activities.iter_mut().find(|a| a.id == activity_id) {
         activity.task_id = Some(task_id);
     }
     drop(activities);
 
-    save_activities(&state).map_err(|e| e.to_string())?;
+    save_activities(&state).map_err(|e: sqlx::Error| e.to_string())?;
 
     Ok(())
 }
@@ -973,7 +983,7 @@ fn match_activity_to_task(
 // 获取任务实际用时
 #[tauri::command]
 fn get_task_actual_time(task_id: String, state: tauri::State<'_, AppState>) -> Result<f64, String> {
-    let activities = state.activities.lock().unwrap();
+    let activities = state.activities.lock().unwrap_or_else(|e| e.into_inner());
     let total: f64 = activities.iter()
         .filter(|a| a.task_id == Some(task_id.clone()))
         .map(|a| a.duration_minutes)
@@ -989,7 +999,7 @@ async fn ai_reschedule_tasks(
     state: tauri::State<'_, AppState>,
 ) -> Result<Vec<PlannedTask>, String> {
     let (api_key, _provider) = {
-        let settings = state.settings.lock().unwrap();
+        let settings = state.settings.lock().unwrap_or_else(|e| e.into_inner());
         (settings.ai_api_key.clone(), settings.ai_provider.clone())
     };
 
@@ -1244,7 +1254,7 @@ fn update_blocked_sites(
 ) -> Result<(), String> {
     let mut blocker = state.dns_blocker.clone();
     blocker.update_blocked_domains(domains, schedule_mode)
-        .map_err(|e| e.to_string())?;
+        .map_err(|e: sqlx::Error| e.to_string())?;
     Ok(())
 }
 
@@ -1280,11 +1290,11 @@ fn check_blocking_permissions() -> bool {
 // All non-activity data now stored in SQLite on desktop instead of localStorage
 
 #[tauri::command]
-async fn get_all_tasks(db: tauri_plugin_sql::DbInstance) -> Result<Vec<database::DbTask>, String> {
+async fn get_all_tasks(db: Db<markers::sqlite>) -> Result<Vec<database::DbTask>, String> {
     let tasks = db
         .query("SELECT * FROM tasks WHERE user_id = 1", ())
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e: Error| e.to_string())?;
     serde_json::from_value::<Vec<database::DbTask>>(tasks)
         .map_err(|e| e.to_string())
 }
@@ -1292,7 +1302,7 @@ async fn get_all_tasks(db: tauri_plugin_sql::DbInstance) -> Result<Vec<database:
 #[tauri::command]
 async fn create_task(
     task: database::DbTask,
-    db: tauri_plugin_sql::DbInstance,
+    db: Db<markers::sqlite>,
 ) -> Result<(), String> {
     db.execute(
         "INSERT INTO tasks (id, title, description, category, priority, estimated_minutes, actual_minutes, status, due_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -1310,13 +1320,13 @@ async fn create_task(
     )
     .await
     .map(|_| ())
-    .map_err(|e| e.to_string())
+    .map_err(|e: Error| e.to_string())
 }
 
 #[tauri::command]
 async fn update_task(
     task: database::DbTask,
-    db: tauri_plugin_sql::DbInstance,
+    db: Db<markers::sqlite>,
 ) -> Result<(), String> {
     db.execute(
         "UPDATE tasks SET title = ?, description = ?, category = ?, priority = ?, estimated_minutes = ?, actual_minutes = ?, status = ?, due_date = ? WHERE id = ? AND user_id = 1",
@@ -1334,26 +1344,26 @@ async fn update_task(
     )
     .await
     .map(|_| ())
-    .map_err(|e| e.to_string())
+    .map_err(|e: Error| e.to_string())
 }
 
 #[tauri::command]
-async fn delete_task(id: String, db: tauri_plugin_sql::DbInstance) -> Result<(), String> {
+async fn delete_task(id: String, db: Db<markers::sqlite>) -> Result<(), String> {
     db.execute("DELETE FROM tasks WHERE id = ? AND user_id = 1", (id,))
         .await
         .map(|_| ())
-        .map_err(|e| e.to_string())
+        .map_err(|e: Error| e.to_string())
 }
 
 #[tauri::command]
-async fn get_today_tasks(date: String, db: tauri_plugin_sql::DbInstance) -> Result<Vec<database::DbTask>, String> {
+async fn get_today_tasks(date: String, db: Db<markers::sqlite>) -> Result<Vec<database::DbTask>, String> {
     let tasks = db
         .query(
             "SELECT * FROM tasks WHERE user_id = 1 AND due_date = ?",
             (date,)
         )
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e: Error| e.to_string())?;
     serde_json::from_value::<Vec<database::DbTask>>(tasks)
         .map_err(|e| e.to_string())
 }
@@ -1361,11 +1371,11 @@ async fn get_today_tasks(date: String, db: tauri_plugin_sql::DbInstance) -> Resu
 // --- Habits SQLite commands ---
 
 #[tauri::command]
-async fn get_all_habits(db: tauri_plugin_sql::DbInstance) -> Result<Vec<database::DbHabit>, String> {
+async fn get_all_habits(db: Db<markers::sqlite>) -> Result<Vec<database::DbHabit>, String> {
     let habits = db
         .query("SELECT * FROM habits WHERE user_id = 1", ())
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e: Error| e.to_string())?;
     serde_json::from_value::<Vec<database::DbHabit>>(habits)
         .map_err(|e| e.to_string())
 }
@@ -1373,7 +1383,7 @@ async fn get_all_habits(db: tauri_plugin_sql::DbInstance) -> Result<Vec<database
 #[tauri::command]
 async fn create_habit(
     habit: database::DbHabit,
-    db: tauri_plugin_sql::DbInstance,
+    db: Db<markers::sqlite>,
 ) -> Result<(), String> {
     db.execute(
         "INSERT INTO habits (id, name, icon, target_minutes, target_count, color, streak, category, reminders) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -1391,13 +1401,13 @@ async fn create_habit(
     )
     .await
     .map(|_| ())
-    .map_err(|e| e.to_string())
+    .map_err(|e: Error| e.to_string())
 }
 
 #[tauri::command]
 async fn update_habit(
     habit: database::DbHabit,
-    db: tauri_plugin_sql::DbInstance,
+    db: Db<markers::sqlite>,
 ) -> Result<(), String> {
     db.execute(
         "UPDATE habits SET name = ?, icon = ?, target_minutes = ?, target_count = ?, color = ?, streak = ?, category = ?, reminders = ? WHERE id = ? AND user_id = 1",
@@ -1415,29 +1425,29 @@ async fn update_habit(
     )
     .await
     .map(|_| ())
-    .map_err(|e| e.to_string())
+    .map_err(|e: Error| e.to_string())
 }
 
 #[tauri::command]
-async fn delete_habit(id: String, db: tauri_plugin_sql::DbInstance) -> Result<(), String> {
+async fn delete_habit(id: String, db: Db<markers::sqlite>) -> Result<(), String> {
     // First delete all checkins for this habit
     let _ = db.execute("DELETE FROM habit_checkins WHERE habit_id = ? AND user_id = 1", (id,)).await;
     // Then delete the habit
     db.execute("DELETE FROM habits WHERE id = ? AND user_id = 1", (id,))
         .await
         .map(|_| ())
-        .map_err(|e| e.to_string())
+        .map_err(|e: Error| e.to_string())
 }
 
 #[tauri::command]
-async fn get_habit_checkins(habit_id: String, db: tauri_plugin_sql::DbInstance) -> Result<Vec<database::DbHabitCheckin>, String> {
+async fn get_habit_checkins(habit_id: String, db: Db<markers::sqlite>) -> Result<Vec<database::DbHabitCheckin>, String> {
     let checkins = db
         .query(
             "SELECT * FROM habit_checkins WHERE habit_id = ? AND user_id = 1",
             (habit_id,)
         )
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e: Error| e.to_string())?;
     serde_json::from_value::<Vec<database::DbHabitCheckin>>(checkins)
         .map_err(|e| e.to_string())
 }
@@ -1445,7 +1455,7 @@ async fn get_habit_checkins(habit_id: String, db: tauri_plugin_sql::DbInstance) 
 #[tauri::command]
 async fn add_habit_checkin(
     checkin: database::DbHabitCheckin,
-    db: tauri_plugin_sql::DbInstance,
+    db: Db<markers::sqlite>,
 ) -> Result<(), String> {
     db.execute(
         "INSERT OR REPLACE INTO habit_checkins (habit_id, checkin_date, value, user_id) VALUES (?, ?, ?, 1)",
@@ -1457,30 +1467,30 @@ async fn add_habit_checkin(
     )
     .await
     .map(|_| ())
-    .map_err(|e| e.to_string())
+    .map_err(|e: Error| e.to_string())
 }
 
 // --- Focus Sessions SQLite commands ---
 
 #[tauri::command]
-async fn get_all_focus_sessions(db: tauri_plugin_sql::DbInstance) -> Result<Vec<database::DbFocusSession>, String> {
+async fn get_all_focus_sessions(db: Db<markers::sqlite>) -> Result<Vec<database::DbFocusSession>, String> {
     let sessions = db
         .query("SELECT * FROM focus_sessions WHERE user_id = 1", ())
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e: Error| e.to_string())?;
     serde_json::from_value::<Vec<database::DbFocusSession>>(sessions)
         .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-async fn get_focus_sessions_by_date(date_prefix: String, db: tauri_plugin_sql::DbInstance) -> Result<Vec<database::DbFocusSession>, String> {
+async fn get_focus_sessions_by_date(date_prefix: String, db: Db<markers::sqlite>) -> Result<Vec<database::DbFocusSession>, String> {
     let sessions = db
         .query(
             "SELECT * FROM focus_sessions WHERE user_id = 1 AND start_time LIKE ?",
             (format!("{}%", date_prefix),)
         )
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e: Error| e.to_string())?;
     serde_json::from_value::<Vec<database::DbFocusSession>>(sessions)
         .map_err(|e| e.to_string())
 }
@@ -1488,10 +1498,10 @@ async fn get_focus_sessions_by_date(date_prefix: String, db: tauri_plugin_sql::D
 #[tauri::command]
 async fn create_focus_session(
     session: database::DbFocusSession,
-    db: tauri_plugin_sql::DbInstance,
+    db: Db<markers::sqlite>,
 ) -> Result<(), String> {
     db.execute(
-        "INSERT INTO focus_sessions (id, start_time, end_time, duration, type, completed) VALUES (?, ?, ?, ?, ?, ?)",
+        "INSERT INTO focus_sessions (id, start_time, end_time, duration, type, completed, user_id) VALUES (?, ?, ?, ?, ?, ?, 1)",
         (
             session.id,
             session.start_time,
@@ -1503,17 +1513,17 @@ async fn create_focus_session(
     )
     .await
     .map(|_| ())
-    .map_err(|e| e.to_string())
+    .map_err(|e: Error| e.to_string())
 }
 
 // --- Pet SQLite commands ---
 
 #[tauri::command]
-async fn get_pet(db: tauri_plugin_sql::DbInstance) -> Result<database::DbPet, String> {
+async fn get_pet(db: Db<markers::sqlite>) -> Result<database::DbPet, String> {
     let pet = db
         .query("SELECT * FROM pets WHERE user_id = 1", ())
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e: Error| e.to_string())?;
 
     let pets: Vec<database::DbPet> = serde_json::from_value(pet)
         .map_err(|e| e.to_string())?;
@@ -1521,6 +1531,7 @@ async fn get_pet(db: tauri_plugin_sql::DbInstance) -> Result<database::DbPet, St
     if pets.is_empty() {
         // Return default if no record exists (shouldn't happen since migration inserts default)
         Ok(database::DbPet {
+            id: None,
             pet_type: "cat".to_string(),
             name: "小橘".to_string(),
             level: 1,
@@ -1540,7 +1551,7 @@ async fn get_pet(db: tauri_plugin_sql::DbInstance) -> Result<database::DbPet, St
 #[tauri::command]
 async fn update_pet(
     pet: database::DbPet,
-    db: tauri_plugin_sql::DbInstance,
+    db: Db<markers::sqlite>,
 ) -> Result<(), String> {
     db.execute(
         "UPDATE pets SET pet_type = ?, name = ?, level = ?, experience = ?, hunger = ?, mood = ?, coins = ?, last_fed = ?, last_interacted = ?, decoration = ? WHERE user_id = 1",
@@ -1559,17 +1570,17 @@ async fn update_pet(
     )
     .await
     .map(|_| ())
-    .map_err(|e| e.to_string())
+    .map_err(|e: Error| e.to_string())
 }
 
 // --- Settings SQLite commands ---
 
 #[tauri::command]
-async fn get_app_settings(db: tauri_plugin_sql::DbInstance) -> Result<database::DbSettings, String> {
+async fn get_app_settings(db: Db<markers::sqlite>) -> Result<database::DbSettings, String> {
     let settings = db
         .query("SELECT * FROM settings WHERE user_id = 1", ())
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e: Error| e.to_string())?;
 
     let settings_list: Vec<database::DbSettings> = serde_json::from_value(settings)
         .map_err(|e| e.to_string())?;
@@ -1577,6 +1588,7 @@ async fn get_app_settings(db: tauri_plugin_sql::DbInstance) -> Result<database::
     if settings_list.is_empty() {
         // Return default if no record exists
         Ok(database::DbSettings {
+            id: None,
             theme: "light".to_string(),
             color_theme: "blue".to_string(),
             background_skin: "default".to_string(),
@@ -1596,7 +1608,7 @@ async fn get_app_settings(db: tauri_plugin_sql::DbInstance) -> Result<database::
 #[tauri::command]
 async fn update_app_settings(
     settings: database::DbSettings,
-    db: tauri_plugin_sql::DbInstance,
+    db: Db<markers::sqlite>,
 ) -> Result<(), String> {
     db.execute(
         "UPDATE settings SET theme = ?, color_theme = ?, background_skin = ?, daily_goal_minutes = ?, language = ?, ai_api_key = ?, ai_provider = ?, auto_start_on_boot = ?, blocked_patterns = ?, feature_flags = ? WHERE user_id = 1",
@@ -1615,80 +1627,82 @@ async fn update_app_settings(
     )
     .await
     .map(|_| ())
-    .map_err(|e| e.to_string())
+    .map_err(|e: Error| e.to_string())
 }
 
 // --- Time Blocks SQLite commands ---
 
 #[tauri::command]
-async fn get_time_blocks_by_date(date: String, db: tauri_plugin_sql::DbInstance) -> Result<Vec<database::DbTimeBlock>, String> {
-    let blocks = db
-        .query(
-            "SELECT * FROM time_blocks WHERE user_id = 1 AND date = ?",
-            (date,)
-        )
-        .await
-        .map_err(|e| e.to_string())?;
-    serde_json::from_value::<Vec<database::DbTimeBlock>>(blocks)
-        .map_err(|e| e.to_string())
+async fn get_time_blocks_by_date(date: String, db: Db<markers::sqlite>) -> Result<Vec<database::DbTimeBlock>, String> {
+    let blocks = sqlx::query_as_unchecked!(
+        database::DbTimeBlock,
+        "SELECT * FROM time_blocks WHERE user_id = 1 AND date = ?",
+        date
+    )
+    .fetch_all(*db)
+    .await
+    .map_err(|e: sqlx::Error| e.to_string())?;
+    Ok(blocks)
 }
 
 #[tauri::command]
 async fn create_time_block(
     block: database::DbTimeBlock,
-    db: tauri_plugin_sql::DbInstance,
+    db: Db<markers::sqlite>,
 ) -> Result<(), String> {
-    db.execute(
-        "INSERT INTO time_blocks (id, task_id, title, start_time, end_time, duration_minutes, category, notes, date, is_completed) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        (
-            block.id,
-            block.task_id,
-            block.title,
-            block.start_time,
-            block.end_time,
-            block.duration_minutes,
-            block.category,
-            block.notes,
-            block.date,
-            block.is_completed,
-        ),
+    sqlx::query_unchecked!(
+        "INSERT INTO time_blocks (id, task_id, title, start_time, end_time, duration_minutes, category, notes, date, is_completed, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)",
+        block.id,
+        block.task_id,
+        block.title,
+        block.start_time,
+        block.end_time,
+        block.duration_minutes,
+        block.category,
+        block.notes,
+        block.date,
+        block.is_completed
     )
+    .execute(*db)
     .await
     .map(|_| ())
-    .map_err(|e| e.to_string())
+    .map_err(|e: sqlx::Error| e.to_string())
 }
 
 #[tauri::command]
 async fn update_time_block(
     block: database::DbTimeBlock,
-    db: tauri_plugin_sql::DbInstance,
+    db: Db<markers::sqlite>,
 ) -> Result<(), String> {
-    db.execute(
+    sqlx::query_unchecked!(
         "UPDATE time_blocks SET task_id = ?, title = ?, start_time = ?, end_time = ?, duration_minutes = ?, category = ?, notes = ?, date = ?, is_completed = ? WHERE id = ? AND user_id = 1",
-        (
-            block.task_id,
-            block.title,
-            block.start_time,
-            block.end_time,
-            block.duration_minutes,
-            block.category,
-            block.notes,
-            block.date,
-            block.is_completed,
-            block.id,
-        ),
+        block.task_id,
+        block.title,
+        block.start_time,
+        block.end_time,
+        block.duration_minutes,
+        block.category,
+        block.notes,
+        block.date,
+        block.is_completed,
+        block.id
     )
+    .execute(*db)
     .await
     .map(|_| ())
-    .map_err(|e| e.to_string())
+    .map_err(|e: sqlx::Error| e.to_string())
 }
 
 #[tauri::command]
-async fn delete_time_block(id: String, db: tauri_plugin_sql::DbInstance) -> Result<(), String> {
-    db.execute("DELETE FROM time_blocks WHERE id = ? AND user_id = 1", (id,))
-        .await
-        .map(|_| ())
-        .map_err(|e| e.to_string())
+async fn delete_time_block(id: String, db: Db<markers::sqlite>) -> Result<(), String> {
+    sqlx::query_unchecked!(
+        "DELETE FROM time_blocks WHERE id = ? AND user_id = 1",
+        id
+    )
+    .execute(*db)
+    .await
+    .map(|_| ())
+    .map_err(|e: sqlx::Error| e.to_string())
 }
 
 // 主函数
@@ -1708,6 +1722,8 @@ fn main() {
         http_client: Client::new(),
         current_activity: Arc::new(Mutex::new(None)),
         last_activity_check: Arc::new(Mutex::new(Instant::now())),
+        activities_dirty: Arc::new(Mutex::new(false)),
+        last_save_time: Arc::new(Mutex::new(Instant::now())),
         // Initialize new modules
         broadcast_manager: broadcast::BroadcastManager::new(),
         pomodoro_timer: pomodoro::PomodoroTimer::new(),
@@ -1730,10 +1746,20 @@ fn main() {
         loop {
             std::thread::sleep(Duration::from_secs(1));
             let result = poll_active_window(&state_clone);
-            // 每次轮询后保存活动到文件
-            let _ = save_activities(&state_clone);
 
-            // 如果保存了新活动，触发 AI 自动匹配
+            // 脏标记 + 节流写入：最多 30 秒间隔写入，只有脏才写入
+            let mut dirty_guard = state_clone.activities_dirty.lock().unwrap_or_else(|e| e.into_inner());
+            let mut last_save_guard = state_clone.last_save_time.lock().unwrap_or_else(|e| e.into_inner());
+            let now = Instant::now();
+            let elapsed = now.duration_since(*last_save_guard);
+
+            if (*dirty_guard && elapsed >= Duration::from_secs(5)) || elapsed >= Duration::from_secs(30) {
+                let _ = save_activities(&state_clone);
+                *dirty_guard = false;
+                *last_save_guard = now;
+            }
+
+            // 如果有新活动创建，触发 AI 自动匹配
             if let Ok(Some((activity_id, window_title, app_name))) = result {
                 let state_clone2 = state_clone.clone();
                 rt_handle.spawn(async move {
@@ -1764,7 +1790,7 @@ fn main() {
             // state is cloned for setup because state was moved into .manage()
             let state = state_for_setup;
             // state is already defined outside, use it directly
-            let is_tracking = *state.is_tracking.lock().unwrap();
+            let is_tracking = *state.is_tracking.lock().unwrap_or_else(|e| e.into_inner());
             let toggle_label = if is_tracking { "暂停追踪" } else { "开始追踪" };
 
             // 创建系统托盘菜单 - Tauri 2.0 MenuItem::new(manager, text, enabled, accelerator)
@@ -1788,7 +1814,7 @@ fn main() {
                 .build(app);
 
             // Load feature flags from saved settings
-            let settings_guard = state.settings.lock().unwrap();
+            let settings_guard = state.settings.lock().unwrap_or_else(|e| e.into_inner());
             if let Some(frontend_flags) = &settings_guard.feature_flags {
                 state.feature_flags.merge_from_frontend(frontend_flags);
             }
@@ -1997,7 +2023,7 @@ fn main() {
                 "暂停追踪" | "开始追踪" => {
                     // 获取当前状态并切换
                     let state = app_handle.try_state::<AppState>().unwrap();
-                    let mut is_tracking = state.is_tracking.lock().unwrap();
+                    let mut is_tracking = state.is_tracking.lock().unwrap_or_else(|e| e.into_inner());
                     *is_tracking = !*is_tracking;
                     let new_status = *is_tracking;
                     drop(is_tracking);

@@ -191,7 +191,7 @@ INSERT OR IGNORE INTO pets (id, user_id) VALUES (1, 1);
     }
 
 // Rust types for database rows
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct DbActivity {
     pub id: String,
     pub name: String,
@@ -204,7 +204,7 @@ pub struct DbActivity {
     pub ai_approved: Option<i32>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct DbTask {
     pub id: String,
     pub title: String,
@@ -218,7 +218,7 @@ pub struct DbTask {
     pub completed_at: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct DbHabit {
     pub id: String,
     pub name: String,
@@ -231,7 +231,7 @@ pub struct DbHabit {
     pub reminders: Option<String>, // JSON
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct DbHabitCheckin {
     pub id: i32,
     pub habit_id: String,
@@ -239,7 +239,7 @@ pub struct DbHabitCheckin {
     pub value: f64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct DbFocusSession {
     pub id: String,
     pub start_time: String,
@@ -249,8 +249,9 @@ pub struct DbFocusSession {
     pub completed: i32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct DbPet {
+    pub id: Option<i32>,
     pub pet_type: String,
     pub name: String,
     pub level: i32,
@@ -263,8 +264,9 @@ pub struct DbPet {
     pub decoration: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct DbSettings {
+    pub id: Option<i32>,
     pub theme: String,
     pub color_theme: String,
     pub background_skin: String,
@@ -277,7 +279,7 @@ pub struct DbSettings {
     pub feature_flags: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct DbTimeBlock {
     pub id: String,
     pub task_id: Option<String>,

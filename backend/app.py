@@ -35,6 +35,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 from functools import wraps
 import time
 _sms_rate_limit: dict[str, list[float]] = {}  # phone -> list of timestamps (within last hour)
+_login_rate_limit: dict[str, list[float]] = {}  # phone -> list of timestamps (within last minute)
 
 def rate_limit_sms(f):
     """Rate limit SMS sending: max 5 requests per phone per hour"""
@@ -57,6 +58,30 @@ def rate_limit_sms(f):
             return jsonify({'code': 429, 'msg': '发送过于频繁，请1小时后再试'}), 429
 
         _sms_rate_limit[phone].append(now)
+        return f(*args, **kwargs)
+    return wrapper
+
+def rate_limit_login(f):
+    """Rate limit login verification: max 5 requests per phone per minute"""
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        data = request.get_json()
+        phone = data.get('phone') if data else None
+        if not phone:
+            return f(*args, **kwargs)  # let the route handle validation
+
+        now = time.time()
+        # Keep only timestamps within the last minute
+        if phone in _login_rate_limit:
+            _login_rate_limit[phone] = [t for t in _login_rate_limit[phone] if now - t < 60]
+        else:
+            _login_rate_limit[phone] = []
+
+        if len(_login_rate_limit[phone]) >= 5:
+            logger.warning(f"Login rate limit exceeded: {phone} ({len(_login_rate_limit[phone])} attempts in last minute)")
+            return jsonify({'code': 429, 'msg': '尝试次数过多，请1分钟后再试'}), 429
+
+        _login_rate_limit[phone].append(now)
         return f(*args, **kwargs)
     return wrapper
 from utils.database import db
@@ -172,7 +197,7 @@ def require_subscription(f):
 
         valid, error = check_subscription_valid(user_id)
         if not valid:
-            return jsonify({'code': 403, 'msg': error, 'code': 'SUBSCRIPTION_EXPIRED'})
+            return jsonify({'code': 403, 'msg': error, 'error_type': 'SUBSCRIPTION_EXPIRED'}), 403
 
         # Add user_id to request for later use
         request.user_id = user_id
@@ -272,6 +297,7 @@ def send_code():
 
 
 @app.route('/api/auth/login-phone', methods=['POST'])
+@rate_limit_login
 def login_phone():
     data = request.get_json()
     phone = data.get('phone')
@@ -340,10 +366,12 @@ if os.environ.get('FLASK_ENV', 'development') == 'development':
         """Development mode: direct login without verification code
         Only available when FLASK_ENV=development
         """
-        # Double protection: also check if SMS is not configured
+        # Double protection: require development environment AND SMS not configured
+        if os.environ.get('FLASK_ENV', 'development') != 'development':
+            return jsonify({'code': 403, 'msg': '此接口仅在开发模式下可用'}), 403
         from config.settings import SMS_ACCESS_KEY_ID
         if SMS_ACCESS_KEY_ID and len(SMS_ACCESS_KEY_ID.strip()) > 0:
-            return jsonify({'code': 403, 'msg': '此接口仅在开发模式下可用'})
+            return jsonify({'code': 403, 'msg': '此接口仅在开发模式下可用'}), 403
 
         data = request.get_json()
         phone = data.get('phone')

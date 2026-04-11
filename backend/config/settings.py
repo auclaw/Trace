@@ -50,7 +50,7 @@ SMS_SIGN_NAME = os.environ.get('SMS_SIGN_NAME', '')
 SMS_TEMPLATE_CODE = os.environ.get('SMS_TEMPLATE_CODE', '')
 
 # Database path
-DATABASE_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'rize.db')
+DATABASE_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'trace.db')
 
 # Try to load local config override
 try:
