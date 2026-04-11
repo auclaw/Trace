@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../store/useAppStore'
 import useTheme from '../hooks/useTheme'
 import dataService from '../services/dataService'
-import type { DailyStat } from '../services/dataService'
+import type { Activity, DailyStat } from '../services/dataService'
 import StatisticsOverview from '../components/statistics/StatisticsOverview'
 import StatisticsDeepWork from '../components/statistics/StatisticsDeepWork'
 import StatisticsAiInsights from '../components/statistics/StatisticsAiInsights'
@@ -12,6 +12,10 @@ import StatisticsAiInsights from '../components/statistics/StatisticsAiInsights'
 /* ─── Types ─── */
 type Period = 'week' | 'month'
 type TabKey = 'overview' | 'deepwork' | 'ai'
+type WeeklyStats = {
+  daily: DailyStat[]
+  categories: Record<string, number>
+}
 
 const DEEP_CATEGORIES = new Set(['开发', '学习'])
 
@@ -66,24 +70,58 @@ export default function Statistics() {
   // OVERVIEW DATA
   // ══════════════════════════════════════════════════
 
-  const weeklyData = useMemo(() => dataService.getWeeklyStats(), [activities])
+  const [weeklyData, setWeeklyData] = useState<WeeklyStats>({ daily: [], categories: {} })
+  const [monthlyData, setMonthlyData] = useState<{ daily: DailyStat[], categories: Record<string, number> }>({ daily: [], categories: {} })
 
-  const monthlyData = useMemo(() => {
-    const now = new Date()
-    const y = now.getFullYear()
-    const m = now.getMonth() + 1
-    const daysInMonth = new Date(y, m, 0).getDate()
-    const daily: DailyStat[] = []
-    const categories: Record<string, number> = {}
-    for (let d = 1; d <= daysInMonth; d++) {
-      const ds = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
-      const stats = dataService.getDailyStats(ds)
-      daily.push({ date: ds, ...stats })
-      for (const [cat, mins] of Object.entries(stats.categories)) {
-        categories[cat] = (categories[cat] || 0) + mins
+  useEffect(() => {
+    const loadWeekly = async () => {
+      const now = new Date()
+      const start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+      const daily: DailyStat[] = []
+      const categories: Record<string, number> = {}
+
+      // Iterate each day for the past week
+      for (let d = new Date(start); d <= now; d.setDate(d.getDate() + 1)) {
+        const ds = toDateStr(d)
+        const stats = await dataService.getDailyStats(ds)
+        const activities = await dataService.getActivities(ds)
+        daily.push({
+          date: ds,
+          totalActivityCount: activities.length,
+          ...stats,
+        })
+        for (const [cat, mins] of Object.entries(stats.categories)) {
+          categories[cat] = (categories[cat] || 0) + mins
+        }
       }
+
+      setWeeklyData({ daily, categories })
     }
-    return { daily, categories }
+    loadWeekly()
+
+    const loadMonthly = async () => {
+      const now = new Date()
+      const y = now.getFullYear()
+      const m = now.getMonth() + 1
+      const daysInMonth = new Date(y, m, 0).getDate()
+      const daily: DailyStat[] = []
+      const categories: Record<string, number> = {}
+      for (let d = 1; d <= daysInMonth; d++) {
+        const ds = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+        const stats = await dataService.getDailyStats(ds)
+        const activities = await dataService.getActivities(ds)
+        daily.push({
+          date: ds,
+          totalActivityCount: activities.length,
+          ...stats,
+        })
+        for (const [cat, mins] of Object.entries(stats.categories)) {
+          categories[cat] = (categories[cat] || 0) + mins
+        }
+      }
+      setMonthlyData({ daily, categories })
+    }
+    loadMonthly()
   }, [activities])
 
   const data = period === 'week' ? weeklyData : monthlyData
@@ -113,7 +151,8 @@ export default function Statistics() {
     const dailySwitches: number[] = []
 
     for (const date of dates) {
-      const dayActivities = dataService.getActivities(date)
+      const dayActivities = activities
+        .filter((a) => a.startTime.slice(0, 10) === date)
         .sort((a, b) => a.startTime.localeCompare(b.startTime))
       if (dayActivities.length < 2) {
         dailySwitches.push(0)
@@ -139,7 +178,7 @@ export default function Statistics() {
     const trend: 'up' | 'down' | 'flat' = avgSecond > avgFirst + 0.5 ? 'up' : avgSecond < avgFirst - 0.5 ? 'down' : 'flat'
 
     return { avg, total: totalSwitches, trend, dailySwitches }
-  }, [data])
+  }, [data, activities])
 
   // ══════════════════════════════════════════════════
   // DEEP WORK DATA
@@ -154,7 +193,7 @@ export default function Statistics() {
       const d = new Date(now)
       d.setDate(d.getDate() - i)
       const ds = toDateStr(d)
-      const acts = dataService.getActivities(ds)
+      const acts = activities.filter((a: Activity) => a.startTime.slice(0, 10) === ds)
       let deepMins = 0, totalMins = 0, shortCount = 0
       for (const a of acts) {
         totalMins += a.duration
@@ -168,9 +207,9 @@ export default function Statistics() {
       days.push({ date: ds, deepMins, totalMins, shortCount })
     }
 
-    const totalDeep = days.reduce((s, d) => s + d.deepMins, 0)
-    const totalAll = days.reduce((s, d) => s + d.totalMins, 0)
-    const totalShort = days.reduce((s, d) => s + d.shortCount, 0)
+    const totalDeep = days.reduce((s: number, d: {deepMins: number}) => s + d.deepMins, 0)
+    const totalAll = days.reduce((s: number, d: {totalMins: number}) => s + d.totalMins, 0)
+    const totalShort = days.reduce((s: number, d: {shortCount: number}) => s + d.shortCount, 0)
     const deepScore = totalAll > 0 ? (totalDeep / totalAll) * 100 : 0
 
     const recommendations: string[] = []
@@ -190,44 +229,62 @@ export default function Statistics() {
     }
 
     return { days, totalDeep, totalAll, deepScore, hourlyDeep, totalShort, recommendations }
-  }, [activities])
+  }, [activities, t])
 
   // ══════════════════════════════════════════════════
   // AI INSIGHTS DATA
   // ══════════════════════════════════════════════════
 
-  const aiAnalysis = useMemo(() => {
-    const weekStats = dataService.getWeeklyStats()
-    const { daily, categories } = weekStats
+  const [aiAnalysis, setAiAnalysis] = useState<ReturnType<typeof calculateAiAnalysis> | null>(null)
+
+  function calculateAiAnalysis() {
+    const { daily, categories } = weeklyData
     if (daily.every((d) => d.totalMinutes === 0)) return null
 
-    const totalMins = daily.reduce((s, d) => s + d.totalMinutes, 0)
+    const totalMins = daily.reduce((s: number, d: DailyStat) => s + d.totalMinutes, 0)
     const aiAvgDaily = totalMins / 7
-    const nonZeroDays = daily.filter((d) => d.totalMinutes > 0)
+    const nonZeroDays = daily.filter((d: DailyStat) => d.totalMinutes > 0)
     const bestDay = nonZeroDays.reduce((a, b) => (a.totalMinutes >= b.totalMinutes ? a : b), nonZeroDays[0])
     const worstDay = nonZeroDays.reduce((a, b) => (a.totalMinutes <= b.totalMinutes ? a : b), nonZeroDays[0])
-    const catEntries = Object.entries(categories).sort((a, b) => b[1] - a[1])
+    const catEntries = Object.entries(categories).sort((a: [string, number], b: [string, number]) => b[1] - a[1])
     const topCat = catEntries[0]
     const leastCat = catEntries.length > 1 ? catEntries[catEntries.length - 1] : null
 
-    const now = new Date()
-    const startDate = toDateStr(new Date(now.getTime() - 6 * 86400000))
-    const endDate = toDateStr(now)
-    const allActivities = dataService.getActivitiesRange(startDate, endDate)
-    const hourlyMinutes: number[] = new Array(24).fill(0)
-    for (const a of allActivities) {
-      const hour = parseInt(a.startTime.slice(11, 13), 10)
-      if (!isNaN(hour)) hourlyMinutes[hour] += a.duration
+    return { totalMins, avgDaily: aiAvgDaily, bestDay, worstDay, categories, catEntries, topCat, leastCat, insights: [] as string[], daily, hourlyMinutes: new Array(24).fill(0) }
+  }
+
+  useEffect(() => {
+    const loadHourlyData = async () => {
+      const baseAnalysis = calculateAiAnalysis()
+      if (!baseAnalysis) {
+        setAiAnalysis(null)
+        return
+      }
+
+      const now = new Date()
+      const startDate = toDateStr(new Date(now.getTime() - 6 * 86400000))
+      const endDate = toDateStr(now)
+      const allActivities = await dataService.getActivitiesRange(startDate, endDate)
+      const hourlyMinutes: number[] = new Array(24).fill(0)
+      for (const a of allActivities) {
+        const hour = parseInt(a.startTime.slice(11, 13), 10)
+        if (!isNaN(hour)) hourlyMinutes[hour] += a.duration
+      }
+
+      const insights: string[] = []
+      if (baseAnalysis.topCat) insights.push(t('statistics.aiTopCategory', { category: baseAnalysis.topCat[0], time: fmtHoursLabel(baseAnalysis.topCat[1]) }))
+      insights.push(t('statistics.aiAvgDaily', { current: fmtHoursLabel(baseAnalysis.avgDaily), target: fmtHoursLabel(Math.max(baseAnalysis.avgDaily * 1.1, 480)) }))
+      if (baseAnalysis.bestDay) insights.push(t('statistics.aiBestDay', { day: dayLabel(baseAnalysis.bestDay.date), time: fmtHoursLabel(baseAnalysis.bestDay.totalMinutes) }))
+      if (baseAnalysis.leastCat) insights.push(t('statistics.aiLeastCategory', { category: baseAnalysis.leastCat[0] }))
+
+      setAiAnalysis({
+        ...baseAnalysis,
+        insights,
+        hourlyMinutes,
+      })
     }
-
-    const insights: string[] = []
-    if (topCat) insights.push(t('statistics.aiTopCategory', { category: topCat[0], time: fmtHoursLabel(topCat[1]) }))
-    insights.push(t('statistics.aiAvgDaily', { current: fmtHoursLabel(aiAvgDaily), target: fmtHoursLabel(Math.max(aiAvgDaily * 1.1, 480)) }))
-    if (bestDay) insights.push(t('statistics.aiBestDay', { day: dayLabel(bestDay.date), time: fmtHoursLabel(bestDay.totalMinutes) }))
-    if (leastCat) insights.push(t('statistics.aiLeastCategory', { category: leastCat[0] }))
-
-    return { totalMins, avgDaily: aiAvgDaily, bestDay, worstDay, categories, catEntries, insights, hourlyMinutes, daily }
-  }, [activities])
+    loadHourlyData()
+  }, [weeklyData, t])
 
   // ── Export ──
   function downloadBlob(blob: Blob, filename: string) {
@@ -241,28 +298,28 @@ export default function Statistics() {
     URL.revokeObjectURL(url)
   }
 
-  const exportJSON = () => {
+  const exportJSON = async () => {
     const now = new Date()
     const startDate = period === 'week'
       ? (() => { const d = new Date(now); d.setDate(d.getDate() - 6); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` })()
       : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
     const endDate = todayStr()
-    const allActs = dataService.getActivitiesRange(startDate, endDate)
+    const allActs = await dataService.getActivitiesRange(startDate, endDate)
     const payload = { period: periodLabel, startDate, endDate, totalMinutes, categories: data.categories, daily: data.daily, activities: allActs }
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
     downloadBlob(blob, `trace-${period}-stats-${endDate}.json`)
     addToast('success', t('statistics.exportSuccess'))
   }
 
-  const exportCSV = () => {
+  const exportCSV = async () => {
     const now = new Date()
     const startDate = period === 'week'
       ? (() => { const d = new Date(now); d.setDate(d.getDate() - 6); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` })()
       : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
     const endDate = todayStr()
-    const allActs = dataService.getActivitiesRange(startDate, endDate)
+    const allActs = await dataService.getActivitiesRange(startDate, endDate)
     const headers = ['id', 'name', 'category', 'startTime', 'endTime', 'duration', 'isManual']
-    const rows = allActs.map((a) =>
+    const rows = allActs.map((a: Activity) =>
       [a.id, `"${a.name.replace(/"/g, '""')}"`, a.category, a.startTime, a.endTime, a.duration, a.isManual].join(',')
     )
     const csv = [headers.join(','), ...rows].join('\n')

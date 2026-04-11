@@ -22,7 +22,7 @@ import {
 import { Card, Button, EmptyState } from '../components/ui'
 import { SkeletonCard } from '../components/ui/Skeleton'
 import { useAppStore } from '../store/useAppStore'
-import type { Activity, TimeBlock } from '../services/dataService'
+import type { Activity, TimeBlock, DailyStat } from '../services/dataService'
 import useTheme from '../hooks/useTheme'
 import { CATEGORY_COLORS } from '../config/themes'
 import dataService from '../services/dataService'
@@ -164,28 +164,47 @@ export default function Dashboard() {
     })
     return unsub
   }, [loadActivities])
-  const dailyStats = useMemo(() => dataService.getDailyStats(today), [today, activities])
+
+  // Daily statistics loaded async
+  const [dailyStats, setDailyStats] = useState<DailyStat>({
+    date: today,
+    totalMinutes: 0,
+    totalActivityCount: 0,
+    categories: {},
+  })
+  const [streak, setStreak] = useState(0)
+
+  useEffect(() => {
+    const loadStats = async () => {
+      const stats = await dataService.getDailyStats(today)
+      const activities = await dataService.getActivities(today)
+      setDailyStats({
+        date: today,
+        totalActivityCount: activities.length,
+        ...stats,
+      })
+
+      // Calculate current streak
+      let count = 0
+      const d = new Date()
+      for (let i = 0; i < 365; i++) {
+        const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+        const dayStats = await dataService.getDailyStats(ds)
+        if (dayStats.totalMinutes >= 60) {
+          count++
+          d.setDate(d.getDate() - 1)
+        } else {
+          break
+        }
+      }
+      setStreak(count)
+    }
+    loadStats()
+  }, [today, activities])
 
   const totalHours = Math.floor(dailyStats.totalMinutes / 60)
   const totalMins = dailyStats.totalMinutes % 60
   const goalPct = Math.min(100, (dailyStats.totalMinutes / dailyGoalMinutes) * 100)
-
-  // Streak: consecutive days with > 60 min of activity
-  const streak = useMemo(() => {
-    let count = 0
-    const d = new Date()
-    for (let i = 0; i < 365; i++) {
-      const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-      const stats = dataService.getDailyStats(ds)
-      if (stats.totalMinutes >= 60) {
-        count++
-        d.setDate(d.getDate() - 1)
-      } else {
-        break
-      }
-    }
-    return count
-  }, [activities])
 
   // Sorted activities for timeline
   const sortedActivities = useMemo(
@@ -199,7 +218,7 @@ export default function Dashboard() {
     const activity = activities.find(a => a.id === id);
     if (!activity) return;
     // Cycle: null → approved → rejected → null
-    let nextApproved: boolean | null = null;
+    let nextApproved: boolean | null;
     if (activity.aiApproved === null || activity.aiApproved === undefined) {
       nextApproved = true;
     } else if (activity.aiApproved === true) {
@@ -220,9 +239,10 @@ export default function Dashboard() {
 
   // Category bar data
   const categoryBar = useMemo(() => {
-    const entries = Object.entries(dailyStats.categories).sort((a, b) => b[1] - a[1])
-    const total = entries.reduce((s, [, v]) => s + v, 0) || 1
-    return entries.map(([cat, mins]) => ({ cat, mins, pct: (mins / total) * 100 }))
+    const entries = Object.entries(dailyStats.categories)
+      .sort((a, b) => (b[1] as number) - (a[1] as number))
+    const total = entries.reduce((s, [, v]) => s + (v as number), 0) || 1
+    return entries.map(([cat, mins]) => ({ cat, mins: mins as number, pct: ((mins as number) / total) * 100 }))
   }, [dailyStats])
 
   // Quick task handler
@@ -496,7 +516,7 @@ export default function Dashboard() {
                           totalMins={totalMins}
                           accentColor={accentColor}
                           dailyStats={{
-                            activityCount: dailyStats.activityCount,
+                            activityCount: dailyStats.totalActivityCount,
                             totalMinutes: dailyStats.totalMinutes,
                           }}
                           streak={streak}
@@ -741,7 +761,7 @@ export default function Dashboard() {
                           </div>
 
                           {/* AI Productivity Coach - Personalized Insights */}
-                          <DailyInsightsCard dailyStats={{ date: today, ...dailyStats }} today={today} />
+                          <DailyInsightsCard dailyStats={dailyStats} today={today} />
                         </div>
                     </SortableWidget>
                   );

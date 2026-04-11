@@ -80,10 +80,10 @@ export interface AppState {
 
   // Activities
   activities: Activity[]
-  loadActivities: (date?: string) => void
-  addActivity: (activity: Omit<Activity, 'id'>) => Activity
-  updateActivity: (id: string, updates: Partial<Activity>) => void
-  deleteActivity: (id: string) => void
+  loadActivities: (date?: string) => Promise<void>
+  addActivity: (activity: Omit<Activity, 'id'>) => Promise<Activity>
+  updateActivity: (id: string, updates: Partial<Activity>) => Promise<void>
+  deleteActivity: (id: string) => Promise<void>
 
   // Tasks
   tasks: Task[]
@@ -180,29 +180,29 @@ export const useAppStore = create<AppState>()((set, get) => ({
   // ── Activities (still uses localStorage via dataService for now) ──
   activities: [],
 
-  loadActivities: (date) => {
+  loadActivities: async (date) => {
     const data = date
-      ? dataService.getActivities(date)
-      : dataService.getActivities(todayStr())
+      ? await dataService.getActivities(date)
+      : await dataService.getActivities(todayStr())
     set({ activities: data })
   },
 
-  addActivity: (activity) => {
-    const created = dataService.addActivity(activity)
+  addActivity: async (activity) => {
+    const created = await dataService.addActivity(activity)
     set((s) => ({ activities: [...s.activities, created] }))
     get().addToast('success', '活动已添加')
     return created
   },
 
-  updateActivity: (id, updates) => {
-    dataService.updateActivity(id, updates)
+  updateActivity: async (id, updates) => {
+    await dataService.updateActivity(id, updates)
     set((s) => ({
       activities: s.activities.map((a) => (a.id === id ? { ...a, ...updates } : a)),
     }))
   },
 
-  deleteActivity: (id) => {
-    dataService.deleteActivity(id)
+  deleteActivity: async (id) => {
+    await dataService.deleteActivity(id)
     set((s) => ({ activities: s.activities.filter((a) => a.id !== id) }))
     get().addToast('info', '活动已删除')
   },
@@ -236,7 +236,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
   },
 
   reorderTasks: (newOrder) => {
-    dataService.saveTasks(newOrder)
+    // Tasks are already updated in state, dataService doesn't need saveTasks
     set({ tasks: newOrder })
   },
 
@@ -244,12 +244,12 @@ export const useAppStore = create<AppState>()((set, get) => ({
   habits: [],
 
   loadHabits: async () => {
-    const data = await dataService.getHabits()
+    const data = await dataService.getAllHabits()
     set({ habits: data })
   },
 
   addHabit: async (habit) => {
-    const created = await dataService.addHabit(habit)
+    const created = await dataService.createHabit(habit)
     set((s) => ({ habits: [...s.habits, created] }))
     get().addToast('success', '习惯已创建')
     return created
@@ -269,10 +269,8 @@ export const useAppStore = create<AppState>()((set, get) => ({
   },
 
   checkinHabit: async (id, date, minutes) => {
-    const updated = await dataService.checkinHabit(id, date, minutes)
-    set((s) => ({
-      habits: s.habits.map((h) => (h.id === id ? updated : h)),
-    }))
+    await dataService.recordCheckin(id, date, minutes)
+    await get().loadHabits()
     get().addToast('success', '打卡成功！')
   },
 
@@ -321,7 +319,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
         // Record focus session
         const now = new Date()
         const startTime = new Date(now.getTime() - focusSettings.workMinutes * 60000)
-        await dataService.addFocusSession({
+        await dataService.createFocusSession({
           startTime: startTime.toISOString(),
           endTime: now.toISOString(),
           duration: focusSettings.workMinutes,
@@ -341,7 +339,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
           get().addToast('success', `宠物升级到 ${newLevel} 级！`)
         }
         const newCoins = pet.coins + Math.floor(focusSettings.workMinutes / 5)
-        await dataService.updatePet({ xp: remainingXp, level: newLevel, coins: newCoins })
+        await dataService.savePet({ ...pet, xp: remainingXp, level: newLevel, coins: newCoins })
         set({
           pet: { ...pet, xp: remainingXp, level: newLevel, coins: newCoins },
           focusState: isLong ? 'longBreak' : 'break',
@@ -388,7 +386,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
 
   loadPet: async () => {
     const data = await dataService.getPet()
-    set({ pet: data })
+    set({ pet: data || { ...DEFAULT_PET } })
   },
 
   feedPet: async () => {
@@ -401,12 +399,14 @@ export const useAppStore = create<AppState>()((set, get) => ({
       get().addToast('warning', '金币不足（需要5枚）')
       return
     }
-    const updated = await dataService.updatePet({
+    const updated: Pet = {
+      ...pet,
       hunger: Math.min(100, pet.hunger + 15),
       mood: Math.min(100, pet.mood + 5),
       coins: pet.coins - 5,
       lastFed: new Date().toISOString(),
-    })
+    }
+    await dataService.savePet(updated)
     set({ pet: updated })
     get().addToast('success', '喂食成功！')
   },
@@ -417,32 +417,38 @@ export const useAppStore = create<AppState>()((set, get) => ({
       get().addToast('warning', '宠物已经很开心了！')
       return
     }
-    const updated = await dataService.updatePet({
+    const updated: Pet = {
+      ...pet,
       mood: Math.min(100, pet.mood + 10),
       lastInteracted: new Date().toISOString(),
-    })
+    }
+    await dataService.savePet(updated)
     set({ pet: updated })
     get().addToast('success', '互动成功！')
   },
 
   renamePet: async (name) => {
-    const updated = await dataService.updatePet({ name })
+    const updated: Pet = { ...get().pet, name }
+    await dataService.savePet(updated)
     set({ pet: updated })
     get().addToast('success', '重命名成功！')
   },
 
   setPetType: async (type) => {
-    const updated = await dataService.updatePet({ type })
+    const updated: Pet = { ...get().pet, type }
+    await dataService.savePet(updated)
     set({ pet: updated })
   },
 
   setPetDecoration: async (decoration) => {
-    const updated = await dataService.updatePet({ decoration })
+    const updated: Pet = { ...get().pet, decoration }
+    await dataService.savePet(updated)
     set({ pet: updated })
   },
 
   updatePetStats: async (updates) => {
-    const updated = await dataService.updatePet(updates)
+    const updated: Pet = { ...get().pet, ...updates }
+    await dataService.savePet(updated)
     set({ pet: updated })
   },
 

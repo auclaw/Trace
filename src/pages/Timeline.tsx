@@ -307,7 +307,8 @@ export default function Timeline() {
   // Load data
   useEffect(() => {
     async function loadTimeBlocks() {
-      setActivities(dataService.getActivities(today))
+      const acts = await dataService.getActivities(today)
+      setActivities(acts)
       const blocks = await dataService.getTimeBlocks(today)
       setTimeBlocks(blocks)
     }
@@ -332,9 +333,10 @@ export default function Timeline() {
 
   // Category change handler
   const handleCategoryChange = useCallback(
-    (id: string, cat: ActivityCategory) => {
-      dataService.updateActivity(id, { category: cat })
-      setActivities(dataService.getActivities(today))
+    async (id: string, cat: ActivityCategory) => {
+      await dataService.updateActivity(id, { category: cat })
+      const data = await dataService.getActivities(today)
+      setActivities(data)
     },
     [today],
   )
@@ -385,22 +387,24 @@ export default function Timeline() {
   }, [])
 
   // Batch operations
-  const handleBatchCategorize = useCallback((category: ActivityCategory) => {
-    selectedIds.forEach((id) => {
+  const handleBatchCategorize = useCallback(async (category: ActivityCategory) => {
+    await Promise.all(Array.from(selectedIds).map((id) =>
       dataService.updateActivity(id, { category })
-    })
-    setActivities(dataService.getActivities(today))
+    ))
+    const data = await dataService.getActivities(today)
+    setActivities(data)
     const count = selectedIds.size
     setSelectedIds(new Set())
     setShowBatchCategoryPicker(false)
     toast(t('timeline.categoryUpdated', { count }), 'success')
   }, [selectedIds, today, toast, t])
 
-  const handleConfirmBatchDelete = useCallback(() => {
-    selectedIds.forEach((id) => {
+  const handleConfirmBatchDelete = useCallback(async () => {
+    await Promise.all(Array.from(selectedIds).map((id) =>
       dataService.deleteActivity(id)
-    })
-    setActivities(dataService.getActivities(today))
+    ))
+    const data = await dataService.getActivities(today)
+    setActivities(data)
     const count = selectedIds.size
     setSelectedIds(new Set())
     setBatchMode(false)
@@ -409,11 +413,11 @@ export default function Timeline() {
   }, [selectedIds, today, toast, t])
 
   // AI classification approval quick toggle
-  const handleAiApprovalToggle = useCallback((id: string) => {
+  const handleAiApprovalToggle = useCallback(async (id: string) => {
     const activity = activities.find(a => a.id === id)
     if (!activity) return
     // Cycle: null → approved → rejected → null
-    let nextApproved: boolean | null = null
+    let nextApproved: boolean | null
     if (activity.aiApproved === null || activity.aiApproved === undefined) {
       nextApproved = true
     } else if (activity.aiApproved === true) {
@@ -421,8 +425,9 @@ export default function Timeline() {
     } else {
       nextApproved = null
     }
-    dataService.updateActivity(id, { aiApproved: nextApproved })
-    setActivities(dataService.getActivities(today))
+    await dataService.updateActivity(id, { aiApproved: nextApproved })
+    const data = await dataService.getActivities(today)
+    setActivities(data)
   }, [activities, today])
 
   // Current activity (simulated tracking)

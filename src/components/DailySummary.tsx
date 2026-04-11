@@ -25,7 +25,7 @@ interface CalculatedData {
   habitsCompleted: number;
   habitsTotal: number;
   segments: { label: string; value: number; color: string }[];
-  pet: Pet;
+  pet: Pet | null;
   aiSummary: string;
   suggestions: string[];
   activities: Activity[];
@@ -216,10 +216,10 @@ export default function DailySummary({ isOpen, onClose, date }: DailySummaryProp
 
     async function calculateData() {
       setLoading(true);
-      const stats = dataService.getDailyStats(dateStr);
-      const activities = dataService.getActivities(dateStr);
+      const stats = await dataService.getDailyStats(dateStr);
+      const activities = await dataService.getActivities(dateStr);
       const focusSessions = await dataService.getFocusSessions(dateStr);
-      const pet = await dataService.getPet();
+      const pet = await dataService.getPet() || null;
 
       // Focus / break time
       const focusMinutes = focusSessions
@@ -249,10 +249,10 @@ export default function DailySummary({ isOpen, onClose, date }: DailySummaryProp
       const segments = Object.entries(stats.categories)
         .map(([label, value]) => ({
           label,
-          value,
+          value: value as number,
           color: CATEGORY_COLORS[label] || '#94a3b8',
         }))
-        .sort((a, b) => b.value - a.value);
+        .sort((a, b) => (b.value as number) - (a.value as number));
 
       // AI summary
       const aiSummary = generateAISummary(stats.totalMinutes, stats.categories, goalPct, completedTasks);
@@ -260,6 +260,7 @@ export default function DailySummary({ isOpen, onClose, date }: DailySummaryProp
 
       setData({
         ...stats,
+        activityCount: activities.length,
         focusMinutes,
         breakMinutes,
         goalPct,
@@ -521,40 +522,42 @@ export default function DailySummary({ isOpen, onClose, date }: DailySummaryProp
         </div>
 
         {/* ── Pet Status ── */}
-        <div
-          className="rounded-2xl p-4 flex items-center gap-4"
-          style={{
-            background: 'linear-gradient(135deg, var(--color-accent-soft), transparent)',
-            border: '1px solid var(--color-border-subtle)',
-          }}
-        >
-          <div className="text-3xl flex-shrink-0">
-            {data.pet.type === 'cat' ? '\u{1F431}' : data.pet.type === 'dog' ? '\u{1F436}' : '\u{1F430}'}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-[var(--color-text-primary)]">
-                {data.pet.name}
-              </span>
-              <Badge variant="accent">Lv.{data.pet.level}</Badge>
+        {data.pet && (
+          <div
+            className="rounded-2xl p-4 flex items-center gap-4"
+            style={{
+              background: 'linear-gradient(135deg, var(--color-accent-soft), transparent)',
+              border: '1px solid var(--color-border-subtle)',
+            }}
+          >
+            <div className="text-3xl flex-shrink-0">
+              {data.pet.type === 'cat' ? '\u{1F431}' : data.pet.type === 'dog' ? '\u{1F436}' : '\u{1F430}'}
             </div>
-            <div className="flex items-center gap-4 mt-1.5">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-[var(--color-text-muted)]">心情</span>
-                <Progress value={data.pet.mood} size="sm" color="#f59e0b" className="w-16" />
-                <span className="text-[10px] tabular-nums text-[var(--color-text-muted)]">{data.pet.mood}%</span>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-[var(--color-text-primary)]">
+                  {data.pet.name}
+                </span>
+                <Badge variant="accent">Lv.{data.pet.level}</Badge>
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-[var(--color-text-muted)]">饱腹</span>
-                <Progress value={data.pet.hunger} size="sm" color="#22c55e" className="w-16" />
-                <span className="text-[10px] tabular-nums text-[var(--color-text-muted)]">{data.pet.hunger}%</span>
+              <div className="flex items-center gap-4 mt-1.5">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-[var(--color-text-muted)]">心情</span>
+                  <Progress value={data.pet.mood} size="sm" color="#f59e0b" className="w-16" />
+                  <span className="text-[10px] tabular-nums text-[var(--color-text-muted)]">{data.pet.mood}%</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-[var(--color-text-muted)]">饱腹</span>
+                  <Progress value={data.pet.hunger} size="sm" color="#22c55e" className="w-16" />
+                  <span className="text-[10px] tabular-nums text-[var(--color-text-muted)]">{data.pet.hunger}%</span>
+                </div>
+              </div>
+              <div className="text-[10px] text-[var(--color-text-muted)] mt-1">
+                金币 {data.pet.coins} &middot; 经验 {data.pet.xp}/{data.pet.level * 100}
               </div>
             </div>
-            <div className="text-[10px] text-[var(--color-text-muted)] mt-1">
-              金币 {data.pet.coins} &middot; 经验 {data.pet.xp}/{data.pet.level * 100}
-            </div>
           </div>
-        </div>
+        )}
 
         {/* ── Tomorrow Suggestions ── */}
         <div

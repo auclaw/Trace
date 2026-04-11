@@ -10,7 +10,7 @@ import dataService from '../services/dataService'
 import { trackingService } from '../services/trackingService'
 import type { Settings as AiSettings } from '../utils/tracking'
 import type { PrivacyLevel, TrackingRule } from '../services/trackingService'
-import type { ActivityCategory, BlockedPattern } from '../services/dataService'
+import type { Activity, ActivityCategory, BlockedPattern } from '../services/dataService'
 import { Button, Badge } from '../components/ui'
 import { DEFAULT_MODULES } from '../config/themes'
 
@@ -203,14 +203,14 @@ export default function Settings() {
   )
 
   /* ── Export helpers (daily/weekly report) ── */
-  const exportDailyReport = useCallback(() => {
+  const exportDailyReport = useCallback(async () => {
     setExporting(true)
     try {
-      const activities = dataService.getActivities()
+      const activities = await dataService.getActivities()
       const today = new Date().toISOString().slice(0, 10)
-      const todayActivities = activities.filter((a) => a.startTime.slice(0, 10) === today)
+      const todayActivities = activities.filter((a: Activity) => a.startTime.slice(0, 10) === today)
       const categoryTotals: Record<string, number> = {}
-      todayActivities.forEach((a) => {
+      todayActivities.forEach((a: Activity) => {
         categoryTotals[a.category] = (categoryTotals[a.category] || 0) + a.duration
       })
       const lines = [
@@ -218,7 +218,7 @@ export default function Settings() {
         '='.repeat(40),
         '',
         `${t('settings.totalActivities')}: ${todayActivities.length}`,
-        `${t('settings.totalDuration')}: ${todayActivities.reduce((s, a) => s + a.duration, 0)} ${t('common.minutes')}`,
+        `${t('settings.totalDuration')}: ${todayActivities.reduce((s: number, a: Activity) => s + a.duration, 0)} ${t('common.minutes')}`,
         '',
         `${t('settings.categorySummary')}:`,
         ...Object.entries(categoryTotals).map(
@@ -227,7 +227,7 @@ export default function Settings() {
         '',
         `${t('settings.activityDetail')}:`,
         ...todayActivities.map(
-          (a) =>
+          (a: Activity) =>
             `  [${a.startTime.slice(11, 16)}-${a.endTime.slice(11, 16)}] ${a.category} | ${a.name} (${a.duration}${t('common.minutes')})`
         ),
         '',
@@ -248,20 +248,20 @@ export default function Settings() {
     } finally {
       setExporting(false)
     }
-  }, [addToast])
+  }, [addToast, t])
 
-  const exportWeeklyReport = useCallback(() => {
+  const exportWeeklyReport = useCallback(async () => {
     setExporting(true)
     try {
-      const activities = dataService.getActivities()
+      const activities = await dataService.getActivities()
       const now = new Date()
       const weekAgo = new Date(now.getTime() - 7 * 86400000)
       const weekActivities = activities.filter(
-        (a) => new Date(a.startTime) >= weekAgo,
+        (a: Activity) => new Date(a.startTime) >= weekAgo,
       )
       const categoryTotals: Record<string, number> = {}
       const dailyTotals: Record<string, number> = {}
-      weekActivities.forEach((a) => {
+      weekActivities.forEach((a: Activity) => {
         categoryTotals[a.category] = (categoryTotals[a.category] || 0) + a.duration
         const day = a.startTime.slice(0, 10)
         dailyTotals[day] = (dailyTotals[day] || 0) + a.duration
@@ -271,7 +271,7 @@ export default function Settings() {
         '='.repeat(50),
         '',
         `${t('settings.totalActivities')}: ${weekActivities.length}`,
-        `${t('settings.totalDuration')}: ${weekActivities.reduce((s, a) => s + a.duration, 0)} ${t('common.minutes')}`,
+        `${t('settings.totalDuration')}: ${weekActivities.reduce((s: number, a: Activity) => s + a.duration, 0)} ${t('common.minutes')}`,
         '',
         `${t('settings.dailyDuration')}:`,
         ...Object.entries(dailyTotals)
@@ -300,7 +300,7 @@ export default function Settings() {
     } finally {
       setExporting(false)
     }
-  }, [addToast])
+  }, [addToast, t])
 
   /* ── Module toggle ── */
   const toggleModule = useCallback(
@@ -348,12 +348,12 @@ export default function Settings() {
   }, [addToast, t])
 
   /* ── Export CSV ── */
-  const exportCSV = useCallback(() => {
+  const exportCSV = useCallback(async () => {
     setExporting(true)
     try {
-      const activities = dataService.getActivities()
+      const activities = await dataService.getActivities()
       const headers = ['id', 'name', 'category', 'startTime', 'endTime', 'duration', 'isManual']
-      const rows = activities.map((a) =>
+      const rows = activities.map((a: Activity) =>
         [
           a.id,
           `"${a.name.replace(/"/g, '""')}"`,
@@ -383,17 +383,17 @@ export default function Settings() {
   }, [addToast, t])
 
   /* ── Export PDF ── */
-  const exportPDF = useCallback(() => {
+  const exportPDF = useCallback(async () => {
     setExporting(true)
     try {
+      const activities = await dataService.getActivities()
       import('jspdf').then(({ jsPDF }) => {
-        const activities = dataService.getActivities()
         const today = new Date().toISOString().slice(0, 10)
 
         // Calculate statistics
-        const totalMinutes = activities.reduce((sum, a) => sum + a.duration, 0)
+        const totalMinutes = activities.reduce((sum: number, a: Activity) => sum + a.duration, 0)
         const categoryTotals: Record<string, number> = {}
-        activities.forEach((a) => {
+        activities.forEach((a: Activity) => {
           if (a.category) {
             categoryTotals[a.category] = (categoryTotals[a.category] || 0) + a.duration
           }
@@ -483,12 +483,12 @@ export default function Settings() {
   }, [addToast, t])
 
   /* ── Custom range exports ── */
-  const exportCustomRangeCSV = useCallback(() => {
+  const exportCustomRangeCSV = useCallback(async () => {
     setExporting(true)
     try {
-      const activities = dataService.getActivitiesRange(customStartDate, customEndDate)
+      const activities = await dataService.getActivitiesRange(customStartDate, customEndDate)
       const headers = ['id', 'name', 'category', 'startTime', 'endTime', 'duration', 'isManual', 'isAiClassified', 'aiApproved']
-      const rows = activities.map((a) =>
+      const rows = activities.map((a: Activity) =>
         [
           a.id,
           `"${a.name.replace(/"/g, '""')}"`,
@@ -519,16 +519,16 @@ export default function Settings() {
     }
   }, [customStartDate, customEndDate, addToast, t])
 
-  const exportCustomRangePDF = useCallback(() => {
+  const exportCustomRangePDF = useCallback(async () => {
     setExporting(true)
     try {
-      import('jspdf').then(({ jsPDF }) => {
-        const activities = dataService.getActivitiesRange(customStartDate, customEndDate)
+      import('jspdf').then(async ({ jsPDF }) => {
+        const activities = await dataService.getActivitiesRange(customStartDate, customEndDate)
 
         // Calculate statistics
-        const totalMinutes = activities.reduce((sum, a) => sum + a.duration, 0)
+        const totalMinutes = activities.reduce((sum: number, a: Activity) => sum + a.duration, 0)
         const categoryTotals: Record<string, number> = {}
-        activities.forEach((a) => {
+        activities.forEach((a: Activity) => {
           if (a.category) {
             categoryTotals[a.category] = (categoryTotals[a.category] || 0) + a.duration
           }

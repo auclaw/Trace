@@ -75,7 +75,6 @@ import dataService from '../services/dataService';
 
 // Compatibility re-exports - map old api.ts names to current dataService names
 export const {
-  getWeeklyStats,
   getSettings,
   deleteActivity,
   updateActivity,
