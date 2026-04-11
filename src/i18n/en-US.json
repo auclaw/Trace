@@ -606,6 +606,15 @@
     "changelog": "Changelog",
     "feedback": "Feedback",
     "comingSoon": "Coming soon",
+    "updater": {
+      "checkUpdate": "Check for Updates",
+      "checking": "Checking...",
+      "installing": "Installing...",
+      "alreadyLatest": "You're already on the latest version",
+      "foundUpdate": "Found new version {{version}}, installing...",
+      "updateInstalled": "Update installed, app will restart",
+      "checkFailed": "Failed to check for updates, please try again later"
+    },
     "sessions": "sessions",
     "moduleVisibility": "Module Visibility",
     "language": "Language",

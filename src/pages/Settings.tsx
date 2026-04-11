@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
+import { check } from '@tauri-apps/plugin-updater'
+import { relaunch } from '@tauri-apps/plugin-process'
 import { changeLanguage, getCurrentLanguage } from '../i18n'
 import { useAppStore } from '../store/useAppStore'
 import useTheme from '../hooks/useTheme'
@@ -631,10 +633,35 @@ export default function Settings() {
     setTimeout(() => window.location.reload(), 800)
   }, [addToast])
 
+  /* ── Check for updates ── */
+  const handleCheckUpdate = useCallback(async () => {
+    setCheckingUpdate(true)
+    try {
+      const update = await check()
+      if (!update) {
+        addToast('info', t('settings.updater.alreadyLatest'))
+        return
+      }
+      addToast('info', t('settings.updater.foundUpdate', { version: update.version }))
+      setInstallingUpdate(true)
+      await update.downloadAndInstall()
+      addToast('success', t('settings.updater.updateInstalled'))
+      await relaunch()
+    } catch (e) {
+      if (import.meta.env.DEV) console.error('Failed to check/update:', e)
+      addToast('error', t('settings.updater.checkFailed'))
+      setInstallingUpdate(false)
+    } finally {
+      setCheckingUpdate(false)
+    }
+  }, [addToast, t])
+
   /* ── Distraction Blocking ── */
   const [blockedPatterns, setBlockedPatterns] = useState<BlockedPattern[]>([])
   const [newPatternInput, setNewPatternInput] = useState('')
   const [blockingScheduleMode, setBlockingScheduleMode] = useState<'focusOnly' | 'always' | 'custom'>('focusOnly')
+  const [checkingUpdate, setCheckingUpdate] = useState(false)
+  const [installingUpdate, setInstallingUpdate] = useState(false)
 
   // Load distraction blocking settings on mount
   useEffect(() => {
@@ -1786,6 +1813,24 @@ export default function Settings() {
                 {t('settings.feedback')}
               </a>
             </div>
+          </div>
+
+          {/* Check for updates */}
+          <div className="pt-3">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleCheckUpdate}
+              loading={checkingUpdate || installingUpdate}
+              className="w-full sm:w-auto"
+            >
+              {checkingUpdate
+                ? t('settings.updater.checking')
+                : installingUpdate
+                ? t('settings.updater.installing')
+                : t('settings.updater.checkUpdate')
+              }
+            </Button>
           </div>
         </div>
       </Section>

@@ -589,6 +589,15 @@
     "changelog": "更新日志",
     "feedback": "意见反馈",
     "comingSoon": "即将上线",
+    "updater": {
+      "checkUpdate": "检查更新",
+      "checking": "检查中...",
+      "installing": "安装中...",
+      "alreadyLatest": "当前已是最新版本",
+      "foundUpdate": "发现新版本 {{version}}，正在安装...",
+      "updateInstalled": "更新已安装，应用将重新启动",
+      "checkFailed": "检查更新失败，请稍后重试"
+    },
     "sessions": "轮",
     "language": "语言",
     "languageZh": "简体中文",
