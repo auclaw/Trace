@@ -23,7 +23,15 @@ impl DnsBlockManager {
             is_running: Arc::new(Mutex::new(false)),
         }
     }
+}
 
+impl Default for DnsBlockManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl DnsBlockManager {
     /// Update the list of blocked domains and apply changes
     pub fn update_blocked_domains(&mut self, domains: Vec<String>, schedule_mode: String) -> io::Result<()> {
         // Store the new list
@@ -94,7 +102,7 @@ impl DnsBlockManager {
         }
 
         let hosts_path = get_hosts_path()?;
-        let (content, has_existing_marker) = read_hosts_content(&hosts_path)?;
+        let (content, has_existing_marker) = read_hosts_content(hosts_path)?;
 
         // Build new content with our blocked domains
         let mut new_content = String::new();
@@ -142,7 +150,7 @@ impl DnsBlockManager {
         new_content.push_str("\n# END TRACE BLOCK\n");
 
         // Write back
-        write_hosts_content(&hosts_path, &new_content)?;
+        write_hosts_content(hosts_path, &new_content)?;
 
         Ok(())
     }
@@ -150,7 +158,7 @@ impl DnsBlockManager {
     /// Remove blocking by removing our section from hosts file
     fn remove_blocking(&self) -> io::Result<()> {
         let hosts_path = get_hosts_path()?;
-        let (content, has_existing_marker) = read_hosts_content(&hosts_path)?;
+        let (content, has_existing_marker) = read_hosts_content(hosts_path)?;
 
         if !has_existing_marker {
             return Ok(()); // Nothing to remove
@@ -183,7 +191,7 @@ impl DnsBlockManager {
             new_content.push('\n');
         }
 
-        write_hosts_content(&hosts_path, &new_content)?;
+        write_hosts_content(hosts_path, &new_content)?;
 
         Ok(())
     }

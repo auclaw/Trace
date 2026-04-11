@@ -3,7 +3,6 @@
 use anyhow::{Result, anyhow};
 use std::ptr;
 use x11::xlib;
-use x11::extensions::screensaver;
 
 pub fn get_idle_time() -> Result<u64> {
     unsafe {

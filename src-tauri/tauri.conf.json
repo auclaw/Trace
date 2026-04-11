@@ -30,6 +30,9 @@
     }
   },
   "plugins": {
+    "sql": {
+      "preload": ["sqlite:trace.db"]
+    },
     "updater": {
       "active": true,
       "endpoints": [

@@ -47,16 +47,11 @@ impl Default for IdleConfig {
 }
 
 /// Idle detection state
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum IdleState {
+    #[default]
     Active,
     Idle,
-}
-
-impl Default for IdleState {
-    fn default() -> Self {
-        Self::Active
-    }
 }
 
 /// Cross-platform idle detector
@@ -118,10 +113,11 @@ impl IdleDetector {
     }
 
     /// Start the background detection loop
+    #[allow(clippy::await_holding_lock)]
     pub async fn run_detection_loop<Fidle, Factive>(&self, app_handle: AppHandle, broadcast: &BroadcastManager, mut on_idle: Fidle, mut on_active: Factive)
     where
-        Fidle: FnMut(&AppHandle) -> (),
-        Factive: FnMut(&AppHandle) -> (),
+        Fidle: FnMut(&AppHandle),
+        Factive: FnMut(&AppHandle),
     {
         let stop_signal = self.stop_signal.clone();
         let state = self.state.clone();

@@ -3,14 +3,13 @@
  * 统一 API 客户端，带全局错误处理和 toast 回应用户提示
  */
 
-import type { RequestInit } from 'node-fetch';
 import { useAppStore } from '../store/useAppStore';
 
 export class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
-    public code?: number,
+    public code?: number
   ) {
     super(message);
     this.name = 'ApiError';
@@ -25,16 +24,13 @@ function getToken(): string | null {
  * Unified fetch wrapper with error handling
  * All API calls should go through this function
  */
-export async function apiRequest<T>(
-  url: string,
-  options?: RequestInit,
-): Promise<T> {
+export async function apiRequest<T>(url: string, options?: any): Promise<T> {
   try {
     const token = getToken();
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(options?.headers as Record<string, string> || {}),
+      ...((options?.headers as Record<string, string>) || {}),
     };
 
     const response = await fetch(url, {
@@ -63,15 +59,15 @@ export async function apiRequest<T>(
 
     return data.data as T;
   } catch (err) {
-      if (err instanceof ApiError) {
-        throw err;
-      }
-
-      // Network error or other unexpected error
-      const addToast = useAppStore.getState().addToast;
-      addToast('error', '网络连接失败，请检查网络后重试');
-      throw new ApiError(0, '网络连接失败');
+    if (err instanceof ApiError) {
+      throw err;
     }
+
+    // Network error or other unexpected error
+    const addToast = useAppStore.getState().addToast;
+    addToast('error', '网络连接失败，请检查网络后重试');
+    throw new ApiError(0, '网络连接失败');
+  }
 }
 
 /**

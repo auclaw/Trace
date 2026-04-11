@@ -7,6 +7,7 @@
 //! - settings: 用户设置
 
 use serde::{Serialize, Deserialize};
+use sqlx::FromRow;
 use tauri_plugin_sql::Migration;
 
 // Database migrations

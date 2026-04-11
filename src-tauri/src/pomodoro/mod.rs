@@ -9,19 +9,14 @@ use tauri::AppHandle;
 use crate::broadcast::BroadcastManager;
 
 /// Pomodoro timer state
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum PomodoroState {
+    #[default]
     Idle,
     Running,
     Paused,
     Break,
     LongBreak,
-}
-
-impl Default for PomodoroState {
-    fn default() -> Self {
-        Self::Idle
-    }
 }
 
 /// Pomodoro configuration
@@ -187,7 +182,7 @@ impl PomodoroTimer {
             PomodoroState::Running => {
                 // Work session completed
                 data.completed_sessions += 1;
-                let is_long_break = data.completed_sessions % self.config.sessions_before_long_break == 0;
+                let is_long_break = data.completed_sessions.is_multiple_of(self.config.sessions_before_long_break);
                 let total_seconds = if is_long_break {
                     data.state = PomodoroState::LongBreak;
                     self.config.long_break_minutes * 60
