@@ -1,0 +1,50 @@
+version: '3.8'
+
+# Trace 时迹 - Docker Compose 生产部署配置
+# 包含: PostgreSQL 数据库 + Flask 后端 API
+
+services:
+  api:
+    build: ./backend
+    ports:
+      - "5000:5000"
+    environment:
+      # Database configuration
+      - DATABASE_URL=postgresql://trace:${DB_PASSWORD:-trace123}@db:5432/trace
+      - FLASK_ENV=${FLASK_ENV:-production}
+      - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+      # SMS configuration (leave empty for dev mode)
+      - SMS_ACCESS_KEY_ID=${SMS_ACCESS_KEY_ID:-}
+      - SMS_SECRET_ACCESS_KEY=${SMS_SECRET_ACCESS_KEY:-}
+      - SMS_SIGN_NAME=${SMS_SIGN_NAME:-}
+      - SMS_TEMPLATE_CODE=${SMS_TEMPLATE_CODE:-}
+      # WeChat configuration
+      - WECHAT_APP_ID=${WECHAT_APP_ID:-}
+      - WECHAT_APP_SECRET=${WECHAT_APP_SECRET:-}
+      - WECHAT_REDIRECT_URI=${WECHAT_REDIRECT_URI:-}
+      # AI configuration
+      - AI_DEFAULT_PROVIDER=${AI_DEFAULT_PROVIDER:-ernie}
+      - AI_ERNIE_API_KEY=${AI_ERNIE_API_KEY:-}
+      - AI_ERNIE_SECRET_KEY=${AI_ERNIE_SECRET_KEY:-}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: trace
+      POSTGRES_USER: trace
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-trace123}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trace -d trace"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
