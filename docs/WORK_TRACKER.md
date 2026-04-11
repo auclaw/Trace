@@ -1,7 +1,7 @@
 # Trace 时迹 开发任务跟踪 / Development Work Tracker
 
 > **Branch**: `p1-completed`
-> **Last Updated**: 2026-04-11 (P0 全部完成，P1 隐私政策已完成，只剩 ErrorBoundary 和 Tauri updater)
+> **Last Updated**: 2026-04-11 (P0 全部完成，P1 隐私政策已完成，只剩 Tauri updater)
 > **Product Chinese Name**: 时迹 (shí jì)
 > **Purpose**: 让任何 AI 或开发者可以接手继续工作 / Enable any AI or developer to continue work
 > **Audit Report**: `docs/AUDIT_REPORT_2026-04-09.html` (含完整竞品分析)
