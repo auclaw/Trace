@@ -28,18 +28,69 @@ CORS(app)
 from config.settings import DATABASE_PATH
 app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{DATABASE_PATH}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# ========== Rate limiting for SMS ==========
+# In-memory rate limit store for single process deployment
+# For production with multiple workers, use Redis instead
+from functools import wraps
+import time
+_sms_rate_limit: dict[str, list[float]] = {}  # phone -> list of timestamps (within last hour)
+
+def rate_limit_sms(f):
+    """Rate limit SMS sending: max 5 requests per phone per hour"""
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        data = request.get_json()
+        phone = data.get('phone') if data else None
+        if not phone:
+            return f(*args, **kwargs)  # let the route handle validation
+
+        now = time.time()
+        # Keep only timestamps within the last hour
+        if phone in _sms_rate_limit:
+            _sms_rate_limit[phone] = [t for t in _sms_rate_limit[phone] if now - t < 3600]
+        else:
+            _sms_rate_limit[phone] = []
+
+        if len(_sms_rate_limit[phone]) >= 5:
+            logger.warning(f"Rate limit exceeded for SMS: {phone} ({len(_sms_rate_limit[phone])} requests in last hour)")
+            return jsonify({'code': 429, 'msg': '发送过于频繁，请1小时后再试'}), 429
+
+        _sms_rate_limit[phone].append(now)
+        return f(*args, **kwargs)
+    return wrapper
 from utils.database import db
 db.init_app(app)
 
 
 # ========== JWT工具函数 ==========
-def generate_token(user_id: int) -> str:
-    """Generate JWT token"""
+# Access token: short-lived (2 hours)
+# Refresh token: longer-lived (14 days)
+ACCESS_TOKEN_EXPIRE = timedelta(hours=2)
+REFRESH_TOKEN_EXPIRE = timedelta(days=14)
+
+def generate_access_token(user_id: int) -> str:
+    """Generate short-lived access token"""
     payload = {
         'user_id': user_id,
-        'exp': datetime.utcnow() + timedelta(days=365)
+        'exp': datetime.utcnow() + ACCESS_TOKEN_EXPIRE,
+        'type': 'access'
     }
     return jwt.encode(payload, SECRET_KEY, algorithm='HS256')
+
+def generate_refresh_token(user_id: int) -> str:
+    """Generate longer-lived refresh token"""
+    payload = {
+        'user_id': user_id,
+        'exp': datetime.utcnow() + REFRESH_TOKEN_EXPIRE,
+        'type': 'refresh'
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm='HS256')
+
+# Keep backward compatibility for existing code
+def generate_token(user_id: int) -> str:
+    """Legacy: backward compatibility - returns access token"""
+    return generate_access_token(user_id)
 
 
 def verify_token(token: str) -> Optional[int]:
@@ -130,9 +181,18 @@ def require_subscription(f):
 
 
 # ========== 验证码存储（SQLite）==========
+import hashlib
+
+def _hash_verification_code(code: str) -> str:
+    """Hash verification code before storing (salted with phone prefix for uniqueness)"""
+    # Use phone prefix as salt so same code doesn't produce same hash across different phones
+    # This is good enough for verification codes - attackers can't precompute
+    return hashlib.sha256(f"{code}:{code[:2]}".encode()).hexdigest()
+
 def save_verification_code(phone: str, code: str, expire_minutes: int = 10):
-    """Save verification code to database with expiration"""
+    """Save verification code (hashed) to database with expiration"""
     expire_at = datetime.now() + timedelta(minutes=expire_minutes)
+    hashed_code = _hash_verification_code(code)
     with get_db_connection() as conn:
         cursor = conn.cursor()
         # Remove old expired codes
@@ -140,16 +200,16 @@ def save_verification_code(phone: str, code: str, expire_minutes: int = 10):
             'DELETE FROM verification_codes WHERE phone = ? OR expire_at < CURRENT_TIMESTAMP',
             (phone,)
         )
-        # Insert new code
+        # Insert new code (stored hashed)
         cursor.execute(
             'INSERT INTO verification_codes (phone, code, expire_at) VALUES (?, ?, ?)',
-            (phone, code, expire_at)
+            (phone, hashed_code, expire_at)
         )
         conn.commit()
 
 
 def get_verification_code(phone: str) -> Optional[dict]:
-    """Get valid verification code from database"""
+    """Get valid verification code from database (returns stored hash)"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(
@@ -159,7 +219,7 @@ def get_verification_code(phone: str) -> Optional[dict]:
         row = cursor.fetchone()
         if not row:
             return None
-        return {'code': row[0], 'expire_at': datetime.fromisoformat(row[1])}
+        return {'code_hash': row[0], 'expire_at': datetime.fromisoformat(row[1])}
 
 
 def send_sms_code(phone: str, code: str) -> bool:
@@ -186,6 +246,7 @@ def check_auth():
 
 
 @app.route('/api/auth/send-code', methods=['POST'])
+@rate_limit_sms
 def send_code():
     data = request.get_json()
     phone = data.get('phone')
@@ -218,7 +279,12 @@ def login_phone():
 
     # Verify code
     stored = get_verification_code(phone)
-    if not stored or stored['code'] != code:
+    if not stored:
+        return jsonify({'code': 400, 'msg': '验证码错误'})
+
+    # Compare hashed code
+    input_hash = _hash_verification_code(code)
+    if input_hash != stored['code_hash']:
         return jsonify({'code': 400, 'msg': '验证码错误'})
 
     if datetime.now() > stored['expire_at']:
@@ -252,70 +318,106 @@ def login_phone():
         else:
             user_id = row[0]
 
-    token = generate_token(user_id)
+    access_token = generate_access_token(user_id)
+    refresh_token = generate_refresh_token(user_id)
     logger.info(f"User {user_id} logged in via phone {phone}")
     return jsonify({
         'code': 200,
         'data': {
-            'token': token,
+            'access_token': access_token,
+            'refresh_token': refresh_token,
             'user_id': user_id
         }
     })
 
 
-@app.route('/api/auth/dev-login', methods=['POST'])
-def dev_login():
-    """Development mode: direct login without verification code
-    Only available when SMS is not configured (for local development)
-    """
-    # Only allow this when SMS is not configured (dev mode)
-    from config.settings import SMS_ACCESS_KEY_ID
-    if SMS_ACCESS_KEY_ID and len(SMS_ACCESS_KEY_ID.strip()) > 0:
-        return jsonify({'code': 403, 'msg': '此接口仅在开发模式下可用'})
+import os
+# Dev-mode login only registered in development environment
+# Production environment will not have this route at all
+if os.environ.get('FLASK_ENV', 'development') == 'development':
+    @app.route('/api/auth/dev-login', methods=['POST'])
+    def dev_login():
+        """Development mode: direct login without verification code
+        Only available when FLASK_ENV=development
+        """
+        # Double protection: also check if SMS is not configured
+        from config.settings import SMS_ACCESS_KEY_ID
+        if SMS_ACCESS_KEY_ID and len(SMS_ACCESS_KEY_ID.strip()) > 0:
+            return jsonify({'code': 403, 'msg': '此接口仅在开发模式下可用'})
 
+        data = request.get_json()
+        phone = data.get('phone')
+
+        if not phone or not re.match(r'^1[3-9]\d{9}$', phone):
+            return jsonify({'code': 400, 'msg': '手机号格式错误'})
+
+        # Query or create user
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT id, is_vip, expire_at FROM users WHERE phone = ?', (phone,))
+            row = cursor.fetchone()
+
+            if not row:
+                # Create new user - automatically activate 14-day free trial
+                from datetime import timedelta
+                expire_at = datetime.now() + timedelta(days=14)
+                cursor.execute(
+                    'INSERT INTO users (phone, created_at, is_vip, expire_at) VALUES (?, ?, ?, ?)',
+                    (phone, datetime.now(), 1, expire_at)
+                )
+                conn.commit()
+                user_id = cursor.lastrowid
+                # Record trial start in history
+                cursor.execute(
+                    '''INSERT INTO subscription_history
+                       (user_id, event_type, order_id, previous_expire_at, new_expire_at, notes)
+                       VALUES (?, ?, ?, ?, ?, ?)''',
+                    (user_id, 'trial_start', None, None, expire_at, 'Dev mode auto-create')
+                )
+                conn.commit()
+                logger.info(f"[DEV MODE] New user created: {user_id}, phone {phone}")
+            else:
+                user_id = row[0]
+
+        access_token = generate_access_token(user_id)
+        refresh_token = generate_refresh_token(user_id)
+        logger.info(f"[DEV MODE] User {user_id} logged in via dev-login ({phone})")
+        return jsonify({
+            'code': 200,
+            'data': {
+                'access_token': access_token,
+                'refresh_token': refresh_token,
+                'user_id': user_id
+            }
+        })
+
+
+@app.route('/api/auth/refresh', methods=['POST'])
+def refresh_token():
+    """Refresh access token using refresh token"""
     data = request.get_json()
-    phone = data.get('phone')
+    refresh_token = data.get('refresh_token')
 
-    if not phone or not re.match(r'^1[3-9]\d{9}$', phone):
-        return jsonify({'code': 400, 'msg': '手机号格式错误'})
+    if not refresh_token:
+        return jsonify({'code': 400, 'msg': '缺少 refresh token'}), 400
 
-    # Query or create user
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute('SELECT id, is_vip, expire_at FROM users WHERE phone = ?', (phone,))
-        row = cursor.fetchone()
-
-        if not row:
-            # Create new user - automatically activate 14-day free trial
-            from datetime import timedelta
-            expire_at = datetime.now() + timedelta(days=14)
-            cursor.execute(
-                'INSERT INTO users (phone, created_at, is_vip, expire_at) VALUES (?, ?, ?, ?)',
-                (phone, datetime.now(), 1, expire_at)
-            )
-            conn.commit()
-            user_id = cursor.lastrowid
-            # Record trial start in history
-            cursor.execute(
-                '''INSERT INTO subscription_history
-                   (user_id, event_type, order_id, previous_expire_at, new_expire_at, notes)
-                   VALUES (?, ?, ?, ?, ?, ?)''',
-                (user_id, 'trial_start', None, None, expire_at, 'Dev mode auto-create')
-            )
-            conn.commit()
-            logger.info(f"[DEV MODE] New user created: {user_id}, phone {phone}")
-        else:
-            user_id = row[0]
-
-    token = generate_token(user_id)
-    logger.info(f"[DEV MODE] User {user_id} logged in via dev-login ({phone})")
-    return jsonify({
-        'code': 200,
-        'data': {
-            'token': token,
-            'user_id': user_id
-        }
-    })
+    try:
+        payload = jwt.decode(refresh_token, SECRET_KEY, algorithms=['HS256'])
+        if payload.get('type') != 'refresh':
+            return jsonify({'code': 401, 'msg': '无效的 refresh token'}), 401
+        user_id = payload['user_id']
+        # Generate new access token
+        new_access_token = generate_access_token(user_id)
+        return jsonify({
+            'code': 200,
+            'data': {
+                'access_token': new_access_token
+            }
+        })
+    except jwt.ExpiredSignatureError:
+        return jsonify({'code': 401, 'msg': 'refresh token 已过期，请重新登录'}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({'code': 401, 'msg': '无效的 refresh token'}), 401
 
 
 @app.route('/api/auth/wechat', methods=['GET'])

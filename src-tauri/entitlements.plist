@@ -4,11 +4,8 @@
 <dict>
   <key>com.apple.security.accessibility</key>
   <true/>
-  <key>com.apple.security.personal-information.address-book</key>
-  <true/>
-  <key>com.apple.security.personal-information.calendar</key>
-  <true/>
-  <key>com.apple.security.personal-information.location</key>
-  <true/>
+  <!-- Only keep accessibility permission needed for window tracking
+  Calendar/AddressBook/Location permissions removed - not used yet
+  Apple Store will reject app if you request permissions you don't use -->
 </dict>
 </plist>
