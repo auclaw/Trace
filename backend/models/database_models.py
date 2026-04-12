@@ -7,6 +7,7 @@ USER_TABLE_SQL = '''
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     phone TEXT UNIQUE,
+    email TEXT UNIQUE,
     openid TEXT UNIQUE,
     created_at TIMESTAMP,
     is_vip INTEGER,
@@ -42,6 +43,68 @@ CREATE TABLE IF NOT EXISTS verification_codes (
     code TEXT NOT NULL,
     expire_at TIMESTAMP NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)
+'''
+
+# Indexes to improve lookup performance for auth and activity queries
+USER_PHONE_INDEX_SQL = 'CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone)'
+USER_EMAIL_INDEX_SQL = 'CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)'
+USER_OPENID_INDEX_SQL = 'CREATE INDEX IF NOT EXISTS idx_users_openid ON users(openid)'
+ACTIVITY_USER_ID_INDEX_SQL = 'CREATE INDEX IF NOT EXISTS idx_activities_user_id ON activities(user_id)'
+VERIFICATION_CODE_PHONE_INDEX_SQL = 'CREATE INDEX IF NOT EXISTS idx_verification_codes_phone ON verification_codes(phone)'
+
+WECHAT_TOKEN_CACHE_TABLE_SQL = '''
+CREATE TABLE IF NOT EXISTS wechat_token_cache (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    openid TEXT UNIQUE NOT NULL,
+    access_token TEXT NOT NULL,
+    refresh_token TEXT,
+    expires_at TIMESTAMP NOT NULL,
+    raw_payload TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)
+'''
+
+ORG_INVITATION_TABLE_SQL = '''
+CREATE TABLE IF NOT EXISTS org_invitations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    org_id INTEGER NOT NULL,
+    team_id INTEGER,
+    inviter_user_id INTEGER NOT NULL,
+    invitee_user_id INTEGER,
+    contact_type TEXT NOT NULL,
+    contact_value TEXT NOT NULL,
+    role TEXT NOT NULL,
+    invite_code TEXT UNIQUE NOT NULL,
+    invite_message TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    notify_channel TEXT NOT NULL DEFAULT 'in_app',
+    notify_status TEXT NOT NULL DEFAULT 'queued',
+    expires_at TIMESTAMP,
+    accepted_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (org_id) REFERENCES organizations (id),
+    FOREIGN KEY (team_id) REFERENCES teams (id),
+    FOREIGN KEY (inviter_user_id) REFERENCES users (id),
+    FOREIGN KEY (invitee_user_id) REFERENCES users (id)
+)
+'''
+
+NOTIFICATION_EVENTS_TABLE_SQL = '''
+CREATE TABLE IF NOT EXISTS notification_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    channel TEXT NOT NULL,
+    template TEXT NOT NULL,
+    target TEXT,
+    title TEXT NOT NULL,
+    content TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'queued',
+    error_message TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    sent_at TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users (id)
 )
 '''
 

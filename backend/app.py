@@ -9,6 +9,7 @@ import jwt
 import random
 import re
 import json
+import secrets
 from datetime import datetime, timedelta
 from typing import Optional, Tuple
 
@@ -84,6 +85,12 @@ def rate_limit_login(f):
         _login_rate_limit[phone].append(now)
         return f(*args, **kwargs)
     return wrapper
+
+
+def internal_server_error(message: str, exc: Exception, code: int = 500):
+    logger.error(f"{message}: {str(exc)}")
+    return jsonify({'code': code, 'msg': '内部错误，请稍后再试'}), code
+
 from utils.database import db
 db.init_app(app)
 
@@ -208,16 +215,16 @@ def require_subscription(f):
 # ========== 验证码存储（SQLite）==========
 import hashlib
 
-def _hash_verification_code(code: str) -> str:
+def _hash_verification_code(code: str, phone: str) -> str:
     """Hash verification code before storing (salted with phone prefix for uniqueness)"""
-    # Use phone prefix as salt so same code doesn't produce same hash across different phones
-    # This is good enough for verification codes - attackers can't precompute
-    return hashlib.sha256(f"{code}:{code[:2]}".encode()).hexdigest()
+    salt = phone.encode() if phone else b'trace-default-salt'
+    return hashlib.pbkdf2_hmac('sha256', code.encode(), salt, 100_000).hex()
+
 
 def save_verification_code(phone: str, code: str, expire_minutes: int = 10):
     """Save verification code (hashed) to database with expiration"""
     expire_at = datetime.now() + timedelta(minutes=expire_minutes)
-    hashed_code = _hash_verification_code(code)
+    hashed_code = _hash_verification_code(code, phone)
     with get_db_connection() as conn:
         cursor = conn.cursor()
         # Remove old expired codes
@@ -252,6 +259,156 @@ def send_sms_code(phone: str, code: str) -> bool:
     Send SMS verification code via configured provider
     """
     return SMSFactory.send_verification_code(phone, code)
+
+
+def _normalize_invite_contact(data: dict) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+    """Normalize invitee contact payload to (contact_type, contact_value, error_msg)."""
+    email = (data.get('email') or '').strip().lower()
+    phone = (data.get('phone') or '').strip()
+    contact = (data.get('contact') or '').strip()
+
+    if not phone and not email and contact:
+        if re.match(r'^1[3-9]\d{9}$', contact):
+            phone = contact
+        elif re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', contact):
+            email = contact.lower()
+
+    if phone:
+        if not re.match(r'^1[3-9]\d{9}$', phone):
+            return None, None, '手机号格式错误'
+        return 'phone', phone, None
+    if email:
+        if not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', email):
+            return None, None, '邮箱格式错误'
+        return 'email', email, None
+    return None, None, '请提供手机号或邮箱'
+
+
+def _create_notification_event(
+    cursor,
+    user_id: Optional[int],
+    channel: str,
+    template: str,
+    target: Optional[str],
+    title: str,
+    content: str,
+    status: str,
+    error_message: Optional[str] = None
+):
+    sent_at = datetime.now() if status == 'sent' else None
+    cursor.execute(
+        '''
+        INSERT INTO notification_events
+        (user_id, channel, template, target, title, content, status, error_message, sent_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''',
+        (user_id, channel, template, target, title, content, status, error_message, sent_at)
+    )
+
+
+def _send_org_invitation_notification(
+    cursor,
+    org_name: str,
+    inviter_id: int,
+    invitee_user_id: Optional[int],
+    contact_type: str,
+    contact_value: str,
+    invite_code: str
+) -> Tuple[str, str]:
+    """Send or queue invite notifications and persist audit records."""
+    inviter_name = f'用户{inviter_id}'
+    message = f'{inviter_name} 邀请你加入组织「{org_name}」，邀请码：{invite_code}'
+
+    if invitee_user_id:
+        _create_notification_event(
+            cursor,
+            invitee_user_id,
+            'in_app',
+            'org_invite',
+            contact_value,
+            '组织邀请',
+            message,
+            'sent'
+        )
+        return 'in_app', 'sent'
+
+    if contact_type == 'phone':
+        sms_service = SMSFactory.get_instance()
+        delivered = bool(
+            hasattr(sms_service, 'send_invitation_notice') and
+            sms_service.send_invitation_notice(contact_value, org_name, inviter_name, invite_code)
+        )
+        status = 'sent' if delivered else 'manual_required'
+        _create_notification_event(
+            cursor,
+            None,
+            'sms',
+            'org_invite',
+            contact_value,
+            '组织邀请',
+            message,
+            status,
+            None if delivered else 'SMS invite template not configured or provider unavailable'
+        )
+        return 'sms', status
+
+    _create_notification_event(
+        cursor,
+        None,
+        'email',
+        'org_invite',
+        contact_value,
+        '组织邀请',
+        message,
+        'manual_required',
+        'Email delivery service not configured'
+    )
+    return 'email', 'manual_required'
+
+
+def _apply_paid_subscription(cursor, order_id: int, user_id: int, plan_type: str, days: int,
+                             transaction_id: str, notify_payload: str):
+    cursor.execute('SELECT expire_at FROM users WHERE id = ?', (user_id,))
+    user = cursor.fetchone()
+    current_expire = user[0] if user else None
+
+    now = datetime.now()
+    if current_expire:
+        current_expire_dt = datetime.fromisoformat(current_expire) if isinstance(current_expire, str) else current_expire
+        is_renewal = current_expire_dt > now
+        new_expire = current_expire_dt + timedelta(days=days) if is_renewal else now + timedelta(days=days)
+    else:
+        is_renewal = False
+        new_expire = now + timedelta(days=days)
+
+    cursor.execute(
+        '''
+        UPDATE subscription_orders
+        SET status = 'paid', paid_at = ?, transaction_id = ?, notify_data = ?, expired_at = ?
+        WHERE id = ?
+        ''',
+        (now, transaction_id, notify_payload, new_expire, order_id)
+    )
+    cursor.execute(
+        '''UPDATE users SET is_vip = 1, expire_at = ? WHERE id = ?''',
+        (new_expire, user_id)
+    )
+    cursor.execute(
+        '''
+        INSERT INTO subscription_history
+        (user_id, event_type, order_id, previous_expire_at, new_expire_at, notes)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ''',
+        (
+            user_id,
+            'subscription_renew' if is_renewal else 'subscription_start',
+            order_id,
+            current_expire,
+            new_expire,
+            f'Payment completed, {plan_type} plan'
+        )
+    )
+    return new_expire
 
 
 # ========== API路由 ==========
@@ -309,7 +466,7 @@ def login_phone():
         return jsonify({'code': 400, 'msg': '验证码错误'})
 
     # Compare hashed code
-    input_hash = _hash_verification_code(code)
+    input_hash = _hash_verification_code(code, phone)
     if input_hash != stored['code_hash']:
         return jsonify({'code': 400, 'msg': '验证码错误'})
 
@@ -618,8 +775,7 @@ def ai_classify():
 
         return jsonify({'code': 200, 'data': {'category': category}})
     except Exception as e:
-        logger.error(f"AI classification failed: {str(e)}")
-        return jsonify({'code': 500, 'msg': str(e)})
+        return internal_server_error('AI classification failed', e)
 
 
 # AI dynamic rescheduling
@@ -665,8 +821,7 @@ def ai_reschedule():
 
         return jsonify({'code': 200, 'data': reordered})
     except Exception as e:
-        logger.error(f"AI reschedule failed: {str(e)}")
-        return jsonify({'code': 500, 'msg': str(e)})
+        return internal_server_error('AI reschedule failed', e)
 
 
 # ========== Subscription & Payment API ==========
@@ -805,7 +960,7 @@ def wechat_pay_notify():
     if success:
         order_no = data.get('out_trade_no')
         transaction_id = data.get('transaction_id')
-        total_fee = int(data.get('total_fee', 0)) / 100  # Convert cents to yuan
+        total_fee_cents = int(data.get('total_fee', 0))
 
         # Update order status and user subscription
         with get_db_connection() as conn:
@@ -813,59 +968,37 @@ def wechat_pay_notify():
 
             # Find order
             cursor.execute(
-                '''SELECT id, user_id, plan_type, days FROM subscription_orders
-                   WHERE order_no = ? AND status = 'pending' ''',
+                '''SELECT id, user_id, plan_type, days, amount, status, transaction_id FROM subscription_orders
+                   WHERE order_no = ?''',
                 (order_no,)
             )
             order = cursor.fetchone()
 
             if not order:
-                logger.warning(f"Order not found or already processed: {order_no}")
+                logger.warning(f"Order not found: {order_no}")
                 return response_xml, 200, {'Content-Type': 'application/xml'}
 
-            order_id, user_id, plan_type, days = order
+            order_id, user_id, plan_type, days, amount, status, existing_transaction_id = order
+            expected_total_fee_cents = int(round(float(amount) * 100))
 
-            # Update order status
-            cursor.execute(
-                '''UPDATE subscription_orders
-                   SET status = 'paid', paid_at = ?, transaction_id = ?, notify_data = ?
-                   WHERE id = ?''',
-                (datetime.now(), transaction_id, xml_data, order_id)
-            )
+            if status == 'paid':
+                logger.info(f"Duplicate payment notification ignored: {order_no}/{existing_transaction_id}")
+                return response_xml, 200, {'Content-Type': 'application/xml'}
 
-            # Calculate new expiration date
-            # Get current expiration
-            cursor.execute('SELECT expire_at FROM users WHERE id = ?', (user_id,))
-            user = cursor.fetchone()
-            current_expire = user[0]
+            if expected_total_fee_cents != total_fee_cents:
+                logger.error(
+                    f"Payment amount mismatch for {order_no}: expected {expected_total_fee_cents}, got {total_fee_cents}"
+                )
+                return wechat_pay._generate_response_xml(False, 'amount mismatch'), 200, {'Content-Type': 'application/xml'}
 
-            now = datetime.now()
-            if current_expire:
-                if isinstance(current_expire, str):
-                    current_expire_dt = datetime.fromisoformat(current_expire)
-                else:
-                    current_expire_dt = current_expire
-                # If current subscription is still active, extend from current expiration
-                if current_expire_dt > now:
-                    new_expire = current_expire_dt + timedelta(days=days)
-                else:
-                    new_expire = now + timedelta(days=days)
-            else:
-                new_expire = now + timedelta(days=days)
-
-            # Update user subscription
-            cursor.execute(
-                '''UPDATE users SET is_vip = 1, expire_at = ? WHERE id = ?''',
-                (new_expire, user_id)
-            )
-
-            # Record subscription history
-            cursor.execute(
-                '''INSERT INTO subscription_history
-                   (user_id, event_type, order_id, previous_expire_at, new_expire_at, notes)
-                   VALUES (?, ?, ?, ?, ?, ?)''',
-                (user_id, 'subscription_start', order_id, current_expire, new_expire,
-                 f"Payment completed, {plan_type} plan")
+            new_expire = _apply_paid_subscription(
+                cursor,
+                order_id=order_id,
+                user_id=user_id,
+                plan_type=plan_type,
+                days=days,
+                transaction_id=transaction_id,
+                notify_payload=xml_data
             )
 
             conn.commit()
@@ -984,10 +1117,20 @@ def list_user_organizations():
 def invite_member():
     """Invite a member to organization"""
     inviter_id = request.user_id
-    data = request.get_json()
+    data = request.get_json() or {}
     org_id = data.get('org_id')
     team_id = data.get('team_id')
     role = data.get('role', 'member')
+    invite_message = (data.get('message') or '').strip()
+
+    if not org_id:
+        return jsonify({'code': 400, 'msg': '缺少组织ID'})
+    if role not in ('admin', 'lead', 'member'):
+        return jsonify({'code': 400, 'msg': '角色无效'})
+
+    contact_type, contact_value, error_msg = _normalize_invite_contact(data)
+    if error_msg:
+        return jsonify({'code': 400, 'msg': error_msg})
 
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -1000,12 +1143,100 @@ def invite_member():
         if not row or row[0] not in ('admin', 'lead'):
             return jsonify({'code': 403, 'msg': '无邀请权限'})
 
-        # TODO: Get user_id by phone/email, send invitation
-        # For now, create pending invitation record
-        # Actual user lookup and notification will be implemented later
+        cursor.execute('SELECT name FROM organizations WHERE id = ?', (org_id,))
+        org_row = cursor.fetchone()
+        if not org_row:
+            return jsonify({'code': 404, 'msg': '组织不存在'})
+        org_name = org_row[0]
 
-    # Placeholder - actual implementation needs user search and notification
-    return jsonify({'code': 200, 'msg': '邀请已发送'})
+        if team_id:
+            cursor.execute('SELECT id FROM teams WHERE id = ? AND org_id = ?', (team_id, org_id))
+            if not cursor.fetchone():
+                return jsonify({'code': 400, 'msg': '团队不存在或不属于该组织'})
+
+        invitee_user_id = None
+        if contact_type == 'phone':
+            cursor.execute('SELECT id FROM users WHERE phone = ?', (contact_value,))
+            user_row = cursor.fetchone()
+            invitee_user_id = user_row[0] if user_row else None
+        elif contact_type == 'email':
+            cursor.execute('SELECT id FROM users WHERE email = ?', (contact_value,))
+            user_row = cursor.fetchone()
+            invitee_user_id = user_row[0] if user_row else None
+
+        member_row = None
+        if invitee_user_id:
+            cursor.execute(
+                '''
+                SELECT status FROM org_members
+                WHERE org_id = ? AND user_id = ?
+                ''',
+                (org_id, invitee_user_id)
+            )
+            member_row = cursor.fetchone()
+            if member_row and member_row[0] == 'active':
+                return jsonify({'code': 409, 'msg': '该用户已在组织中'})
+            if member_row and member_row[0] == 'pending':
+                return jsonify({'code': 409, 'msg': '该用户已有待处理邀请'})
+
+        cursor.execute(
+            '''
+            SELECT id FROM org_invitations
+            WHERE org_id = ? AND contact_value = ? AND status = 'pending'
+            ''',
+            (org_id, contact_value)
+        )
+        if cursor.fetchone():
+            return jsonify({'code': 409, 'msg': '该联系方式已有待处理邀请'})
+
+        invite_code = secrets.token_urlsafe(16)
+        expires_at = datetime.now() + timedelta(days=7)
+        notify_channel, notify_status = _send_org_invitation_notification(
+            cursor,
+            org_name=org_name,
+            inviter_id=inviter_id,
+            invitee_user_id=invitee_user_id,
+            contact_type=contact_type,
+            contact_value=contact_value,
+            invite_code=invite_code
+        )
+
+        cursor.execute(
+            '''
+            INSERT INTO org_invitations
+            (org_id, team_id, inviter_user_id, invitee_user_id, contact_type, contact_value,
+             role, invite_code, invite_message, status, notify_channel, notify_status, expires_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?)
+            ''',
+            (
+                org_id, team_id, inviter_id, invitee_user_id, contact_type, contact_value,
+                role, invite_code, invite_message, notify_channel, notify_status, expires_at
+            )
+        )
+        invitation_id = cursor.lastrowid
+
+        if invitee_user_id and not member_row:
+            cursor.execute(
+                '''
+                INSERT INTO org_members (org_id, team_id, user_id, role, status)
+                VALUES (?, ?, ?, ?, 'pending')
+                ''',
+                (org_id, team_id, invitee_user_id, role)
+            )
+
+        conn.commit()
+
+    return jsonify({
+        'code': 200,
+        'data': {
+            'invitation_id': invitation_id,
+            'invite_code': invite_code,
+            'contact_type': contact_type,
+            'contact_value': contact_value,
+            'notify_channel': notify_channel,
+            'notify_status': notify_status,
+        }
+    })
 
 
 @app.route('/api/org/members', methods=['GET'])
@@ -1029,8 +1260,9 @@ def list_org_members():
             return jsonify({'code': 403, 'msg': '无权限访问'})
 
         cursor.execute(
-            '''SELECT om.id, om.team_id, om.user_id, om.role, om.status, om.invited_at
+            '''SELECT om.id, om.team_id, om.user_id, om.role, om.status, om.invited_at, u.phone, u.email
                FROM org_members om
+               LEFT JOIN users u ON u.id = om.user_id
                WHERE om.org_id = ?
                ORDER BY om.role DESC, om.created_at''',
             (org_id,)
@@ -1045,6 +1277,36 @@ def list_org_members():
                 'role': row[3],
                 'status': row[4],
                 'invited_at': row[5],
+                'phone': row[6],
+                'email': row[7],
+                'source': 'member',
+            })
+
+        cursor.execute(
+            '''
+            SELECT id, team_id, invitee_user_id, role, status, created_at, contact_type, contact_value,
+                   invite_code, notify_channel, notify_status
+            FROM org_invitations
+            WHERE org_id = ? AND status = 'pending'
+            ORDER BY created_at DESC
+            ''',
+            (org_id,)
+        )
+        invite_rows = cursor.fetchall()
+        for row in invite_rows:
+            members.append({
+                'id': row[0],
+                'team_id': row[1],
+                'user_id': row[2],
+                'role': row[3],
+                'status': row[4],
+                'invited_at': row[5],
+                'contact_type': row[6],
+                'contact_value': row[7],
+                'invite_code': row[8],
+                'notify_channel': row[9],
+                'notify_status': row[10],
+                'source': 'invitation',
             })
 
     return jsonify({'code': 200, 'data': {'members': members}})
@@ -2148,8 +2410,7 @@ def browser_get_today_activities():
         processed = process_activities_data(raw_activities, date_str)
         return jsonify({'code': 200, 'data': processed})
     except Exception as e:
-        logger.error(f"Failed to read activities file: {e}")
-        return jsonify({'code': 500, 'msg': str(e)})
+        return internal_server_error('Failed to read activities file', e)
 
 
 @app.route('/api/browser/get-activities-by-date', methods=['GET'])
@@ -2173,8 +2434,7 @@ def browser_get_activities_by_date():
         processed = process_activities_data(raw_activities, date_str)
         return jsonify({'code': 200, 'data': processed})
     except Exception as e:
-        logger.error(f"Failed to read activities file: {e}")
-        return jsonify({'code': 500, 'msg': str(e)})
+        return internal_server_error('Failed to read activities file', e)
 
 
 @app.route('/api/browser/get-today-stats', methods=['GET'])
@@ -2228,8 +2488,7 @@ def browser_get_today_stats():
             }
         })
     except Exception as e:
-        logger.error(f"Failed to calculate stats: {e}")
-        return jsonify({'code': 500, 'msg': str(e)})
+        return internal_server_error('Failed to calculate stats', e)
 
 
 @app.route('/api/browser/get-monthly-stats', methods=['GET'])

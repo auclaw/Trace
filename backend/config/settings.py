@@ -17,6 +17,7 @@ KIMI_API_KEY = os.environ.get('KIMI_API_KEY', '')
 
 # Volcano Engine AI configuration
 VOLC_API_KEY = os.environ.get('VOLC_API_KEY', '')
+VOLCENGINE_API_KEY = os.environ.get('VOLCENGINE_API_KEY', VOLC_API_KEY)
 VOLC_API_SECRET = os.environ.get('VOLC_API_SECRET', '')
 VOLC_ENDPOINT = os.environ.get('VOLC_ENDPOINT', 'https://aquasearch.volcengineapi.com')
 
@@ -48,6 +49,7 @@ SMS_ACCESS_KEY_ID = os.environ.get('SMS_ACCESS_KEY_ID', '')
 SMS_ACCESS_KEY_SECRET = os.environ.get('SMS_ACCESS_KEY_SECRET', '')
 SMS_SIGN_NAME = os.environ.get('SMS_SIGN_NAME', '')
 SMS_TEMPLATE_CODE = os.environ.get('SMS_TEMPLATE_CODE', '')
+SMS_INVITE_TEMPLATE_CODE = os.environ.get('SMS_INVITE_TEMPLATE_CODE', '')
 
 # Database path
 DATABASE_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'trace.db')

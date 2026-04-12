@@ -39,19 +39,27 @@ FLASK_ENV=production
 
 # 阿里云短信配置（验证码登录）
 SMS_ACCESS_KEY_ID=your-access-key
-SMS_SECRET_ACCESS_KEY=your-secret-key
+SMS_ACCESS_KEY_SECRET=your-secret-key
 SMS_SIGN_NAME=你的签名
 SMS_TEMPLATE_CODE=你的模板CODE
+SMS_INVITE_TEMPLATE_CODE=你的组织邀请模板CODE
 
 # 微信登录配置（可选）
 WECHAT_APP_ID=your-app-id
 WECHAT_APP_SECRET=your-app-secret
-WECHAT_REDIRECT_URI=https://your-domain.com/callback
+
+# 微信支付配置
+WECHAT_PAY_MCH_ID=your-mch-id
+WECHAT_PAY_API_KEY=your-pay-api-key
+WECHAT_PAY_NOTIFY_URL=https://api.your-domain.com/api/subscription/wechat-notify
 
 # AI API 配置
-AI_DEFAULT_PROVIDER=ernie
-AI_ERNIE_API_KEY=your-ernie-api-key
-AI_ERNIE_SECRET_KEY=your-ernie-secret
+ERNIE_API_KEY=your-ernie-api-key
+VOLC_API_KEY=your-volc-api-key
+VOLC_API_SECRET=your-volc-secret
+
+# Tauri 自动更新公钥（仅发布机/CI 注入）
+TRACE_UPDATER_PUBKEY=your-tauri-updater-public-key
 ```
 
 ### 3. 启动服务
@@ -151,6 +159,8 @@ docker-compose up -d
 3. **限制端口** - 只开放 80/443，5000 不直接对外
 4. **定期备份** - 定时备份数据库
 5. **更新依赖** - 定期 `docker pull` 和重建获取安全更新
+6. **密钥不入仓库** - `SECRET_KEY`、支付密钥、短信密钥、AI Key、`TRACE_UPDATER_PUBKEY` 全部来自 Secret Manager / CI Secret
+7. **发布前演练** - 运行 `npm run test:release`，正式打包前使用 `RUN_TAURI_BUILD=1 npm run test:release`
 
 ## 故障排查
 

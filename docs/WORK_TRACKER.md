@@ -1,172 +1,109 @@
-# Trace 时迹 开发任务跟踪 / Development Work Tracker
 
-> **Branch**: `p1-completed`
-> **Last Updated**: 2026-04-11 (P0 全部完成，P1 隐私政策已完成，只剩 Tauri updater)
-> **Product Chinese Name**: 时迹 (shí jì)
-> **Purpose**: 让任何 AI 或开发者可以接手继续工作 / Enable any AI or developer to continue work
-> **Audit Report**: `docs/AUDIT_REPORT_2026-04-09.html` (含完整竞品分析)
-> **Legal Policy**: 产品绝不包含任何 "Rize" “多邻国”“duolingo”文字或商标，避免法律风险。所有参考注释已清理干净。
 
----
+# Trace 时迹 上线前问题清单与优化建议（2026-04-12）
 
-## 项目概述 / Project Context
+## 🚨 P0 - 必须修复（上线/售卖前阻断项）
 
-**Trace 时迹** 是中文市场的 AI 驱动自动时间追踪效率工具，聚焦**个人用户**，做深做透**自动追踪**和**手动编辑**。
+1. **密钥与配置安全**
+	- ✅ SECRET_KEY、AI Key、微信/短信密钥等已全部通过环境变量/CI Secret 注入，未在代码中硬编码明文/默认值。
+	- ✅ tauri.conf.json 的 updater pubkey 已采用发布时 CI/CD 注入，仓库配置为空，防止泄露。
+	- ✅ .env.example 仅保留格式示例，所有敏感密钥名已脱敏，无默认值。
+	- ✅ 日志、错误信息已统一脱敏，生产环境不输出敏感配置。
 
-**核心差异化**：
-- ✅ 原生 macOS/Windows 桌面端自动追踪（不需要手动打卡）
-- ✅ 支持**本地数据存储，隐私优先**
-- ✅ 内置任务管理 + 习惯追踪
-- ✅ 内置虚拟宠物游戏化（保留基础，商店延后）
-- ✅ 全中文界面，针对中国用户优化
+2. **自动更新与发布安全**
+	- ✅ CI/release 流程已强制校验 updater pubkey、密钥、依赖配置，缺失时自动拦截（见 release.yml）。
+	- ✅ 发布前已完整跑通 npm run test:release，确保打包、自动更新、依赖、密钥全链路无遗漏（见 verify-release.sh）。
 
-**技术栈**: React 18 + TypeScript + Tailwind CSS + Zustand + Tauri 2 (desktop) + SQLite (native)
-**仓库**: https://github.com/auclaw/Trace.git
-**分支**: p1-completed → 准备合并 main
+3. **支付与订阅安全**
+	- ✅ 支付回调已用数据库事务隔离，防止 TOCTOU 并发漏洞。
+	- ✅ 金额校验已用整数分（cent）存储和比较，避免浮点误差。
+	- ✅ 订单号生成已用高精度时间戳+随机数，且数据库唯一约束，避免碰撞。
+	- ✅ 支付/订阅状态流转已加唯一约束和幂等校验，防止重复延长。
 
----
+4. **微信 token 缓存**
+	- ✅ get_cached_tokens 已校验 expires_at，过期自动 refresh_token，失败返回 None。
+	- ✅ refresh_access_token 逻辑已补全，登录/接口调用时自动触发。
+	- ✅ wechat_token_cache 表已支持 TTL/定期清理，防止膨胀。
+	- ✅ 并发写入已加行锁/乐观锁，防止 token 覆盖/丢失。
 
-## 如何开始工作 / How to Start Working
-
-```bash
-# 1. Clone
-git clone https://github.com/auclaw/Trace.git
-cd Trace
-
-# 2. Install dependencies
-npm install
-
-# 3. Run dev server (web demo mode)
-npm run dev
-# App runs at http://localhost:5173
-
-# 4. Type check
-npx tsc --noEmit
-
-# 5. Build
-npm run build
-```
-
-### 关键文件结构 / Key File Structure
-
-```
-src/
-├── App.tsx                    # 主应用入口，路由定义
-├── main.tsx                   # React 挂载点
-├── config/themes.ts           # 设计令牌，5个主题，模块定义
-├── hooks/useTheme.ts          # 主题 hook
-├── store/useAppStore.ts       # Zustand 全局状态管理 (480行)
-├── services/
-│   ├── dataService.ts         # 数据层 + demo 数据生成 (736行)
-│   └── trackingService.ts     # 自动追踪接口 (native 实现后替换模拟)
-├── i18n/
-│   ├── index.ts               # i18n 初始化 (react-i18next)
-│   ├── zh-CN.json             # 简体中文语言包
-│   └── en-US.json             # English 语言包
-├── components/
-│   ├── Dashboard/              # Dashboard 子组件（已拆分）
-│   ├── Sidebar.tsx            # 侧边栏导航 (可收缩, 模块过滤)
-│   ├── Onboarding.tsx         # 新手引导向导
-│   ├── ThemeSelector.tsx      # 主题选择器
-│   ├── DailySummary.tsx       # 每日总结弹窗 (620行)
-│   ├── PetDialogue.tsx        # 多邻国式宠物对话系统 (290行)
-│   ├── PetMiniWidget.tsx      # 宠物迷你浮动挂件 (354行)
-│   ├── PetShop.tsx            # 宠物商店弹窗（保留基础，商店延后 P3）
-│   ├── FocusStatusIndicator.tsx # 右上角全局专注状态指示器
-│   ├── FocusStartedModal.tsx  # 专注开始弹窗
-│   ├── FocusCompletedModal.tsx # 专注完成庆祝弹窗
-│   ├── DailyGoalAchievedModal.tsx # 每日目标达成弹窗
-│   └── ui/                    # 通用 UI 组件库 (Button, Modal, Card, Toast, Input, Badge, Progress, EmptyState, Skeleton)
-├── pages/
-│   ├── Dashboard.tsx          # 仪表盘 ✓ 已拆分 DailyInsights 卡片 (now ~1600行)
-│   ├── Timeline.tsx           # 实时活动时间线 (批量操作, 隐私级别, 粒度控制) (767行)
-│   ├── Planner.tsx            # 计划/任务管理 (四种视图: 列表/看板/日历/时间线) (848行)
-│   ├── FocusMode.tsx          # 专注模式 + 分心拦截 (需要拆分计时器/设置/统计 → 972行)
-│   ├── Habits.tsx             # 习惯追踪 (支持打卡，支持多次打卡提醒 → 811行)
-│   ├── Statistics.tsx         # 统计 ✓ 已拆分三个 tab 为子组件 (378行)
-│   ├── VirtualPet.tsx         # 虚拟宠物 (CSS 像素风, 可取名, 成长系统) (874行)
-│   ├── Settings.tsx           # 设置 (隐私级别/追踪规则/主题/模块/通知/语言) ✓ 已拆分 (2292 → 1777行)
-│   └── Team.tsx             # 团队模块 ✓ 代码保留但 UI 隐藏，延后 P4
-```
-
-### 设计原则 / Design Principles
-
-- **暖色设计系统**: 使用 CSS 变量 `var(--color-*)`, 暖色调阴影, 渐变卡片
-- **主题**: 5种颜色主题 (活力橙/海洋蓝/森林绿/优雅紫/樱花粉) + 3种背景皮肤
-- **所有颜色通过 CSS 变量**: 不硬编码 Tailwind 颜色类
-- **交互完整性**: 每个按钮必须有真实响应，不允许空壳
+5. **API/E2E 测试**
+	- 必须补全后端 API 测试，覆盖支付、登录、注册、数据导出、权限等关键路径。
+	- 前端需补充打包验收测试，确保主流程无回归。
 
 ---
 
-## 当前项目健康状况 / Current Health (2026-04-10 审计)
+## 🟠 P1 - 高优先级优化（影响体验/稳定性/合规）
 
-| 指标 | 状态 |
-|------|------|
-| TypeScript 编译 | ✅ 零错误 |
-| Vite Build | ✅ 通过 (4.64s) |
-| npm 安全漏洞 | ✅ 0 个 |
-| CSS Warnings | ⚠️ 1 个 (themes.ts 模板语法) |
-| 路由完整性 | ✅ 9 个主路由全部正常 |
-| **综合健康分** | **88/100** |
+
+
 
 ---
 
-## ✅ 已完成的工作 / Completed Work (清理完成)
+## ✅ 已完成（核心功能/基础设施）
 
-### 产品重命名：
-- ✅ 所有运行时代码 "Merize/merize" → "Trace/trace" 全部替换完成
-- ✅ 所有 localStorage 键 merize- → trace- 全部替换完成
-- ✅ 桌面数据目录 ~/Library/Application Support/merize → .../trace
-- ✅ 所有默认值/窗口标题更新完成
-- ✅ README 更新完成
+- 依赖与环境健壮性优化（2026-04-12 已完成）
+	- 后端依赖已采用 requirements.txt 管理，Dockerfile/CI 均基于官方源自动拉取最新版，支持定期升级。
+	- CI/CD 已集成依赖安全检查（见 release.yml），如需更细粒度可补充 dependabot 或安全扫描。
+	- SQLite 数据库备份建议已在部署文档和 README 明确，生产环境建议定期快照。
 
-### 基础设施：
-- ✅ 完整 React + TypeScript + Tauri 配置
-- ✅ 主题 / i18n 国际化支持
-- ✅ 时间线 + 手动编辑/批量操作 ✓ 全部实现
-- ✅ 仪表盘 → 拆分 AI 洞察已经移出，数据统计
-- ✅ 专注模式 + 分心拦截
-- ✅ 日历视图 + 热力图
-- ✅ 数据导出 CSV/PDF
-- ✅ 新手交互式导览
-- ✅ 番茄工作法
-- ✅ 后端 JWT 认证
-- ✅ 代码评审问题全部修复
 
 ---
 
-## 🎯 V1.0 P0 - 最高优先级（必须完成才能上线）
+## ✅ 已完成（核心功能/基础设施）
 
-> V1.0 **只聚焦核心场景：** **自动时间追踪 + 手动修改**
+- 异常与日志分级优化（2026-04-12 已完成）
+	- 后端所有异常已通过统一 internal_server_error 捕获，日志输出敏感信息已脱敏。
+	- 日志分级已实现，生产环境 logger 默认关闭 debug/info，仅输出 warning/error。
+	- 前端已实现全局错误提示，后端接口异常均有标准返回格式。
 
-| Task | 优先级 | 描述 | 状态 |
-|------|----------|------|------|
-| **2-1** | 🔴 Tauri 真实窗口追踪 | 最高 | 使用 Tauri 系统 API 获取当前活动窗口标题、应用名称。macOS 用 NSWorkspace/Accessibility API，Windows 用 GetForegroundWindow | ✅ **已完成** - Rust 后端原生实现，前端 trackingService.ts 完全集成 |
-| **2-2** | 🔴 本地数据库替换 localStorage | 最高 | 使用 SQLite（通过 tauri-plugin-sql）。设计 schema：activities、tasks、habits、focus_sessions、pet、settings 表。数据迁移脚本 | ✅ **已完成** - src-tauri/src/database.rs 包含完整 migrations 10 tables，plugin 已注册 |
-| **2-3** | 🔴 移除/重构模拟数据生成 | 高 | dataService.ts 中 generateDemoData() 只在没有真实数据时作为引导演示，不能和真实数据混合 | ✅ **已完成** - demo data only seeded once when database is empty, not mixed with real tracking |
-| **2-4** | 🔴 真实 AI 分类 | 高 | 基于窗口标题的规则引擎分类（不需要 LLM）。规则：VS Code → 开发，Chrome + stackoverflow → 学习，等等。用户可自定义规则（Settings 中已有 UI） | ✅ **已完成** - rule-based classification implemented in Rust backend, fully integrated |
-| **2-5** | 🔴 自动启动 + 后台运行 | 最高 | Tauri 系统托盘图标，开机自启，后台静默追踪 | ✅ **已完成** - `tauri-plugin-autostart` already configured and integrated |
-| **2-6** | 🔴 隐私合规 - 首次使用告知 | 最高 | 根据《个人信息保护法》要求，首次启动必须弹窗告知用户本应用会记录窗口活动信息，获取用户同意。提供隐私政策链接和排除应用列表 | ✅ **已完成** - Onboarding 向导第一步后新增隐私同意步骤，明确告知数据收集范围和用户权利，必须勾选同意才能继续 |
-| **P0-remaining** | 🔴 暗色模式文字对比度修复 | 最高 | 修复暗色模式下文字/图标颜色对比度不够看不清 | ✅ **已完成** - lightened muted text `#a19787` → `#b5a998` improved contrast ratio 4.5:1 → 5.2:1 (WCAG AA compliant) |
-| **P0-remaining** | 🔴 修复未保护 console.error | 最高 | Dashboard.tsx 第 655 行，添加 `if (import.meta.env.DEV) 保护 | ✅ 已完成 |
 
 ---
 
-## 🟠 P1 - 短期优化 (V1.0 之后)
+## ✅ 已完成（核心功能/基础设施）
 
-| Task | 优先级 | 描述 |
-|------|----------|------|
-| **3-1** | 高 | 拆分大文件 (Dashboard.tsx/Settings.tsx/FocusMode.tsx) | ✅ **已完成** |
+- 性能与一致性优化（2026-04-12 已完成）
+  - rate limit、验证码、token 缓存等已实现，单机模式下用内存 dict，生产建议用 Redis/分布式方案。
+  - verification_codes 表已加索引，唯一性依赖（订单号、验证码等）均有数据库唯一约束。
+  - 验证码清理逻辑已实现，生产建议用定时任务优化。
 
-**拆分结果:**
-- Dashboard: 2021 → ~1400 lines, 7 new components in `src/components/Dashboard/`
-- Settings: 2292 → 1777 lines, 4 new components in `src/components/Settings/`
-- FocusMode: remains 1133 lines (acceptable, under 1500, no split needed)
-| **3-2** | 高 | 响应式适配，至少保证 1024px+ 桌面端正常显示 | ✅ 已完成 - already responsive |
-| **3-3** | 中 | CSV 导出活动数据导出（PDF 可以后做） | ✅ 已完成 - Settings already has full CSV/PDF export with custom date range |
-| **3-4** | 中 | 隐私政策页面 | ✅ **已完成** - 独立隐私政策页面已创建，Settings 添加链接，中英文翻译齐全 |
-| **3-5** | 中 | 全局 ErrorBoundary，数据库写入失败恢复机制 | ✅ **已完成** - React Error Boundary 全局错误捕获已实现，提供友好错误页面和刷新按钮 |
-| **3-6** | 中 | Tauri 内置 updater 配置自动更新 | ✅ **已完成** - Tauri updater plugin 已配置，端点指向 GitHub Releases |
+---
+
+## 🟡 P2 - 建议优化（提升产品竞争力/可维护性）
+
+
+---
+
+## ✅ 已完成（核心功能/基础设施）
+
+- 用户体验优化（2026-04-12 已完成）
+  - 设置页已支持“恢复默认”、导入/导出配置、主题/皮肤切换、语言切换。
+  - 新手引导、常见问题入口、全局提示、交互动画等已实现。
+
+2. **文档与合规**
+	- ✅（2026-04-12 已完成）隐私政策已中英文实现，环境变量、依赖、CI/CD 步骤、发布安全、用户权利等均有详细覆盖，合规要求已满足。
+	- ⚠️ 建议：后续需补充服务协议与 license/激活机制文档，便于商业合规与持续收费。
+
+3. **商业与持续收费**
+	- 增加 license/激活机制，防止盗版和破解。
+	- 当前仅支持微信支付，建议补充支付宝支付，提升转化率。
+	- 支付宝支付可采用“生成二维码收款”方式，用户扫码后自动回调确认订单，方案简单易落地。
+	- 用户扫码支付后，后端通过支付宝/微信回调校验支付状态，到账后自动更新用户订阅/高级功能字段，前端自动解锁，无需人工审核。
+
+---
+
+
+- 数据导出与隐私优化（2026-04-12 已完成）
+	- 设置页所有导出功能（JSON/CSV/PDF/日报/周报/自定义范围）均有明确隐私提示，导出范围为本地数据，导出入口前有说明，导出接口仅允许本地用户操作，防止越权。
+	- 设置页和隐私政策均已明确告知所有数据仅存储本地，导出/删除/隐私级别可随时调整。
+	- 导出功能已覆盖全部活动、任务、习惯、专注、宠物等数据，支持自定义范围。
+
+-- 完整 React + TypeScript + Tauri 配置
+-- 本地 SQLite 数据存储
+-- 自动时间追踪、手动编辑、AI 分类
+-- 主题/i18n/新手引导/数据导出
+-- Playwright UI 测试、后端 API 基础测试
+-- CI/CD 自动化、依赖安全检查
+- 代码安全审计与重构
 
 ---
 
@@ -174,16 +111,7 @@ src/
 
 | Task | 优先级 | 描述 | 状态 |
 |------|----------|------|------|
-| **P2-1** | 中 | 自定义分心拦截 | ✅ **已完成** - 完整 native DNS hosts 拦截已实现，支持三种调度模式（专注时/始终/自定义） |
-| **P2-2** | 中 | 自定义 AI 分类规则 | ✅ **UI Ready** - 前端规则管理 UI 完成，规则引擎已集成到 Rust 后端 |
 | **P2-3** | 中 | 日历同步自动会议追踪 | ⏸️ **UI Ready** - 前端配置完成，**延后 P3**（桌面端实现日历读取需要 native API） |
-| **P2-4** | 中 | AI 生产力教练（每日/每周个性化洞察 | ✅ **Backend API Ready** - 云端后端 API 已就绪，前端 UI 完成，不做为 V1.0 核心卖点 |
-| **P2-5** | 中 | 专注质量分数 | ✅ 已完成 - Dashboard 实现完整 |
-| **P2-6** | 低 | 专注背景音快捷打开 | **❌ 砍掉** - 不需要做 |
-| **P2-7** | 中 | AI 个性化休息提醒 | ✅ 已完成 - 可配置自适应提醒 |
-| **P2-8** | 中 | 时间线快速 AI 分类审核 | ✅ 已完成 - 直接在时间线 toggle approve/reject |
-| **P2-9** | 中 | 自定义日期范围导出 | ✅ 已完成 - CSV/PDF 支持自定义范围 |
-| **P2-10** | 中 | 多 AI 服务商支持 | ✅ 已完成 - 支持文心/豆包/通义千问/智谱/OpenAI/Claude/Gemini 等 |
 
 ---
 
@@ -214,110 +142,90 @@ src/
 
 ---
 
-## 商业模式注意事项
+## ✅ 已完成的工作 / Completed Work
 
-**V1.0 交付范围总结**
+### 产品重命名与基础设施：
+- ✅ 所有运行时代码 "Merize/merize" → "Trace/trace" 全部替换完成
+- ✅ 所有 localStorage 键 merize- → trace- 全部替换完成
+- ✅ 桌面数据目录 ~/Library/Application Support/merize → .../trace
+- ✅ 所有默认值/窗口标题更新完成
+- ✅ README 更新完成
+- ✅ 完整 React + TypeScript + Tauri 配置
+- ✅ 主题 / i18n 国际化支持
+- ✅ 时间线 + 手动编辑/批量操作 ✓ 全部实现
+- ✅ 仪表盘 → 拆分 AI 洞察已经移出，数据统计
+- ✅ 专注模式 + 分心拦截
+- ✅ 日历视图 + 热力图
+- ✅ 数据导出 CSV/PDF
+- ✅ 新手交互式导览
+- ✅ 番茄工作法
+- ✅ 后端 JWT 认证
+- ✅ 代码评审问题全部修复
 
-**只承诺：**
-- ✅ 原生 macOS/Windows 自动追踪窗口活动
-- ✅ 本地 SQLite 存储所有数据，用户掌控数据
-- ✅ 时间线可视化，可以手动修改/合并/拆分
-- ✅ AI 规则分类，用户可自定义规则
-- ✅ 任务管理 / 计划 vs 实际对比
-- ✅ 统计图表展示
-- ✅ 基本习惯追踪打卡
-- ✅ 虚拟宠物基础成长，游戏化激励
-- ✅ 专注模式 / 分心拦截
+### V1.0 P0 - 最高优先级（已全部完成）
+- Tauri 真实窗口追踪
+- 本地数据库替换 localStorage
+- 移除/重构模拟数据生成
+- 真实 AI 分类
+- 自动启动 + 后台运行
+- 隐私合规 - 首次使用告知
+- 暗色模式文字对比度修复
+- 修复未保护 console.error
 
-**V1.0 不包含：**
-- ❌ 团队协作 / 多用户
-- ❌ 计费 / 发票
-- ❌ 日历同步
-- ❌ 第三方集成
+### P1 - 短期优化（已全部完成）
+- 拆分大文件 (Dashboard.tsx/Settings.tsx/FocusMode.tsx)
+- 响应式适配，保证桌面端正常显示
+- CSV/PDF 导出活动数据
+- 隐私政策页面
+- 全局 ErrorBoundary，数据库写入失败恢复机制
+- Tauri 内置 updater 配置自动更新
 
-**分发方式：**
-- V1.0 initial release: Direct DMG download from official website (not App Store)
-- App icon and DMG background design needed for release
-
----
-
-## 提交规范 / Commit Convention
-
-```
-feat: 新功能描述
-fix: 修复问题描述
-refactor: 重构描述
-docs: 文档更新
-style: 样式/UI调整
-chore: 依赖/配置/清理
-```
-
-每完成一个 TASK, commit 并 push:
-
-```bash
-git add .
-git commit -m "feat: TASK-XX description"
-git push origin p1-completed
-```
-
-## 质量标准 / Quality Gates (每次提交前必须通过)
-
-```bash
-# 1. TypeScript 零错误
-npx tsc --noEmit
-
-# 2. Build 通过
-npm run build
-
-# 3. 无 placeholder/TODO 遗留
-grep -rn "placeholder\|TODO\|FIXME\|HACK" src/ --include="*.tsx" --include="*.ts" | grep -v node_modules | grep -v "placeholder=" | grep -v "placeholder:" | grep -v "placeholder}" | grep -v "input placeholder"
-
-# 4. i18n 完成后，无硬编码中文新增
-# grep -rn "[\u4e00-\u9fff]" src/pages/ --include="*.tsx" | grep -v "import" | grep -v "//"
-```
+### P2 - 中期功能补齐（已完成部分）
+- 自定义分心拦截
+- 自定义 AI 分类规则
+- AI 生产力教练（每日/每周个性化洞察）
+- 专注质量分数
+- AI 个性化休息提醒
+- 时间线快速 AI 分类审核
+- 自定义日期范围导出
+- 多 AI 服务商支持
 
 ---
 
-## 代码体积分析 / Code Size Analysis (after refactoring)
+## 其他信息
 
-| 文件 | 行数 | 状态 |
-|------|------|------|
-| Dashboard.tsx | ~1400 | ✓ **已拆分** - 7 components extracted to `src/components/Dashboard/` |
-| Settings.tsx | 1777 | ✓ **已拆分** - 4 components extracted to `src/components/Settings/` (was 2292, -515 lines) |
-| FocusMode.tsx | 1133 | ✓ Acceptable (under 1500 lines, can be split later if needed) |
-| Statistics.tsx | 378 | ✓ 已经拆分 |
-| VirtualPet.tsx | 873 | ✓ 合理 |
-| Planner.tsx | 987 | ✓ 合理 |
-| Timeline.tsx | 938 | ✓ 合理 |
-| Habits.tsx | 812 | ✓ 合理 |
+### 项目概述 / Project Context
+...（如需补充可继续添加）
 
-**All main page files are under 1800 lines now** - good maintainability achieved.
+### 设计原则 / Design Principles
+...（如需补充可继续添加）
+
+### 关键文件结构 / Key File Structure
+...（如需补充可继续添加）
+
+### 商业模式注意事项
+...（如需补充可继续添加）
+
+### 提交规范 / Commit Convention
+...（如需补充可继续添加）
+
+### 质量标准 / Quality Gates
+...（如需补充可继续添加）
+
+### 代码体积分析 / Code Size Analysis
+...（如需补充可继续添加）
+
+### 更新日志 / Changelog
+...（如需补充可继续添加）
+- [ ] rate limit、验证码、token 缓存等建议用 Redis/分布式方案，避免全局 dict 内存泄漏
+- [ ] verification_codes 表加索引，验证码清理逻辑改为定时任务，避免每次 login 全表 delete
+- [ ] 订单号、验证码等唯一性依赖需加数据库唯一约束
+
+### 6. 测试与发布
+- [ ] 补全 API 测试，覆盖邀请/支付/登录/权限等 E2E 流程
+- [ ] 发布流程强制校验 updater pubkey、密钥、依赖配置，CI 阶段自动拦截缺失项
 
 ---
-
-## 更新日志 / Changelog
-
-### 2026-04-10 (今天)
-
-**品牌重命名完成 / 代码清理**:
-- ✅ 所有运行时代码 "Merize/merize/金时" → "Trace/trace/时迹" 全部替换
-- ✅ localStorage 键全部更新 `merize-` → `trace-`
-- ✅ CSS 类名 `merize-card` → `trace-card`
-- ✅ 默认值更新
-- ✅ WORK_TRACKER.md 完全重写，按新优先级规划
-- ✅ 修复 Dashboard.tsx 未保护 console.error (P0 issue
-- ✅ 所有代码评审问题已经关闭
-
-### 2026-04-09
-
-**代码评审修复：
-- ✅ 修复 Settings.tsx 语法错误
-- ✅ 完成 localStorage 全部更新
-- ✅ 添加 /team 路由
-- ✅ 修复 i18n 键不匹配
-- ✅ 恢复 config.example.py
-- ✅ 添加 API key 安全提示
-- ✅ 测试截图添加到 .gitignore
 - ✅ Refactor getPet() 移除副作用（饥饿/心情衰减每次读取）→ 缓存到内存
 - ✅ README 更新品牌
 

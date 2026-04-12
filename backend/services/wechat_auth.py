@@ -2,9 +2,12 @@
 WeChat OAuth 2.0 Authentication
 完整的微信二维码登录 OAuth 2.0 流程
 """
+import json
+from datetime import datetime, timedelta
 import requests
 from typing import Tuple, Optional, Dict
 from config.settings import WECHAT_APP_ID, WECHAT_APP_SECRET
+from utils.database import get_db_connection
 from utils.logger import setup_logger
 
 logger = setup_logger()
@@ -111,7 +114,51 @@ class WechatAuth:
         return bool(self.app_id and self.app_secret)
 
     def _cache_tokens(self, openid: str, access_token: str, expires_in: int, refresh_token: str):
-        """Cache tokens for future use (placeholder for persistence)"""
-        # TODO: Implement persistent caching if needed
-        logger.debug(f"Cached tokens for WeChat user {openid[:8]}...")
+        """Persist WeChat OAuth tokens in SQLite for later refresh/user info calls."""
+        expires_at = datetime.now() + timedelta(seconds=max(expires_in, 60))
+        raw_payload = json.dumps({
+            'access_token': access_token,
+            'refresh_token': refresh_token,
+            'expires_in': expires_in,
+        })
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                '''
+                INSERT INTO wechat_token_cache (openid, access_token, refresh_token, expires_at, raw_payload, updated_at)
+                VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(openid) DO UPDATE SET
+                    access_token = excluded.access_token,
+                    refresh_token = excluded.refresh_token,
+                    expires_at = excluded.expires_at,
+                    raw_payload = excluded.raw_payload,
+                    updated_at = CURRENT_TIMESTAMP
+                ''',
+                (openid, access_token, refresh_token, expires_at, raw_payload)
+            )
+            conn.commit()
+        logger.debug(f"Persisted WeChat tokens for {openid[:8]}...")
 
+    def get_cached_tokens(self, openid: str) -> Optional[Dict]:
+        """Load cached WeChat token payload."""
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                '''
+                SELECT access_token, refresh_token, expires_at, raw_payload
+                FROM wechat_token_cache
+                WHERE openid = ?
+                ''',
+                (openid,)
+            )
+            row = cursor.fetchone()
+
+        if not row:
+            return None
+
+        return {
+            'access_token': row[0],
+            'refresh_token': row[1],
+            'expires_at': row[2],
+            'raw_payload': json.loads(row[3]) if row[3] else {},
+        }

@@ -10,6 +10,7 @@ pub mod pomodoro;
 pub mod idle_detection;
 
 use std::collections::HashMap;
+use std::env;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
@@ -1756,7 +1757,15 @@ fn main() {
             .add_migrations("sqlite:trace.db", database::get_migrations())
             .build()
         )
-        .plugin(tauri_plugin_updater::Builder::default().build())
+        .plugin({
+            let mut updater_builder = tauri_plugin_updater::Builder::default();
+            if let Ok(pubkey) = env::var("TRACE_UPDATER_PUBKEY") {
+                if !pubkey.trim().is_empty() {
+                    updater_builder = updater_builder.pubkey(pubkey);
+                }
+            }
+            updater_builder.build()
+        })
         .manage(state)
         .setup(move |app| {
             // state is cloned for setup because state was moved into .manage()

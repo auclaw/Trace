@@ -16,7 +16,8 @@ from config.settings import (
     SMS_ACCESS_KEY_ID,
     SMS_ACCESS_KEY_SECRET,
     SMS_SIGN_NAME,
-    SMS_TEMPLATE_CODE
+    SMS_TEMPLATE_CODE,
+    SMS_INVITE_TEMPLATE_CODE
 )
 from utils.logger import setup_logger
 
@@ -32,6 +33,7 @@ class AliCloudSMS:
         self.access_key_secret = access_key_secret or SMS_ACCESS_KEY_SECRET
         self.sign_name = sign_name or SMS_SIGN_NAME
         self.template_code = template_code or SMS_TEMPLATE_CODE
+        self.invite_template_code = SMS_INVITE_TEMPLATE_CODE
         self.endpoint = "dysmsapi.aliyuncs.com"
 
     def _percent_encode(self, s: str) -> str:
@@ -113,6 +115,50 @@ class AliCloudSMS:
                 return False
         except Exception as e:
             logger.error(f"SMS API request error: {str(e)}")
+            return False
+
+    def send_invitation_notice(self, phone: str, org_name: str, inviter_name: str, invite_code: str) -> bool:
+        """Send an organization invitation SMS when a dedicated template is configured."""
+        if not self.access_key_id or not self.access_key_secret:
+            logger.warning(f"SMS invite not configured, invitation for {phone}: org={org_name}, code={invite_code}")
+            return False
+
+        if not self.sign_name or not self.invite_template_code:
+            logger.warning("SMS invite template not configured, invitation requires manual delivery")
+            return False
+
+        params = {
+            'Action': 'SendSms',
+            'Version': '2017-05-25',
+            'AccessKeyId': self.access_key_id,
+            'Timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
+            'Format': 'JSON',
+            'SignatureMethod': 'HMAC-SHA1',
+            'SignatureVersion': '1.0',
+            'SignatureNonce': str(int(datetime.now().timestamp() * 1000000)),
+            'RegionId': 'cn-hangzhou',
+            'PhoneNumbers': phone,
+            'SignName': self.sign_name,
+            'TemplateCode': self.invite_template_code,
+            'TemplateParam': json.dumps({
+                'org_name': org_name,
+                'inviter_name': inviter_name,
+                'invite_code': invite_code,
+            })
+        }
+        params['Signature'] = self._calculate_signature(params)
+        url = f"https://{self.endpoint}/?{urllib.parse.urlencode(params)}"
+
+        try:
+            response = requests.get(url, timeout=10)
+            result = response.json()
+            if result.get('Code') == 'OK':
+                logger.info(f"Invitation SMS sent to {phone} for org {org_name}")
+                return True
+            logger.error(f"Invitation SMS failed: {result.get('Message', 'Unknown error')}")
+            return False
+        except Exception as e:
+            logger.error(f"Invitation SMS request error: {str(e)}")
             return False
 
 

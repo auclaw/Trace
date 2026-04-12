@@ -108,7 +108,7 @@ merize/
 ```bash
 cd backend
 pip install -r requirements.txt
-# 复制 config.example.py 为 config.py 填入你的配置
+# 或在项目根目录复制 .env.example 为 .env 并注入环境变量
 python app.py
 ```
 
@@ -126,10 +126,16 @@ npm run tauri build
 
 ## 配置说明
 
-后端 `backend/config.py`:
+优先使用环境变量或项目根目录 `.env` 管理配置，避免把密钥写进仓库。
+
+关键配置：
 1. `SECRET_KEY` - JWT 密钥
 2. `ERNIE_API_KEY` / `DOUBAN_API_KEY` - 大模型 API 密钥（二选一）
 3. `WECHAT_APP_ID` / `WECHAT_APP_SECRET` - 微信开放平台
+4. `WECHAT_PAY_MCH_ID` / `WECHAT_PAY_API_KEY` / `WECHAT_PAY_NOTIFY_URL` - 微信支付
+5. `SMS_ACCESS_KEY_ID` / `SMS_ACCESS_KEY_SECRET` / `SMS_TEMPLATE_CODE` - 短信验证码
+6. `SMS_INVITE_TEMPLATE_CODE` - 组织邀请短信模板
+7. `TRACE_UPDATER_PUBKEY` - Tauri updater 公钥，仅发布时通过 CI Secret 注入
 
 ## 技术栈
 
@@ -150,6 +156,15 @@ npm run tauri build
 - 用户可自定义主题配色（五种彩色主题）
 - 超大圆角 + 柔和阴影分层，无边框设计更现代
 - 全面对齐国内桌面端产品交互习惯
+
+## 发布前验证
+
+```bash
+npm run test:release
+RUN_TAURI_BUILD=1 npm run test:release
+```
+
+更多安全与发布控制要求见 [docs/SECURITY_AND_RELEASE.md](docs/SECURITY_AND_RELEASE.md)。
 
 ## 安装指南
 
