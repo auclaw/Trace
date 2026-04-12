@@ -41,3 +41,4 @@ winapi = { version = "0.3", features = ["winuser", "sysinfoapi"] }
 [target.'cfg(target_os = "linux")'.dependencies]
 x11 = "2.2"
 x11-dl = "2.2"
+x11-screensaver = "0.3"
