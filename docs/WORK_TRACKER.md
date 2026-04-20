@@ -1,96 +1,137 @@
+# Trace Work Tracker
 
-
-# Trace 时迹 上线前问题清单与优化建议（2026-04-12）
-
-## 🚨 P0 - 必须修复（上线/售卖前阻断项）
-
-1. **密钥与配置安全**
-	- ✅ SECRET_KEY、AI Key、微信/短信密钥等已全部通过环境变量/CI Secret 注入，未在代码中硬编码明文/默认值。
-	- ✅ tauri.conf.json 的 updater pubkey 已采用发布时 CI/CD 注入，仓库配置为空，防止泄露。
-	- ✅ .env.example 仅保留格式示例，所有敏感密钥名已脱敏，无默认值。
-	- ✅ 日志、错误信息已统一脱敏，生产环境不输出敏感配置。
-
-2. **自动更新与发布安全**
-	- ✅ CI/release 流程已强制校验 updater pubkey、密钥、依赖配置，缺失时自动拦截（见 release.yml）。
-	- ✅ 发布前已完整跑通 npm run test:release，确保打包、自动更新、依赖、密钥全链路无遗漏（见 verify-release.sh）。
-
-3. **支付与订阅安全**
-	- ✅ 支付回调已用数据库事务隔离，防止 TOCTOU 并发漏洞。
-	- ✅ 金额校验已用整数分（cent）存储和比较，避免浮点误差。
-	- ✅ 订单号生成已用高精度时间戳+随机数，且数据库唯一约束，避免碰撞。
-	- ✅ 支付/订阅状态流转已加唯一约束和幂等校验，防止重复延长。
-
-4. **微信 token 缓存**
-	- ✅ get_cached_tokens 已校验 expires_at，过期自动 refresh_token，失败返回 None。
-	- ✅ refresh_access_token 逻辑已补全，登录/接口调用时自动触发。
-	- ✅ wechat_token_cache 表已支持 TTL/定期清理，防止膨胀。
-	- ✅ 并发写入已加行锁/乐观锁，防止 token 覆盖/丢失。
-
-5. **API/E2E 测试**
-	- 必须补全后端 API 测试，覆盖支付、登录、注册、数据导出、权限等关键路径。
-	- 前端需补充打包验收测试，确保主流程无回归。
-✅ 后端 API 测试已集成（支付、登录、注册、数据导出、权限等主流程已覆盖，建议持续完善 E2E 测试覆盖率）。
-✅ 前端打包验收测试已集成（Playwright UI 测试和主流程打包验收已覆盖，建议持续完善自动化测试）。
+> Last updated: 2026-04-20
+> Source of truth for feature requirements: `EXECUTION_GUARDIAN_BLUEPRINT.md`
+> Design system reference: `DESIGN_SYSTEM.md`
 
 ---
 
-## 🟠 P1 - 高优先级优化（影响体验/稳定性/合规）
+## Current Status: Pre-Beta Development
 
-
-# Trace 时迹 WORK TRACKER（2026-04-12）
-
-## 🚀 V1.0 上线必需功能（已全部完成）
-
-1. 密钥与配置安全（环境变量注入、敏感信息脱敏、配置安全）
-2. 自动更新与发布安全（CI/CD 校验、打包/依赖/密钥全链路验证）
-3. 支付与订阅安全（事务隔离、金额校验、订单唯一、幂等校验）
-4. 微信 token 缓存（过期自动刷新、并发安全、TTL 清理）
-5. API/E2E 测试（后端主流程 API 测试、前端打包验收测试）
-6. License/激活机制（唯一激活码、后端校验、前端激活弹窗、本地加密存储、后台管理）
-7. 支付宝支付（二维码收款、回调自动确认、前端扫码自动解锁）
-8. 依赖与环境健壮性优化（依赖管理、CI/CD 安全检查、数据库备份）
-9. 异常与日志分级优化（统一异常捕获、日志脱敏、分级输出）
-10. 性能与一致性优化（rate limit、验证码、token 缓存、唯一约束、定时清理）
-11. 用户体验优化（设置导入导出、主题/皮肤/语言切换、新手引导、全局提示、交互动画）
-12. 数据导出与隐私优化（导出功能隐私提示、本地数据、导出范围自定义）
-13. 产品重命名与基础设施（品牌替换、数据目录、README、窗口标题等）
-14. 代码安全审计与重构
+**Product**: Trace 时迹 — AI-native execution guardian
+**Solo developer using AI coding agents (Claude Code, Codex, etc.)**
+**Language**: English-first development, Chinese localization later
 
 ---
 
-## 🛠️ 未来开发计划（未开发/长期规划）
+## Completed (V1.0 Infrastructure)
 
-1. 服务协议与 license/激活机制文档补充（合规要求）
-2. rate limit、验证码、token 缓存等建议用 Redis/分布式方案，避免全局 dict 内存泄漏
-3. verification_codes 表加索引，验证码清理逻辑改为定时任务，避免每次 login 全表 delete
-4. 订单号、验证码等唯一性依赖需加数据库唯一约束
-5. 补全 API 测试，覆盖邀请/支付/登录/权限等 E2E 流程
-6. 发布流程强制校验 updater pubkey、密钥、依赖配置，CI 阶段自动拦截缺失项
-7. 日历同步完整 native 实现
-8. 虚拟宠物商店（保留基础宠物，商店延后）
-9. 第三方集成（飞书/钉钉）
-10. 开放 API
-11. 团队功能（整个模块，延后）
-12. 计费追踪 / 发票（延后）
-13. AI 洞察（非 V1.0 卖点，延后）
-14. 习惯追踪多次打卡 / 提醒（延后）
-15. 背景音（延后）
+- [x] Activity auto-tracking (window monitoring, Tauri layer)
+- [x] AI classification with approval workflow
+- [x] Task management (kanban/list/calendar/timeline views, subtasks, priorities)
+- [x] Focus Mode (Pomodoro timer, distraction blocking, ambient sounds, XP/coins)
+- [x] Timeline visualization (chronological, color-coded, adjustable granularity)
+- [x] Statistics (weekly/monthly, pie charts, heatmap, basic AI insights)
+- [x] Habits system (daily check-in, streaks, categories)
+- [x] Virtual Pet system (stats, feeding, shop, decorations)
+- [x] Settings (theme, color themes, AI config, privacy, tracking rules, data export)
+- [x] Zustand store + IPC layer + data service
+- [x] Onboarding flow (basic)
+- [x] Light/dark mode
+- [x] Design system v3 "Macaron Editorial" (Coral Pink, Quicksand/Plus Jakarta Sans/JetBrains Mono)
+- [x] Key/config security (env vars, no hardcoded secrets)
+- [x] CI/CD release pipeline (updater pubkey, signing)
+- [x] Payment infrastructure (Alipay, WeChat — backend)
+- [x] License/activation mechanism
+- [x] API/E2E test foundation (Playwright)
+- [x] Product rename to Trace 时迹
+- [x] Code security audit
+- [x] Documentation: Blueprint v3.0, Design System v3, Architecture, API, Deployment
 
 ---
 
-## ✅ 已完成功能清单
+## In Progress: Execution Guardian Development
 
-- 见“V1.0 上线必需功能”全部已完成
-- 依赖与环境健壮性优化
-- 异常与日志分级优化
-- 性能与一致性优化
-- 用户体验优化
-- 文档与合规完善（隐私政策、部署文档、合规检查）
-- License/激活机制、支付宝支付
-- 数据导出与隐私优化
-- 产品重命名与基础设施
-- 代码安全审计与重构
-- 其他所有 P0/P1/P2 已完成项
+### Sprint 0: Page Reorganization (NEXT — Start Here)
+
+- [ ] **Task 0.1**: Sidebar 8 tabs → 5 tabs (Dashboard, Timeline, Task, Analytics, Settings)
+- [ ] **Task 0.1**: Focus Mode → full-screen overlay (controlled by `isFocusModeOpen` store state, not a route)
+- [ ] **Task 0.2**: Rename `Planner.tsx` → `Task.tsx`, `Statistics.tsx` → `Analytics.tsx`
+- [ ] **Task 0.3**: Consolidate scattered settings into Settings page
+
+### Sprint 1: Data Layer Foundation
+
+- [ ] **Task 1.1**: Create 5 new DB tables (context_snapshots, interruption_events, daily_reviews, guardian_settings, wandering_events)
+- [ ] **Task 1.2**: Add `executionGuardian` slice to Zustand store
+- [ ] **Task 1.3**: Create `guardianIpc.ts` with IPC commands for all new tables
+
+### Sprint 2: Now Engine + Launch Boost
+
+- [ ] **Task 2.1**: Now Engine recommendation service (`nowEngine.ts`)
+- [ ] **Task 2.2**: NowEngine Dashboard component (single task display + "Start" + "Switch")
+- [ ] **Task 2.3**: LaunchBoost component (first-step guidance before Focus timer starts)
+
+### Sprint 3: Interruption Alert + Context Snapshot
+
+- [ ] **Task 3.1**: DeviationDetector service (window switch monitoring during focus)
+- [ ] **Task 3.2**: InterruptionAlert modal (3 choices: resume / glance / pause)
+- [ ] **Task 3.3**: Context Snapshot creation on pause, recovery on resume
+
+### Sprint 4: StatusBar + Wandering Detection (Can defer to post-beta)
+
+- [ ] **Task 4.1**: StatusBar system tray widget (Tauri, current task + timer)
+- [ ] **Task 4.2**: WanderingDetector service (high-frequency window switch detection)
+- [ ] **Task 4.3**: Wandering intervention modal
+
+### Sprint 5: Morning Ritual + Daily Review
+
+- [ ] **Task 5.1**: Morning Ritual flow (daily first-open → greeting → timeblocks → confirm)
+- [ ] **Task 5.2**: Daily Review flow (positive-first feedback → plan vs actual → tomorrow's top task)
+
+### Sprint 6: Analytics + Settings + Onboarding (Can defer to post-beta)
+
+- [ ] **Task 6.1**: Execution Guardian analytics tab (interruption trends, procrastination patterns, energy curve)
+- [ ] **Task 6.2**: Guardian settings section (sensitivity, thresholds, ritual config)
+- [ ] **Task 6.3**: Enhanced onboarding (Now Engine intro, Guardian concept explanation)
+
+### Sprint 7: Testing + Polish
+
+- [ ] E2E tests for all new guardian features
+- [ ] Bug fixes and integration testing
+- [ ] Performance optimization (deviation detector efficiency)
+
 ---
 
+## Deferred to V2+
 
+| Feature | Version | Notes |
+|---------|---------|-------|
+| Habits (as Dashboard widget) | V2 | Code exists, hidden from nav |
+| Virtual Pet (as Dashboard widget) | V2 | Code exists, hidden from nav |
+| Managed AI service (Trace AI Pro) | V2 | BYO key only in V1, hybrid model details TBD |
+| Cloud sync (E2E encrypted) | V2-V3 | Local-first in V1, design for abstraction |
+| Multi-device / phone companion | V2-V3 | Depends on cloud sync |
+| Calendar integration (Apple/Google) | V3 | See Blueprint Section 16 |
+| Email/IM integration (Slack, 飞书) | V3 | See Blueprint Section 16 |
+| Project tool integration (Jira, Linear) | V3 | See Blueprint Section 16 |
+| Code integration (GitHub/GitLab) | V4 | See Blueprint Section 16 |
+| Health data integration | V4 | See Blueprint Section 16 |
+| MCP protocol (AI agent interop) | V4 | See Blueprint Section 16 |
+| Team features | V4+ | Not planned yet |
+| Enterprise version | V4+ | Not planned yet |
+
+---
+
+## Beta Website Fixes (trace-ai-zh.lovable.app)
+
+- [ ] Remove hardcoded "已有 1,017 人预约" or connect to real count
+- [ ] Fix privacy claim wording (too absolute, contradicts cloud AI)
+- [ ] Fix E2E encryption claim (should say "本地加密存储" for V1)
+- [ ] Unify brand name to "时迹 Trace" (not "TraceAI")
+- [ ] Remove gender selector from signup flow
+- [ ] Add real Privacy Policy and Contact pages
+- [ ] Hide or remove "Edit with Lovable" builder badge
+
+---
+
+## Key References
+
+| Document | Purpose |
+|----------|---------|
+| `EXECUTION_GUARDIAN_BLUEPRINT.md` | Complete product spec — AI agents read this to understand what to build |
+| `DESIGN_SYSTEM.md` | Visual design tokens, component primitives, typography, colors |
+| `ARCHITECTURE.md` | System architecture (Tauri + React + Flask) |
+| `API.md` | Backend REST API specification |
+| `CONTRIBUTING.md` | Dev setup and code standards |
+| `DEPLOYMENT.md` | Production deployment guide |
+| `SECURITY_AND_RELEASE.md` | Security checklist |
