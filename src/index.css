@@ -26,11 +26,11 @@
   --color-border-subtle: #E8E4DE;
   --color-border-strong: #D6D3CD;
 
-  /* Accent — Coral Pink (Figma primary) */
-  --color-accent: #FF8C82;
-  --color-accent-hover: #FB5F51;
-  --color-accent-soft: rgba(255, 140, 130, 0.12);
-  --color-accent-gradient: linear-gradient(135deg, #FF8C82 0%, #FB5F51 100%);
+  /* Accent — Macaron Blue default (blue-forward, gender-neutral) */
+  --color-accent: #79BEEB;
+  --color-accent-hover: #5AACDF;
+  --color-accent-soft: rgba(121, 190, 235, 0.12);
+  --color-accent-gradient: linear-gradient(135deg, #79BEEB 0%, #5AACDF 100%);
 
   /* Macaron palette — secondary accents */
   --color-macaron-mint: #A8E6CF;
@@ -99,7 +99,7 @@
   --color-border-subtle: #3A3436;
   --color-border-strong: #504A4C;
   /* card borders use --color-border-strong */
-  --color-accent-soft: rgba(255, 140, 130, 0.18);
+  --color-accent-soft: rgba(121, 190, 235, 0.18);
   --color-success-soft: rgba(168, 230, 207, 0.18);
   --color-danger-soft: rgba(255, 140, 130, 0.18);
   --color-warning-soft: rgba(255, 211, 182, 0.18);

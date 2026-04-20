@@ -155,7 +155,7 @@ export interface AppState {
 export const useAppStore = create<AppState>()((set, get) => ({
   // ── Theme ──
   theme: (localStorage.getItem(LS.THEME) as 'light' | 'dark') || 'light',
-  colorTheme: (localStorage.getItem(LS.COLOR_THEME) as ColorTheme) || 'coral',
+  colorTheme: (localStorage.getItem(LS.COLOR_THEME) as ColorTheme) || 'blue',
   backgroundSkin: (localStorage.getItem(LS.BG_SKIN) as BackgroundSkin) || 'gradient',
 
   setTheme: (theme) => {

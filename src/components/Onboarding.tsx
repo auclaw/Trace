@@ -67,7 +67,7 @@ export default function Onboarding() {
     petType: 'cat',
     petName: '小橘',
     dailyGoalMinutes: 480,
-    colorTheme: 'coral',
+    colorTheme: 'blue',
     darkMode: false,
     activeModules: DEFAULT_MODULES.filter((m) => !['dashboard', 'settings'].includes(m)),
     privacyLevel: 'standard',

@@ -13,17 +13,21 @@ Editorial illustration style meets pastel macaron palette. Cards have soft borde
 - Soft 2px borders with offset box-shadows — the "editorial stamp" look
 - Macaron pastel accents — soft enough for all-day use, distinctive enough to feel premium
 - Progressive disclosure — clean surfaces, complexity revealed on interaction
+- Default shipped visual tone should be **blue-forward and gender-neutral**, not pink-forward
+- Coral Pink remains an optional accent theme, but should not define the default product feel
 
 ---
 
 ## 2. Color Palette
 
-### Primary — Coral Pink
+### Default Beta Accent — Macaron Blue
 | Token | Light | Dark |
 |---|---|---|
-| `--color-accent` | `#FF8C82` | `#FF8C82` |
-| `--color-accent-hover` | `#FB5F51` | `#FF9E96` |
-| `--color-accent-soft` | `rgba(255,140,130,0.12)` | `rgba(255,140,130,0.18)` |
+| `--color-accent` | `#79BEEB` | `#79BEEB` |
+| `--color-accent-hover` | `#5AACDF` | `#8DCAF0` |
+| `--color-accent-soft` | `rgba(121,190,235,0.12)` | `rgba(121,190,235,0.18)` |
+
+> Default shipped accent should be **Macaron Blue** to keep the product broadly appealing and less overly cute. Coral Pink remains available as a selectable theme.
 
 ### Macaron Secondaries
 | Name | Hex | Usage |
@@ -156,13 +160,13 @@ box-shadow: 0 2px 6px rgba(58,54,56,0.05);
 
 ### Button — Primary
 ```css
-background: #FF8C82;
+background: var(--color-accent);
 color: #FFFFFF;
 border: none;
 border-radius: 12px;
 font-family: 'Plus Jakarta Sans';
 font-weight: 600;
-box-shadow: 4px 4px 0px #D6D3CD;
+box-shadow: 4px 4px 0px var(--color-border-strong);
 ```
 
 ### Button — Secondary
@@ -176,7 +180,7 @@ box-shadow: 4px 4px 0px #D6D3CD;
 
 ### Nav Item — Active
 ```css
-background: #FF8C82;
+background: var(--color-accent);
 color: #FFFFFF;
 border: none;
 border-radius: 12px;
@@ -217,11 +221,13 @@ Users can switch accent color in Settings. All themes share the same canvas and 
 
 | Theme | Accent | Hover | Chinese Name |
 |---|---|---|---|
-| Coral Pink | `#FF8C82` | `#FB5F51` | 珊瑚粉 |
 | Macaron Blue | `#79BEEB` | `#5AACDF` | 马卡龙蓝 |
+| Coral Pink | `#FF8C82` | `#FB5F51` | 珊瑚粉 |
 | Macaron Mint | `#A8E6CF` | `#7DD4B0` | 马卡龙薄荷 |
 | Macaron Lilac | `#D4C4FB` | `#B8A3F5` | 马卡龙紫 |
 | Macaron Lemon | `#FFD3B6` | `#FFBB8E` | 马卡龙柠檬 |
+
+> Recommended default for beta shipping: **Macaron Blue**
 
 ---
 
