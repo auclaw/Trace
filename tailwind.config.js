@@ -7,49 +7,60 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Merize Zapier-inspired Warm Orange Design System
-        // Vibrant warm approach based on Zapier design philosophy
+        // Trace "Macaron Editorial" Design System v3
+        // Figma reference: Coral Pink + Pastel Macaron palette
         aether: {
-          // Base backgrounds - warm cream (not pure white)
-          100: '#fffefb',      // Light: Base canvas (warm cream paper-like)
-          200: '#fffefb',      // Light: Surface elevation 1
-          300: '#eceae3',      // Light: Surface elevation 2 (light sand)
+          // Base backgrounds — warm parchment cream
+          100: '#FDFBF7',
+          200: '#FFFFFF',
+          300: '#F5F1EA',
           dark: {
-            100: '#1a1614',    // Dark: Base canvas (warm dark near-black)
-            200: '#25201e',    // Dark: Surface elevation 1
-            300: '#3a3630',    // Dark: Surface elevation 2
+            100: '#1A1718',
+            200: '#242022',
+            300: '#383436',
           },
-          // Text colors - warm undertones
+          // Text colors — warm charcoal
           text: {
-            primary: '#201515',      // Warm near-black with reddish undertone
-            secondary: '#36342e',    // Warm dark gray-brown
-            muted: '#939084',        // Mid-range warm gray
+            primary: '#3A3638',
+            secondary: '#5C5658',
+            muted: '#9E9899',
             dark: {
-              primary: '#f8f5f0',    // Warm off-white for dark mode
-              secondary: '#d1cdc4',  // Warm light gray
-              muted: '#a19d94',      // Warm muted gray
+              primary: '#F5F0ED',
+              secondary: '#D4CCCF',
+              muted: '#A89DA0',
             },
           },
-          // Brand accent - Zapier Orange (vivid warm accent)
-          accent: '#ff4f00',         // Primary orange accent
-          accentSoft: 'rgba(255, 79, 0, 0.15)',  // Soft orange background
-          accentDark: '#ff6b2a',     // Lighter orange for dark mode
-          accentSoftDark: 'rgba(255, 107, 42, 0.15)',
-          // Semantic colors - kept but harmonized with warm palette
-          success: '#2e7d32',        // Muted green that works with orange
-          successDark: '#4caf50',
-          warning: '#ff4f00',        // Use accent orange as warning
-          warningDark: '#ff6b2a',
+          // Brand accent — Coral Pink
+          accent: '#FF8C82',
+          accentHover: '#FB5F51',
+          accentSoft: 'rgba(255, 140, 130, 0.12)',
+          accentDark: '#FF9E96',
+          accentSoftDark: 'rgba(255, 158, 150, 0.18)',
+          // Macaron palette — secondary accents
+          mint: '#A8E6CF',
+          lilac: '#D4C4FB',
+          lemon: '#FFD3B6',
+          blue: '#79BEEB',
+          // Semantic colors
+          success: '#A8E6CF',
+          successStrong: '#4CAF50',
+          successDark: '#7DCFAB',
+          warning: '#FFD3B6',
+          warningStrong: '#F59E0B',
+          warningDark: '#FFB88C',
           // Category semantic colors
           category: {
-            focus: '#34c759',      // Green for deep work
-            meeting: '#5aa9e6',    // Soft Blue for meetings
-            break: '#ff9500',      // Orange for breaks
-            other: '#86868b',      // Gray for other
+            focus: '#A8E6CF',
+            meeting: '#79BEEB',
+            break: '#FFD3B6',
+            creative: '#D4C4FB',
+            other: '#9E9899',
           },
+          // Border
+          border: '#D6D3CD',
+          borderCard: '#3A3638',
         },
-        // Keep original primary for compatibility, will migrate
-        // Use CSS variables for dynamic theme color switching
+        // CSS variable-driven tokens for dynamic theme switching
         primary: 'var(--color-accent)',
         accent: 'var(--color-accent)',
         accentSoft: 'var(--color-accent-soft)',
@@ -57,8 +68,9 @@ export default {
         warning: 'var(--color-warning)',
       },
       fontFamily: {
-        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
-        serif: ['Source Serif 4', 'Source Han Serif SC', 'Georgia', 'serif'],
+        sans: ['Plus Jakarta Sans', 'Noto Sans SC', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
+        heading: ['Quicksand', 'Noto Sans SC', 'sans-serif'],
+        mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
       },
       borderRadius: {
         // "Aether Prodigy" - Extra large rounded corners like modern SaaS design
@@ -68,15 +80,18 @@ export default {
         button: '12px',
       },
       boxShadow: {
-        // Extremely subtle, soft shadows like Prodigy design - very light elevation
-        // Based on dribbble shot: Prodify AI Dashboard App UI-Design
-        'subtle': '0 2px 16px rgba(0, 0, 0, 0.04)',
-        'elevated': '0 4px 24px rgba(0, 0, 0, 0.06)',
-        'container': '0 4px 28px rgba(0, 0, 0, 0.05)',
-        'focus-ring': '0 0 0 3px rgba(90, 169, 230, 0.15)',
+        // Editorial offset shadows (Figma: 4px 4px 0px)
+        'subtle': '0 2px 16px rgba(58, 54, 56, 0.04)',
+        'elevated': '0 4px 24px rgba(58, 54, 56, 0.06)',
+        'container': '0 4px 28px rgba(58, 54, 56, 0.05)',
+        'card': '4px 4px 0px #D6D3CD',
+        'card-hover': '6px 6px 0px #D6D3CD',
+        'card-accent': '4px 4px 0px rgba(255, 140, 130, 0.35)',
+        'focus-ring': '0 0 0 3px rgba(255, 140, 130, 0.20)',
         'subtle-dark': '0 2px 16px rgba(0, 0, 0, 0.35)',
         'elevated-dark': '0 4px 24px rgba(0, 0, 0, 0.45)',
         'container-dark': '0 4px 28px rgba(0, 0, 0, 0.4)',
+        'card-dark': '4px 4px 0px rgba(0, 0, 0, 0.30)',
       },
       spacing: {
         // 8px grid system consistent spacing

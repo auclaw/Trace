@@ -3,56 +3,69 @@
 @tailwind utilities;
 
 /* ============================================================
-   Merize Design System v2 — "Warm Sunrise"
-   Inspired by: 小日常 (warm browns), Forest (nature),
-   TickTick (clean color), Monday (color info)
+   Trace Design System v3 — "Macaron Editorial"
+   Figma reference: Coral Pink + Pastel Macaron palette
+   Typography: Quicksand (headings), Plus Jakarta Sans (body),
+   JetBrains Mono (code/labels)
    ============================================================ */
 
 :root {
-  /* Canvas — warm cream parchment, NOT pure white */
-  --color-bg-base: #fefbf6;
-  --color-bg-surface-1: #ffffff;
-  --color-bg-surface-2: #faf6f0;
-  --color-bg-surface-3: #f5f0e8;
+  /* Canvas — warm parchment cream */
+  --color-bg-base: #FDFBF7;
+  --color-bg-surface-1: #FFFFFF;
+  --color-bg-surface-2: #FAF7F2;
+  --color-bg-surface-3: #F5F1EA;
 
-  /* Text — warm brown undertones, never pure black */
-  --color-text-primary: #2c1810;
-  --color-text-secondary: #5d4037;
-  --color-text-muted: #a09080;
-  --color-text-inverse: #fefbf6;
+  /* Text — warm charcoal, never pure black */
+  --color-text-primary: #3A3638;
+  --color-text-secondary: #5C5658;
+  --color-text-muted: #9E9899;
+  --color-text-inverse: #FDFBF7;
 
-  /* Borders — warm sand */
-  --color-border-subtle: #e8ddd0;
-  --color-border-strong: #d0c4b4;
+  /* Borders — warm stone */
+  --color-border-subtle: #E8E4DE;
+  --color-border-strong: #D6D3CD;
+  --color-border-card: #3A3638;
 
-  /* Accent — set dynamically by colorTheme, orange default */
-  --color-accent: #f97316;
-  --color-accent-soft: rgba(249, 115, 22, 0.10);
-  --color-accent-gradient: linear-gradient(135deg, #f97316 0%, #fb923c 100%);
+  /* Accent — Coral Pink (Figma primary) */
+  --color-accent: #FF8C82;
+  --color-accent-hover: #FB5F51;
+  --color-accent-soft: rgba(255, 140, 130, 0.12);
+  --color-accent-gradient: linear-gradient(135deg, #FF8C82 0%, #FB5F51 100%);
+
+  /* Macaron palette — secondary accents */
+  --color-macaron-mint: #A8E6CF;
+  --color-macaron-lilac: #D4C4FB;
+  --color-macaron-lemon: #FFD3B6;
+  --color-macaron-blue: #79BEEB;
 
   /* Semantic */
-  --color-success: #22c55e;
-  --color-success-soft: rgba(34, 197, 94, 0.10);
-  --color-danger: #ef4444;
-  --color-danger-soft: rgba(239, 68, 68, 0.10);
-  --color-warning: #f59e0b;
-  --color-warning-soft: rgba(245, 158, 11, 0.10);
-  --color-info: #3b82f6;
-  --color-info-soft: rgba(59, 130, 246, 0.10);
+  --color-success: #A8E6CF;
+  --color-success-strong: #4CAF50;
+  --color-success-soft: rgba(168, 230, 207, 0.20);
+  --color-danger: #FF8C82;
+  --color-danger-strong: #FB5F51;
+  --color-danger-soft: rgba(255, 140, 130, 0.15);
+  --color-warning: #FFD3B6;
+  --color-warning-strong: #F59E0B;
+  --color-warning-soft: rgba(255, 211, 182, 0.20);
+  --color-info: #79BEEB;
+  --color-info-strong: #3B82F6;
+  --color-info-soft: rgba(121, 190, 235, 0.15);
 
-  /* Gamification gold (小日常 inspired) */
-  --color-gold: #ffd54f;
-  --color-gold-gradient: linear-gradient(135deg, #ffd54f 0%, #ffb74d 50%, #ffd54f 100%);
+  /* Gamification gold */
+  --color-gold: #FFD54F;
+  --color-gold-gradient: linear-gradient(135deg, #FFD54F 0%, #FFB74D 50%, #FFD54F 100%);
 
-  /* Warm-tinted shadows (小日常 technique: brown alpha, NOT black) */
-  --shadow-xs: 0 1px 2px rgba(44, 24, 16, 0.04);
-  --shadow-sm: 0 2px 6px rgba(44, 24, 16, 0.05);
-  --shadow-md: 0 4px 12px rgba(44, 24, 16, 0.07);
-  --shadow-lg: 0 8px 24px rgba(44, 24, 16, 0.09);
-  --shadow-xl: 0 16px 40px rgba(44, 24, 16, 0.12);
-  --shadow-card: 0 2px 8px rgba(44, 24, 16, 0.05), 0 0 1px rgba(44, 24, 16, 0.08);
-  --shadow-card-hover: 0 8px 24px rgba(44, 24, 16, 0.10), 0 0 1px rgba(44, 24, 16, 0.12);
-  --shadow-accent: 0 4px 14px rgba(249, 115, 22, 0.25);
+  /* Shadows — editorial offset style (Figma: 4px 4px 0px) */
+  --shadow-xs: 0 1px 2px rgba(58, 54, 56, 0.04);
+  --shadow-sm: 0 2px 6px rgba(58, 54, 56, 0.05);
+  --shadow-md: 0 4px 12px rgba(58, 54, 56, 0.07);
+  --shadow-lg: 0 8px 24px rgba(58, 54, 56, 0.09);
+  --shadow-xl: 0 16px 40px rgba(58, 54, 56, 0.12);
+  --shadow-card: 4px 4px 0px #D6D3CD;
+  --shadow-card-hover: 6px 6px 0px #D6D3CD;
+  --shadow-accent: 4px 4px 0px rgba(255, 140, 130, 0.35);
 
   /* Transitions */
   --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
@@ -61,7 +74,7 @@
   --duration-normal: 200ms;
   --duration-slow: 300ms;
 
-  /* Radius (16px cards = friendly/personal, NOT enterprise) */
+  /* Radius — Figma: 24px cards, 12px buttons */
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
@@ -69,42 +82,37 @@
   --radius-2xl: 24px;
   --radius-full: 9999px;
 
-  /* Sidebar */
-  --sidebar-width: 264px;
+  /* Sidebar — Figma: 256px */
+  --sidebar-width: 256px;
   --sidebar-width-collapsed: 68px;
 }
 
 /* ── Dark Mode ── */
-/* Optimized for modern dark mode:
-   - Slightly elevated base for better hierarchy
-   - Improved text contrast meeting WCAG AA standards
-   - Softer shadows that don't bleed
-   - Accent colors with proper opacity for dark background
-*/
 .dark {
-  --color-bg-base: #12110f;
-  --color-bg-surface-1: #1a1916;
-  --color-bg-surface-2: #25221d;
-  --color-bg-surface-3: #2f2c25;
-  --color-text-primary: #f8f4ed;
-  --color-text-secondary: #d4cbbf;
-  --color-text-muted: #b5a998;
-  --color-text-inverse: #12110f;
-  --color-border-subtle: #38332b;
-  --color-border-strong: #4d4639;
-  --color-accent-soft: rgba(251, 146, 60, 0.16);
-  --color-success-soft: rgba(74, 222, 128, 0.16);
-  --color-danger-soft: rgba(248, 113, 113, 0.16);
-  --color-warning-soft: rgba(251, 191, 36, 0.16);
-  --color-info-soft: rgba(96, 165, 250, 0.16);
+  --color-bg-base: #1A1718;
+  --color-bg-surface-1: #242022;
+  --color-bg-surface-2: #2E2A2C;
+  --color-bg-surface-3: #383436;
+  --color-text-primary: #F5F0ED;
+  --color-text-secondary: #D4CCCF;
+  --color-text-muted: #A89DA0;
+  --color-text-inverse: #1A1718;
+  --color-border-subtle: #3A3436;
+  --color-border-strong: #504A4C;
+  --color-border-card: #504A4C;
+  --color-accent-soft: rgba(255, 140, 130, 0.18);
+  --color-success-soft: rgba(168, 230, 207, 0.18);
+  --color-danger-soft: rgba(255, 140, 130, 0.18);
+  --color-warning-soft: rgba(255, 211, 182, 0.18);
+  --color-info-soft: rgba(121, 190, 235, 0.18);
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.35);
   --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.40);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.50);
   --shadow-xl: 0 16px 40px rgba(0, 0, 0, 0.55);
-  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.30), 0 0 1px rgba(255, 255, 255, 0.08);
-  --shadow-card-hover: 0 8px 24px rgba(0, 0, 0, 0.45), 0 0 1px rgba(255, 255, 255, 0.12);
-  --shadow-accent: 0 4px 14px rgba(251, 146, 60, 0.35);
+  --shadow-card: 4px 4px 0px rgba(0, 0, 0, 0.30);
+  --shadow-card-hover: 6px 6px 0px rgba(0, 0, 0, 0.35);
+  --shadow-accent: 4px 4px 0px rgba(255, 140, 130, 0.25);
 }
 
 /* ============================================================
@@ -116,7 +124,7 @@
 body {
   margin: 0;
   padding: 0;
-  font-family: 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Plus Jakarta Sans', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: var(--color-bg-base);
@@ -129,8 +137,9 @@ body {
 }
 
 h1, h2, h3, h4, h5, h6 {
+  font-family: 'Quicksand', 'Noto Sans SC', sans-serif;
   color: var(--color-text-primary);
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: -0.02em;
 }
 
@@ -277,8 +286,8 @@ h1, h2, h3, h4, h5, h6 {
 @layer components {
   .trace-card {
     background: var(--color-bg-surface-1);
-    border: 1px solid var(--color-border-subtle);
-    border-radius: var(--radius-lg);
+    border: 2px solid var(--color-border-card);
+    border-radius: var(--radius-2xl);
     box-shadow: var(--shadow-card);
     transition: box-shadow var(--duration-normal) var(--ease-default),
                 transform var(--duration-normal) var(--ease-default);
@@ -286,11 +295,19 @@ h1, h2, h3, h4, h5, h6 {
 
   .trace-card-hover:hover {
     box-shadow: var(--shadow-card-hover);
-    transform: translateY(-2px);
+    transform: translate(-2px, -2px);
   }
 
   .trace-card-accent {
     border-left: 3px solid var(--color-accent);
+  }
+
+  /* Soft variant — no solid border, for secondary cards */
+  .trace-card-soft {
+    background: var(--color-bg-surface-1);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-2xl);
+    box-shadow: var(--shadow-sm);
   }
 }
 
@@ -355,7 +372,7 @@ h1, h2, h3, h4, h5, h6 {
 .recharts-text {
   fill: var(--color-text-muted) !important;
   font-size: 11px;
-  font-family: 'Inter', 'Noto Sans SC', sans-serif;
+  font-family: 'JetBrains Mono', 'Plus Jakarta Sans', 'Noto Sans SC', sans-serif;
 }
 
 .recharts-cartesian-grid line {
