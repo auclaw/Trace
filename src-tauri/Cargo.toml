@@ -39,6 +39,5 @@ io-kit-sys = "0.3"
 winapi = { version = "0.3", features = ["winuser", "sysinfoapi"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
-x11 = "2.2"
+x11 = { version = "2.2", features = ["xlib", "xss"] }
 x11-dl = "2.2"
-x11-screensaver = "0.3"
