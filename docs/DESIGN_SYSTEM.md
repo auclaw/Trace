@@ -6,11 +6,11 @@
 
 ## 1. Design Philosophy
 
-Editorial illustration style meets pastel macaron palette. Cards have solid borders with offset shadows (like editorial print), giving a playful yet structured feel. Rounded corners (24px cards, 12px buttons) keep the interface friendly and approachable.
+Editorial illustration style meets pastel macaron palette. Cards have soft borders with offset shadows (like editorial print), giving a playful yet structured feel. Rounded corners (24px cards, 12px buttons) keep the interface friendly and approachable.
 
 **Key principles:**
 - Warm parchment canvas (`#FDFBF7`), never pure white backgrounds
-- Solid 2px borders with offset box-shadows — the "editorial stamp" look
+- Soft 2px borders with offset box-shadows — the "editorial stamp" look
 - Macaron pastel accents — soft enough for all-day use, distinctive enough to feel premium
 - Progressive disclosure — clean surfaces, complexity revealed on interaction
 
@@ -53,7 +53,8 @@ Editorial illustration style meets pastel macaron palette. Cards have solid bord
 |---|---|---|
 | `--color-border-subtle` | `#E8E4DE` | `#3A3436` |
 | `--color-border-strong` | `#D6D3CD` | `#504A4C` |
-| `--color-border-card` | `#3A3638` | `#504A4C` |
+
+> Cards use `--color-border-strong` (`#D6D3CD`) for borders — no dark/black borders.
 
 ---
 
@@ -140,7 +141,7 @@ Dark mode shadows use `rgba(0,0,0,...)` for deeper contrast.
 ### Card (`.trace-card`)
 ```css
 background: var(--color-bg-surface-1);
-border: 2px solid var(--color-border-card);
+border: 2px solid var(--color-border-strong);
 border-radius: 24px;
 box-shadow: 4px 4px 0px #D6D3CD;
 ```
@@ -157,7 +158,7 @@ box-shadow: 0 2px 6px rgba(58,54,56,0.05);
 ```css
 background: #FF8C82;
 color: #FFFFFF;
-border: 2px solid #3A3638;
+border: none;
 border-radius: 12px;
 font-family: 'Plus Jakarta Sans';
 font-weight: 600;
@@ -168,7 +169,7 @@ box-shadow: 4px 4px 0px #D6D3CD;
 ```css
 background: #FFFFFF;
 color: #3A3638;
-border: 2px solid #3A3638;
+border: 2px solid #D6D3CD;
 border-radius: 12px;
 box-shadow: 4px 4px 0px #D6D3CD;
 ```
@@ -177,7 +178,7 @@ box-shadow: 4px 4px 0px #D6D3CD;
 ```css
 background: #FF8C82;
 color: #FFFFFF;
-border: 2px solid #3A3638;
+border: none;
 border-radius: 12px;
 ```
 
@@ -229,7 +230,7 @@ Users can switch accent color in Settings. All themes share the same canvas and 
 Dark mode inverts canvas to warm dark tones while keeping accent colors consistent.
 
 - Background base: `#1A1718` (warm dark, not pure black)
-- Cards get reduced border contrast (`#504A4C` instead of `#3A3638`)
+- Cards get soft border using `--color-border-strong` (`#504A4C`), no dark/black borders
 - Offset shadows use `rgba(0,0,0,0.30)` for depth
 - Accent soft backgrounds increase opacity from 0.12 → 0.18 for visibility
 

@@ -22,10 +22,9 @@
   --color-text-muted: #9E9899;
   --color-text-inverse: #FDFBF7;
 
-  /* Borders — warm stone */
+  /* Borders — warm stone (no dark borders on cards) */
   --color-border-subtle: #E8E4DE;
   --color-border-strong: #D6D3CD;
-  --color-border-card: #3A3638;
 
   /* Accent — Coral Pink (Figma primary) */
   --color-accent: #FF8C82;
@@ -99,7 +98,7 @@
   --color-text-inverse: #1A1718;
   --color-border-subtle: #3A3436;
   --color-border-strong: #504A4C;
-  --color-border-card: #504A4C;
+  /* card borders use --color-border-strong */
   --color-accent-soft: rgba(255, 140, 130, 0.18);
   --color-success-soft: rgba(168, 230, 207, 0.18);
   --color-danger-soft: rgba(255, 140, 130, 0.18);
@@ -286,7 +285,7 @@ h1, h2, h3, h4, h5, h6 {
 @layer components {
   .trace-card {
     background: var(--color-bg-surface-1);
-    border: 2px solid var(--color-border-card);
+    border: 2px solid var(--color-border-strong);
     border-radius: var(--radius-2xl);
     box-shadow: var(--shadow-card);
     transition: box-shadow var(--duration-normal) var(--ease-default),

@@ -58,7 +58,7 @@ export default {
           },
           // Border
           border: '#D6D3CD',
-          borderCard: '#3A3638',
+          borderCard: '#D6D3CD',
         },
         // CSS variable-driven tokens for dynamic theme switching
         primary: 'var(--color-accent)',
