@@ -9,7 +9,7 @@ export default defineConfig({
   base: './',
   server: {
     strictPort: false,
-    allowedHosts: 'all',
+    allowedHosts: true,
   },
   envPrefix: ['VITE_', 'TAURI_'],
   build: {
