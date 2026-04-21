@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trace Design Spec Preview - Dashboard & Timeline</title>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    /* ===== DESIGN SYSTEM TOKENS ===== */
+    :root {
+      --color-bg-base: #FDFBF7;
+      --color-bg-surface-1: #FFFFFF;
+      --color-bg-surface-2: #FAF7F2;
+      --color-text-primary: #3A3638;
+      --color-text-secondary: #5C5658;
+      --color-text-muted: #9E9899;
+      --color-border-strong: #D6D3CD;
+      --color-border-subtle: #F5F0EA;
+      --color-accent: #79BEEB;
+      --color-accent-soft: rgba(121,190,235,0.12);
+      --color-green: #A8E6CF;
+      --color-green-soft: rgba(168,230,207,0.12);
+      --color-coral: #FF8C82;
+      --color-coral-soft: rgba(255,140,130,0.12);
+      --color-lemon: #FFD3B6;
+      --color-lemon-soft: rgba(255,211,182,0.12);
+      --color-purple: #D4C4FB;
+      --color-purple-soft: rgba(212,196,251,0.12);
+      --color-pink: #FFB5D4;
+      --color-pink-soft: rgba(255,181,212,0.12);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: var(--color-bg-base);
+      color: var(--color-text-primary);
+      line-height: 1.5;
+    }
+
+    .page-header {
+      padding: 32px;
+      border-bottom: 2px solid var(--color-border-strong);
+      background: white;
+    }
+
+    .page-header h1 {
+      font-family: 'Quicksand', sans-serif;
+      font-weight: 700;
+      font-size: 28px;
+      margin-bottom: 4px;
+    }
+
+    .page-header p {
+      color: var(--color-text-muted);
+      font-size: 14px;
+    }
+
+    .nav-tabs {
+      display: flex;
+      gap: 8px;
+      margin-top: 20px;
+    }
+
+    .tab-btn {
+      padding: 10px 20px;
+      border: 2px solid var(--color-border-strong);
+      border-radius: 12px;
+      background: white;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .tab-btn.active {
+      background: var(--color-accent);
+      border-color: var(--color-accent);
+      color: white;
+      box-shadow: 4px 4px 0px var(--color-border-strong);
+    }
+
+    .tab-btn:hover {
+      background: var(--color-bg-surface-2);
+    }
+
+    .tab-btn.active:hover {
+      background: var(--color-accent);
+    }
+
+    .content {
+      padding: 32px;
+    }
+
+    .section {
+      margin-bottom: 48px;
+    }
+
+    .section-title {
+      font-family: 'Quicksand', sans-serif;
+      font-weight: 700;
+      font-size: 22px;
+      margin-bottom: 24px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--color-border-subtle);
+    }
+
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+    }
+
+    .panel {
+      background: white;
+      border: 2px solid var(--color-border-strong);
+      border-radius: 24px;
+      box-shadow: 4px 4px 0px var(--color-border-strong);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 20px 24px;
+      border-bottom: 2px solid var(--color-border-subtle);
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 500;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+    }
+
+    .panel-header.doc {
+      background: var(--color-purple-soft);
+      color: #7b6bb8;
+    }
+
+    .panel-header.current {
+      background: var(--color-green-soft);
+      color: #5a8a72;
+    }
+
+    .panel-body {
+      padding: 24px;
+    }
+
+    /* ===== SIDEBAR SAMPLE ===== */
+    .sidebar-demo {
+      width: 256px;
+      background: white;
+      border-right: 2px solid var(--color-border-strong);
+      padding: 24px;
+      border-radius: 16px 0 0 16px;
+    }
+
+    .sidebar-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+
+    .sidebar-logo-icon {
+      width: 40px;
+      height: 40px;
+      background: var(--color-coral);
+      border: 2px solid var(--color-border-strong);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 700;
+    }
+
+    .sidebar-logo-text {
+      font-family: 'Quicksand', sans-serif;
+      font-weight: 700;
+      font-size: 20px;
+    }
+
+    .sidebar-nav-item {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 12px;
+      border-radius: 12px;
+      margin-bottom: 4px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-weight: 700;
+      font-size: 16px;
+    }
+
+    .sidebar-nav-item.inactive {
+      color: var(--color-text-secondary);
+    }
+
+    .sidebar-nav-item.inactive:hover {
+      background: var(--color-bg-surface-2);
+      color: var(--color-text-primary);
+    }
+
+    .sidebar-nav-item.active {
+      background: var(--color-coral-soft);
+      border: 2px solid var(--color-border-strong);
+      box-shadow: 4px 4px 0px var(--color-border-strong);
+      color: var(--color-text-primary);
+    }
+
+    .sidebar-nav-item.active svg {
+      color: var(--color-coral);
+    }
+
+    /* ===== NOW ENGINE CARD ===== */
+    .now-engine-card {
+      background: var(--color-bg-surface-1);
+      border: 2px solid var(--color-accent);
+      border-radius: 24px;
+      box-shadow: 4px 4px 0px rgba(121,190,235,0.4);
+      padding: 32px;
+      min-height: 280px;
+      transition: all 0.2s ease;
+    }
+
+    .now-engine-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 500;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: var(--color-accent);
+      margin-bottom: 16px;
+    }
+
+    .now-engine-taskname {
+      font-family: 'Quicksand', sans-serif;
+      font-weight: 700;
+      font-size: 24px;
+      color: var(--color-text-primary);
+      margin-bottom: 12px;
+    }
+
+    .now-engine-meta {
+      display: flex;
+      gap: 16px;
+      font-size: 13px;
+      color: var(--color-text-secondary);
+      margin-bottom: 16px;
+    }
+
+    .now-engine-firststep {
+      background: var(--color-bg-surface-2);
+      border: 1px solid var(--color-border-subtle);
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-size: 14px;
+      color: var(--color-text-secondary);
+      margin-bottom: 24px;
+    }
+
+    .now-engine-buttons {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+    }
+
+    .btn-primary {
+      background: var(--color-accent);
+      color: white;
+      border: none;
+      padding: 14px 24px;
+      border-radius: 12px;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 600;
+      font-size: 16px;
+      cursor: pointer;
+      box-shadow: 4px 4px 0px var(--color-border-strong);
+      transition: all 0.2s ease;
+    }
+
+    .btn-secondary {
+      background: white;
+      color: var(--color-text-primary);
+      border: 2px solid var(--color-border-strong);
+      padding: 14px 24px;
+      border-radius: 12px;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 600;
+      font-size: 16px;
+      cursor: pointer;
+      box-shadow: 4px 4px 0px var(--color-border-strong);
+      transition: all 0.2s ease;
+    }
+
+    /* ===== SIMPLE STATS CARD ===== */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: var(--color-bg-surface-2);
+      border-radius: 16px;
+      padding: 16px;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--color-text-muted);
+      margin-bottom: 4px;
+    }
+
+    .stat-value {
+      font-family: 'Quicksand', sans-serif;
+      font-weight: 700;
+      font-size: 24px;
+      color: var(--color-text-primary);
+    }
+
+    /* ===== TIMELINE SAMPLE ===== */
+    .timeline-container {
+      background: white;
+      border: 1px solid var(--color-border-subtle);
+      border-radius: 24px;
+      box-shadow: 0 8px 30px rgba(121,190,235,0.08);
+      padding: 24px;
+    }
+
+    .timeline-grid {
+      display: flex;
+      gap: 16px;
+    }
+
+    .timeline-axis {
+      width: 72px;
+      flex-shrink: 0;
+    }
+
+    .timeline-hour {
+      height: 80px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--color-text-muted);
+      border-bottom: 1px solid var(--color-border-subtle);
+    }
+
+    .timeline-activity-area {
+      flex: 1;
+    }
+
+    .timeline-block {
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin-bottom: 2px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .timeline-block.coding {
+      background: rgba(121,190,235,0.15);
+      color: var(--color-accent);
+      height: 48px;
+    }
+
+    .timeline-block.meeting {
+      background: rgba(212,196,251,0.15);
+      color: #9a8ad8;
+      height: 60px;
+    }
+
+    .timeline-block.browsing {
+      background: rgba(255,140,130,0.15);
+      color: var(--color-coral);
+      height: 32px;
+    }
+
+    .timeline-block.empty {
+      background: var(--color-bg-surface-2);
+      height: 80px;
+      opacity: 0.3;
+    }
+
+    /* ===== DIFF HIGHLIGHTS ===== */
+    .diff-badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      font-weight: 500;
+      margin-left: 8px;
+    }
+
+    .diff-badge.missing {
+      background: var(--color-coral-soft);
+      color: #c45c52;
+    }
+
+    .diff-badge.different {
+      background: var(--color-lemon-soft);
+      color: #a68560;
+    }
+
+    .diff-badge.ok {
+      background: var(--color-green-soft);
+      color: #4a8a6e;
+    }
+
+    .diff-list {
+      margin-top: 16px;
+      font-size: 13px;
+      color: var(--color-text-secondary);
+    }
+
+    .diff-list li {
+      margin-bottom: 8px;
+      padding-left: 8px;
+    }
+
+    .legend {
+      display: flex;
+      gap: 16px;
+      margin-top: 24px;
+      padding: 16px;
+      background: var(--color-bg-surface-2);
+      border-radius: 12px;
+      font-size: 12px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+
+    /* ===== CURRENT SIMPLE DASHBOARD ===== */
+    .current-stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .current-stat-card {
+      border-radius: 16px;
+      padding: 20px;
+    }
+
+    .current-stat-card.blue {
+      background: var(--color-accent);
+      border: 2px solid #5a9ccc;
+      box-shadow: 4px 4px 0px rgba(121,190,235,0.4);
+    }
+
+    .current-stat-card.green {
+      background: var(--color-green);
+      border: 2px solid #7bb89a;
+      box-shadow: 4px 4px 0px rgba(168,230,207,0.4);
+    }
+
+    .current-stat-card.dark {
+      background: #2a2829;
+      border: 2px solid #3a3638;
+      box-shadow: 4px 4px 0px #3a3638;
+    }
+
+    .current-stat-card.yellow {
+      background: var(--color-lemon);
+      border: 2px solid #d8b494;
+      box-shadow: 4px 4px 0px rgba(255,211,182,0.4);
+    }
+
+    .quick-nav-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    .quick-nav-card {
+      background: white;
+      border: 2px solid var(--color-border-strong);
+      border-radius: 16px;
+      box-shadow: 4px 4px 0px var(--color-border-strong);
+      padding: 20px;
+    }
+
+    .quick-nav-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+    }
+
+    .quick-nav-card h4 {
+      font-family: 'Quicksand', sans-serif;
+      font-size: 16px;
+      margin-bottom: 8px;
+    }
+
+    .quick-nav-card p {
+      font-size: 13px;
+      color: var(--color-text-muted);
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="page-header">
+    <h1>Trace Design Spec Preview</h1>
+    <p>对比：文档规范 vs 当前实际实现 — Dashboard & Timeline</p>
+    <div class="nav-tabs">
+      <button class="tab-btn active" onclick="showSection('sidebar')">Sidebar</button>
+      <button class="tab-btn" onclick="showSection('dashboard')">Dashboard</button>
+      <button class="tab-btn" onclick="showSection('timeline')">Timeline</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- ===== SIDEBAR SECTION ===== -->
+    <div id="sidebar" class="section">
+      <h2 class="section-title">Sidebar 侧边栏</h2>
+      <div class="comparison-grid">
+        <div class="panel">
+          <div class="panel-header doc">📄 文档规范</div>
+          <div class="panel-body">
+            <div class="sidebar-demo" style="border: 2px solid var(--color-border-strong);">
+              <div class="sidebar-logo">
+                <div class="sidebar-logo-icon">≡</div>
+                <div class="sidebar-logo-text">Trace 时迹</div>
+              </div>
+              <div class="sidebar-nav-item active">
+                <span>🏠</span> Dashboard
+              </div>
+              <div class="sidebar-nav-item inactive">
+                <span>📐</span> Timeline
+              </div>
+              <div class="sidebar-nav-item inactive">
+                <span>✅</span> Task
+              </div>
+              <div class="sidebar-nav-item inactive">
+                <span>📊</span> Analytics
+              </div>
+              <div class="sidebar-nav-item inactive">
+                <span>⚙️</span> Settings
+              </div>
+            </div>
+
+            <div class="diff-list">
+              <h4 style="margin-bottom: 12px; color: var(--color-text-primary);">关键差异:</h4>
+              <ul>
+                <li><span class="diff-badge different">不同</span> <strong>Logo 背景色</strong>: 文档是珊瑚红 #FF8C82 vs 当前是蓝渐变</li>
+                <li><span class="diff-badge different">不同</span> <strong>激活态样式</strong>: 文档是珊瑚红软背景 + 图标变红 vs 当前是蓝色背景</li>
+                <li><span class="diff-badge different">不同</span> <strong>宽度</strong>: 文档是 256px vs 当前是 264px</li>
+                <li><span class="diff-badge different">不同</span> <strong>Logo文字</strong>: 文档是 "Trace 时迹" vs 当前是只有 "Trace AI"</li>
+                <li><span class="diff-badge missing">缺失</span> <strong>Section Headers</strong>: "NAVIGATION", "CATEGORIES" 标签</li>
+                <li><span class="diff-badge ok">已实现</span> 2px 灰色边框 + 马卡龙配色体系</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header current">💻 当前实现</div>
+          <div class="panel-body">
+            <div class="sidebar-demo" style="background: white;">
+              <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 32px;">
+                <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #79BEEB 0%, #5AACDF 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700;">Ξ</div>
+                <div style="font-family: 'Quicksand', sans-serif; font-weight: 700; font-size: 20px;">Trace AI</div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 16px; padding: 12px; border-radius: 12px; margin-bottom: 4px; background: var(--color-accent); color: #2a4a5e; font-weight: 700;">
+                <span>🏠</span> Dashboard
+              </div>
+              <div style="display: flex; align-items: center; gap: 16px; padding: 12px; border-radius: 12px; margin-bottom: 4px; color: var(--color-text-muted);">
+                <span>📐</span> Timeline
+              </div>
+              <div style="display: flex; align-items: center; gap: 16px; padding: 12px; border-radius: 12px; margin-bottom: 4px; color: var(--color-text-muted);">
+                <span>✅</span> Tasks
+              </div>
+              <div style="display: flex; align-items: center; gap: 16px; padding: 12px; border-radius: 12px; margin-bottom: 4px; color: var(--color-text-muted);">
+                <span>📊</span> Analytics
+              </div>
+              <div style="display: flex; align-items: center; gap: 16px; padding: 12px; border-radius: 12px; margin-bottom: 4px; color: var(--color-text-muted);">
+                <span>⚙️</span> Settings
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== DASHBOARD SECTION ===== -->
+    <div id="dashboard" class="section hidden">
+      <h2 class="section-title">Dashboard 仪表盘</h2>
+      <div class="comparison-grid">
+        <div class="panel">
+          <div class="panel-header doc">📄 文档规范 - Now Engine + Layout</div>
+          <div class="panel-body">
+            <div class="now-engine-card">
+              <div class="now-engine-label">现在 →</div>
+              <div class="now-engine-taskname">📋 写季度报告</div>
+              <div class="now-engine-meta">
+                <span>⏱ 预估 2h</span>
+                <span>📅 已拖延 3 天</span>
+                <span>😐 情绪: 中性</span>
+              </div>
+              <div class="now-engine-firststep">
+                第一步: 打开文档从第三节开始
+              </div>
+              <div class="now-engine-buttons">
+                <button class="btn-primary">🚀 开始专注</button>
+                <button class="btn-secondary">🔄 换一个</button>
+              </div>
+            </div>
+
+            <div style="margin-top: 24px;">
+              <h4 style="font-family: 'Quicksand', sans-serif; margin-bottom: 16px;">完整布局结构:</h4>
+              <div style="font-size: 13px; color: var(--color-text-secondary); line-height: 2;">
+                <span style="color: var(--color-coral);">●</span> F. Unresolved Snapshot Card (A1 Lemon) — <em style="color: var(--color-coral);">条件显示</em><br>
+                <span style="color: var(--color-accent);">●</span> A. NowEngine (A1 Blue) — 核心推荐<br>
+                <span style="color: var(--color-text-muted);">●</span> C. Activity Tracking + D. Plan vs Actual (A2 并排)<br>
+                <span style="color: var(--color-text-muted);">●</span> E. Daily Review Entry (A2)<br>
+                <span style="color: var(--color-purple);">●</span> B. Morning Ritual Modal (A1 Purple) — <em style="color: var(--color-purple);">Overlay</em>
+              </div>
+            </div>
+
+            <div class="diff-list" style="margin-top: 24px;">
+              <h4 style="margin-bottom: 12px; color: var(--color-text-primary);">关键差异:</h4>
+              <ul>
+                <li><span class="diff-badge missing">缺失</span> <strong>Now Engine 核心组件</strong>: 当前没有AI推荐卡片</li>
+                <li><span class="diff-badge missing">缺失</span> <strong>Morning Ritual 晨间启动</strong>: 4步启动仪式 Modal</li>
+                <li><span class="diff-badge missing">缺失</span> <strong>Unresolved Snapshot 上下文快照</strong>: 暂停的任务恢复卡片</li>
+                <li><span class="diff-badge missing">缺失</span> <strong>Plan vs Actual 计划对比</strong>: 显示偏离/匹配状态</li>
+                <li><span class="diff-badge different">不同</span> <strong>统计卡片布局</strong>: 文档是 4 stat bar (flat cards) vs 当前 4 colored cards</li>
+                <li><span class="diff-badge different">不同</span> <strong>Quick Nav位置</strong>: 文档没有快速导航三卡片，现在是核心内容</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header current">💻 当前实现 - Simple Stats + Nav</div>
+          <div class="panel-body">
+            <div class="current-stats-row">
+              <div class="current-stat-card blue">
+                <div style="font-size: 13px; color: #2a4a5e; margin-bottom: 4px;">今日专注</div>
+                <div style="font-family: 'Quicksand', sans-serif; font-weight: 700; font-size: 24px; color: #2a4a5e;">6h 42m</div>
+              </div>
+              <div class="current-stat-card green">
+                <div style="font-size: 13px; color: #2d5a4a; margin-bottom: 4px;">目标进度</div>
+                <div style="font-family: 'Quicksand', sans-serif; font-weight: 700; font-size: 24px; color: #2d5a4a;">73%</div>
+              </div>
+              <div class="current-stat-card dark">
+                <div style="font-size: 13px; color: #9E9899; margin-bottom: 4px;">活动数</div>
+                <div style="font-family: 'Quicksand', sans-serif; font-weight: 700; font-size: 24px; color: white;">23</div>
+              </div>
+              <div class="current-stat-card yellow">
+                <div style="font-size: 13px; color: #7a5a4a; margin-bottom: 4px;">连续天数</div>
+                <div style="font-family: 'Quicksand', sans-serif; font-weight: 700; font-size: 24px; color: #7a5a4a;">7</div>
+              </div>
+            </div>
+
+            <div class="quick-nav-grid">
+              <div class="quick-nav-card">
+                <div class="quick-nav-icon" style="background: var(--color-accent-soft);">
+                  <span style="color: var(--color-accent);">📐</span>
+                </div>
+                <h4>Timeline</h4>
+                <p>查看今日活动分布</p>
+                <div style="margin-top: 12px; font-size: 12px; color: var(--color-accent); font-weight: 600;">打开 →</div>
+              </div>
+              <div class="quick-nav-card">
+                <div class="quick-nav-icon" style="background: var(--color-green-soft);">
+                  <span style="color: var(--color-green);">✅</span>
+                </div>
+                <h4>Tasks</h4>
+                <p>管理今日待办</p>
+                <div style="margin-top: 12px; font-size: 12px; color: var(--color-green); font-weight: 600;">5 个待处理</div>
+              </div>
+              <div class="quick-nav-card">
+                <div class="quick-nav-icon" style="background: var(--color-lemon-soft);">
+                  <span style="color: #d89a5e;">📊</span>
+                </div>
+                <h4>Analytics</h4>
+                <p>查看生产力报告</p>
+                <div style="margin-top: 12px; font-size: 12px; color: #d89a5e; font-weight: 600;">查看详情 →</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== TIMELINE SECTION ===== -->
+    <div id="timeline" class="section hidden">
+      <h2 class="section-title">Timeline 时间线</h2>
+      <div class="comparison-grid">
+        <div class="panel">
+          <div class="panel-header doc">📄 文档规范 - B1 Soft Glow</div>
+          <div class="panel-body">
+            <div class="stats-row">
+              <div class="stat-card">
+                <div class="stat-label">Total Time</div>
+                <div class="stat-value">6h 42m</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">Deep Work</div>
+                <div class="stat-value" style="color: var(--color-green);">3h 15m</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">Switches</div>
+                <div class="stat-value">47</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">Interrupts</div>
+                <div class="stat-value" style="color: var(--color-coral);">8</div>
+              </div>
+            </div>
+
+            <div class="timeline-container">
+              <div class="timeline-grid">
+                <div class="timeline-axis">
+                  <div class="timeline-hour">08:00</div>
+                  <div class="timeline-hour">09:00</div>
+                  <div class="timeline-hour">10:00</div>
+                  <div class="timeline-hour">11:00</div>
+                </div>
+                <div class="timeline-activity-area">
+                  <div class="timeline-block coding">VS Code — report.tsx <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; text-transform: uppercase;">coding</span></div>
+                  <div class="timeline-block.browsing">Chrome — Twitter <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; text-transform: uppercase;">distraction</span></div>
+                  <div class="timeline-block.meeting">Zoom — Team Sync <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; text-transform: uppercase;">meeting</span></div>
+                  <div class="timeline-block empty"></div>
+                </div>
+              </div>
+              <div style="height: 2px; background: var(--color-coral); position: relative; margin-top: 10px;">
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--color-coral); position: absolute; top: -14px; left: 0; letter-spacing: 1px;">NOW</span>
+                <span style="width: 10px; height: 10px; background: var(--color-coral); border-radius: 50%; position: absolute; top: -4px; left: 0;"></span>
+              </div>
+            </div>
+
+            <div class="diff-list">
+              <h4 style="margin-bottom: 12px; color: var(--color-text-primary);">关键差异:</h4>
+              <ul>
+                <li><span class="diff-badge missing">缺失</span> <strong>顶部 4 Stat Bar</strong>: Total Time / Deep Work / Switches / Interrupts</li>
+                <li><span class="diff-badge missing">缺失</span> <strong>打断标记 🚩</strong>: Coral红色旗帜 + hover Tooltip</li>
+                <li><span class="diff-badge missing">缺失</span> <strong>NOW Marker</strong>: 珊瑚红色当前时间线标记</li>
+                <li><span class="diff-badge different">不同</span> <strong>卡片风格</strong>: 文档是 B1 (soft glow: 1px淡边 + 光晕阴影) vs 当前是 A2 硬边硬阴影</li>
+                <li><span class="diff-badge different">不同</span> <strong>活动块配色</strong>: 文档是淡色背景+彩色文字 vs 当前是实色块</li>
+                <li><span class="diff-badge missing">缺失</span> <strong>隐私模式切换</strong>: 页面右上角开关</li>
+                <li><span class="diff-badge missing">缺失</span> <strong>批量重分类</strong>: 多选活动后底部浮动bar</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header current">💻 当前实际实现</div>
+          <div class="panel-body">
+            <div style="padding: 20px; border: 2px solid var(--color-border-strong); border-radius: 16px; box-shadow: 4px 4px 0px var(--color-border-strong); background: white;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <div>
+                  <div style="font-family: 'Quicksand', sans-serif; font-weight: 700; font-size: 18px;">Timeline</div>
+                  <div style="font-size: 13px; color: var(--color-text-muted); margin-top: 4px;">2026年4月21日</div>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                  <button style="padding: 6px 12px; border: 2px solid var(--color-border-strong); border-radius: 8px; background: white; font-size: 12px;">◀</button>
+                  <button style="padding: 6px 12px; border: 2px solid var(--color-border-strong); border-radius: 8px; background: white; font-size: 12px;">今天</button>
+                  <button style="padding: 6px 12px; border: 2px solid var(--color-border-strong); border-radius: 8px; background: white; font-size: 12px;">▶</button>
+                </div>
+              </div>
+
+              <div style="border-left: 3px solid var(--color-accent); padding-left: 16px; margin-left: 16px;">
+                <div style="margin-bottom: 24px;">
+                  <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--color-text-muted); margin-bottom: 4px;">09:15 – 09:52</div>
+                  <div style="font-weight: 600; font-size: 14px;">VS Code</div>
+                  <div style="font-size: 12px; color: var(--color-text-secondary);">编程 · 37 min</div>
+                </div>
+                <div style="margin-bottom: 24px;">
+                  <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--color-text-muted); margin-bottom: 4px;">09:52 – 09:59</div>
+                  <div style="font-weight: 600; font-size: 14px; color: var(--color-coral);">Chrome</div>
+                  <div style="font-size: 12px; color: var(--color-text-secondary);">浏览 · 7 min</div>
+                </div>
+                <div style="margin-bottom: 24px;">
+                  <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--color-text-muted); margin-bottom: 4px;">09:59 – 11:02</div>
+                  <div style="font-weight: 600; font-size: 14px; color: var(--color-purple);">Zoom</div>
+                  <div style="font-size: 12px; color: var(--color-text-secondary);">会议 · 63 min</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="legend" style="margin-top: 24px;">
+              <div class="legend-item">
+                <div class="legend-dot" style="background: var(--color-accent);"></div>
+                <span>Coding / Dev</span>
+              </div>
+              <div class="legend-item">
+                <div class="legend-dot" style="background: var(--color-purple);"></div>
+                <span>Meeting</span>
+              </div>
+              <div class="legend-item">
+                <div class="legend-dot" style="background: var(--color-coral);"></div>
+                <span>Distraction</span>
+              </div>
+              <div class="legend-item">
+                <div class="legend-dot" style="background: var(--color-green);"></div>
+                <span>Research</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
+      document.getElementById(id).classList.remove('hidden');
+
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

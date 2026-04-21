@@ -1,69 +1,107 @@
-// Active Tracking Card - shows current tracking status when tracking is active
-// Splitted from Dashboard.tsx
+import { Clock, Activity } from 'lucide-react'
 
-import { useTranslation } from 'react-i18next'
-import { CATEGORY_COLORS } from '../../config/themes'
-import type { Activity } from '../../services/dataService'
-
-interface ActiveTrackingCardProps {
-  currentTracking: Activity | null
-  onNavigateToTimeline: () => void
-  fmtTime: (iso: string) => string
+interface Props {
+  currentApp: string
+  duration: number // minutes
+  category: string
 }
 
-export default function ActiveTrackingCard({
-  currentTracking,
-  onNavigateToTimeline,
-  fmtTime,
-}: ActiveTrackingCardProps) {
-  const { t } = useTranslation()
+export default function ActiveTrackingCard({ currentApp, duration, category }: Props) {
+  // Generate random activity blocks for the mini timeline
+  const activityBlocks = [
+    { category: 'work', width: 25 },
+    { category: 'break', width: 8 },
+    { category: 'learning', width: 18 },
+    { category: 'other', width: 5 },
+    { category: 'work', width: 30 },
+  ]
 
-  if (!currentTracking) return null
+  const getCategoryColor = (cat: string) => {
+    const colors: Record<string, string> = {
+      work: '#79BEEB',
+      meeting: '#D4C4FB',
+      break: '#A8E6CF',
+      learning: '#FFD3B6',
+      other: '#D6D3CD',
+    }
+    return colors[cat] || colors.other
+  }
 
   return (
     <div
-      className="flex items-center gap-3 rounded-2xl px-5 py-3"
+      className="p-6 rounded-2xl transition-all duration-200 hover:translate-x-[-2px] hover:translate-y-[-2px]"
       style={{
-        background: currentTracking
-          ? `linear-gradient(135deg, ${CATEGORY_COLORS[currentTracking.category] || 'var(--color-accent)'}12, ${CATEGORY_COLORS[currentTracking.category] || 'var(--color-accent)'}06)`
-          : 'var(--color-bg-surface-2)',
-        border: `1px solid ${currentTracking ? `${CATEGORY_COLORS[currentTracking.category] || 'var(--color-accent)'}30` : 'var(--color-border-subtle)'}`,
+        background: '#FFFFFF',
+        border: '2px solid #D6D3CD',
+        boxShadow: '4px 4px 0px #D6D3CD',
       }}
     >
-      <span className="relative flex h-3 w-3">
-        <span
-          className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
-          style={{ background: currentTracking ? CATEGORY_COLORS[currentTracking.category] || 'var(--color-accent)' : 'var(--color-accent)' }}
-        />
-        <span
-          className="relative inline-flex rounded-full h-3 w-3"
-          style={{ background: currentTracking ? CATEGORY_COLORS[currentTracking.category] || 'var(--color-accent)' : 'var(--color-accent)' }}
-        />
-      </span>
-      {currentTracking ? (
-        <div className="flex-1 min-w-0">
-          <span className="text-[13px] font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-            {t('dashboard.tracking')}: {currentTracking.name}
-          </span>
-          <span className="text-[12px] ml-2" style={{ color: 'var(--color-text-muted)' }}>
-            {fmtTime(currentTracking.startTime)} {t('dashboard.started')} · {currentTracking.category}
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Activity size={18} style={{ color: '#79BEEB' }} />
+          <h3
+            className="text-base font-semibold"
+            style={{ color: '#3A3638', fontFamily: 'Quicksand, sans-serif' }}
+          >
+            Activity Tracking
+          </h3>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div
+            className="w-2 h-2 rounded-full animate-pulse"
+            style={{ background: '#A8E6CF' }}
+          />
+          <span
+            className="text-xs font-semibold"
+            style={{ color: '#A8E6CF', fontFamily: 'JetBrains Mono, monospace' }}
+          >
+            RECORDING
           </span>
         </div>
-      ) : (
-        <span className="text-[13px]" style={{ color: 'var(--color-text-muted)' }}>
-          {t('dashboard.trackingWaiting')}
+      </div>
+
+      {/* Current App */}
+      <p className="text-sm mb-2" style={{ color: '#5C5658' }}>
+        {currentApp}
+      </p>
+
+      {/* Duration & Category */}
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-2">
+          <Clock size={16} style={{ color: '#9E9899' }} />
+          <span
+            className="text-xl font-bold"
+            style={{ color: '#3A3638', fontFamily: 'Quicksand, sans-serif' }}
+          >
+            {Math.floor(duration / 60)}h {duration % 60}m
+          </span>
+        </div>
+        <span
+          className="px-3 py-1 rounded-lg text-xs font-semibold"
+          style={{
+            background: `${getCategoryColor(category)}20`,
+            color: getCategoryColor(category),
+          }}
+        >
+          {category}
         </span>
-      )}
-      <button
-        onClick={onNavigateToTimeline}
-        className="text-[11px] px-2.5 py-1 rounded-full"
-        style={{
-          background: 'var(--color-accent-soft)',
-          color: 'var(--color-accent)',
-        }}
-      >
-        {t('nav.timeline')}
-      </button>
+      </div>
+
+      {/* Mini Timeline Preview */}
+      <div className="h-10 rounded-xl flex items-center gap-1 px-2" style={{ background: '#FAF7F2' }}>
+        {activityBlocks.map((block, i) => (
+          <div
+            key={i}
+            className="h-6 rounded-md"
+            style={{
+              width: `${block.width}%`,
+              background: getCategoryColor(block.category),
+              opacity: 0.6,
+            }}
+          />
+        ))}
+      </div>
     </div>
   )
 }

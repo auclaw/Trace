@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trace AI - 专注模式设计方案</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #F5F1EA; padding: 24px; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        h1 { text-align: center; color: #3A3638; margin-bottom: 8px; font-size: 28px; }
+        .subtitle { text-align: center; color: #9E9899; margin-bottom: 32px; }
+        h2 { color: #3A3638; margin: 40px 0 20px; font-size: 20px; padding-left: 16px; border-left: 4px solid #79BEEB; }
+        h3 { color: #3A3638; margin-bottom: 12px; font-size: 16px; }
+        .options-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; }
+        .option-card { background: white; border-radius: 16px; padding: 20px; border: 2px solid #D6D3CD; box-shadow: 4px 4px 0px #D6D3CD; }
+        .option-card.recommended { border-color: #A8E6CF; box-shadow: 4px 4px 0px #A8E6CF; }
+        .badge { display: inline-block; font-size: 11px; padding: 3px 10px; border-radius: 12px; margin-bottom: 12px; }
+        .badge.recommended { background: #A8E6CF; color: #2D5A4A; }
+        .badge.alternative { background: #FFD3B6; color: #7A5A4A; }
+        .wireframe-box { background: #FAFAFA; border: 1px dashed #9E9899; border-radius: 8px; padding: 12px; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #5C5658; line-height: 1.5; white-space: pre; overflow-x: auto; margin: 12px 0; }
+        .pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+        .pros { background: rgba(168, 230, 207, 0.2); padding: 10px; border-radius: 8px; font-size: 12px; }
+        .cons { background: rgba(255, 140, 130, 0.15); padding: 10px; border-radius: 8px; font-size: 12px; }
+        .pros h4, .cons h4 { margin-bottom: 6px; font-size: 13px; }
+        .pros ul, .cons ul { margin-left: 16px; }
+        .pros li, .cons li { margin: 4px 0; }
+        .comparison { background: white; border-radius: 16px; padding: 24px; margin-top: 32px; border: 2px solid #D6D3CD; }
+        .comparison-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .comparison-table th, .comparison-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #EEE; }
+        .comparison-table th { background: #F8F9FA; font-weight: 600; color: #5C5658; }
+        .check { color: #A8E6CF; font-weight: bold; }
+        .cross { color: #FF8C82; }
+        .note { margin-top: 16px; padding: 12px; background: #FFF8E6; border-left: 3px solid #FFD3B6; border-radius: 4px; font-size: 12px; color: #7A5A4A; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧘 专注模式 - 设计方案对比</h1>
+        <p class="subtitle">因为专注模式是"操作状态"而非"浏览页面"，不应该与 Dashboard 同级</p>
+
+        <div class="options-grid">
+
+            <!-- 方案A: 全局浮动按钮 + 展开面板 (推荐) -->
+            <div class="option-card recommended">
+                <span class="badge recommended">✅ 推荐方案 A</span>
+                <h3>全局浮动按钮 + 侧边展开面板</h3>
+                <div class="wireframe-box">
+┌────────────────────────────────────────┐
+│ 页面内容 (Dashboard/Timeline/...)       │
+│                                         │
+│                                         │
+│                               ┌────┐    │
+│                               │ 🧘 │    │  ← 右下角固定
+│                               └────┘    │
+│                                         │
+└────────────────────────────────────────┘
+
+点击后从右侧滑出：
+
+┌───────────────────────┬───────────────┐
+│                       │ ╭────────────╮  │
+│                       │ │   24:32    │  │
+│                       │ │  ████████  │  │
+│                       │ │            │  │
+│                       │ │ [暂停][结束]  │
+│                       │ │            │  │
+│                       │ │ 今日: 3个  │  │
+│                       │ ╰────────────╯  │
+│                       │                 │
+└───────────────────────┴───────────────┘
+                </div>
+                <div class="pros-cons">
+                    <div class="pros">
+                        <h4>✅ 优点</h4>
+                        <ul>
+                            <li>任何页面都能快速进入</li>
+                            <li>不打断当前浏览上下文</li>
+                            <li>层级正确：工具级操作</li>
+                            <li>可以部分展开看倒计时</li>
+                        </ul>
+                    </div>
+                    <div class="cons">
+                        <h4>⚠️ 注意</h4>
+                        <ul>
+                            <li>需要处理 z-index 层级</li>
+                            <li>避免遮挡重要内容</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 方案B: 侧边栏底部嵌入 -->
+            <div class="option-card">
+                <span class="badge alternative">方案 B</span>
+                <h3>侧边栏底部嵌入卡片</h3>
+                <div class="wireframe-box">
+┌───────────────┐
+│ Ξ Trace AI    │
+├───────────────┤
+│ ◉ Dashboard   │
+│   Timeline    │
+│   Tasks       │
+│   Analytics   │
+│   Settings    │
+│               │
+│               │
+│               │
+├───────────────┤
+│ ╭───────────╮ │  ← 空闲状态显示
+│ │ 🧘 开始专注│ │    按钮卡片
+│ ╰───────────╯ │
+│               │
+│ ╭───────────╮ │  ← 进行中显示
+│ │ 🟢 15:42  │ │    倒计时卡片
+│ │ [暂停]    │ │
+│ ╰───────────╯ │
+│               │
+│ 👤 Alex Pro   │
+└───────────────┘
+                </div>
+                <div class="pros-cons">
+                    <div class="pros">
+                        <h4>✅ 优点</h4>
+                        <ul>
+                            <li>入口位置固定易找</li>
+                            <li>侧边栏空间利用</li>
+                            <li>始终可见倒计时</li>
+                            <li>不需要额外弹窗</li>
+                        </ul>
+                    </div>
+                    <div class="cons">
+                        <h4>⚠️ 注意</h4>
+                        <ul>
+                            <li>侧边栏空间有限</li>
+                            <li>功能太多会拥挤</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 方案C: 全屏模态弹窗 -->
+            <div class="option-card">
+                <span class="badge alternative">方案 C</span>
+                <h3>全屏模态覆盖层</h3>
+                <div class="wireframe-box">
+点击任意"开始专注"按钮触发：
+
+╔═══════════════════════════════════════════╗
+║                                           ║
+║           🍅 番茄专注模式                  ║
+║                                           ║
+║              24:32                        ║
+║           ╔══════════╗                    ║
+║           ║██████████║                    ║
+║           ╚══════════╝                    ║
+║                                           ║
+║        [ ⏸ 暂停 ]  [ ⏹ 结束 ]            ║
+║                                           ║
+║     📌 当前任务: Dashboard 重构            ║
+║                                           ║
+╚═══════════════════════════════════════════╝
+
+  [×] 点击背景或ESC可最小化到角落继续运行
+                </div>
+                <div class="pros-cons">
+                    <div class="pros">
+                        <h4>✅ 优点</h4>
+                        <ul>
+                            <li>沉浸式体验，仪式感</li>
+                            <li>真正进入"专注"状态</li>
+                            <li>可以放更多统计信息</li>
+                        </ul>
+                    </div>
+                    <div class="cons">
+                        <h4>⚠️ 注意</h4>
+                        <ul>
+                            <li>完全打断当前工作流</li>
+                            <li>太重了，快速启动有负担</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 方案D: 组合方案 (A+B 最佳实践) -->
+            <div class="option-card recommended">
+                <span class="badge recommended">🏆 最终方案 D</span>
+                <h3>组合方案：侧边栏嵌入 + 浮动按钮 + 迷你模式</h3>
+                <div class="wireframe-box">
+
+┌───────────────┐  ┌───────────────────────────┐
+│ Ξ Trace AI    │  │                           │
+├───────────────┤  │                           │
+│ ◉ Dashboard   │  │                           │
+│   Timeline    │  │                           │
+│   Tasks       │  │                     ╭──╮  │ ← 迷你浮动
+│   Analytics   │  │                     │15│  │   只显示倒计时
+│   Settings    │  │                     ╰──╯  │
+│               │  │                           │
+├───────────────┤  └───────────────────────────┘
+│ ╭───────────╮ │
+│ │ 🧘 专注   │ │  ← 侧边栏：点击开始/查看详情
+│ │ 24:32     │ │
+│ ╰───────────╯ │
+│               │
+│ 👤 Alex Pro   │
+└───────────────┘
+
+  点击侧边栏卡片 → 展开详情弹窗（非全屏）
+  拖拽浮动按钮 → 可移动位置
+  双击浮动按钮 → 暂停/继续
+                </div>
+                <div class="pros-cons">
+                    <div class="pros">
+                        <h4>✅ 最佳体验</h4>
+                        <ul>
+                            <li>多入口满足不同场景</li>
+                            <li>侧边栏：状态可见 + 启动</li>
+                            <li>浮动：倒计时始终可见</li>
+                            <li>弹窗：详情 + 统计</li>
+                        </ul>
+                    </div>
+                    <div class="cons">
+                        <h4>⚠️ 实施</h4>
+                        <ul>
+                            <li>开发量稍大但值得</li>
+                            <li>需要统一状态管理</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- 对比表 -->
+        <div class="comparison">
+            <h2>📋 方案对比总结</h2>
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>特性</th>
+                        <th>方案A 浮动按钮</th>
+                        <th>方案B 侧边嵌入</th>
+                        <th>方案C 全屏模态</th>
+                        <th>方案D 组合</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>层级正确（非页面级）</td>
+                        <td class="check">✅</td>
+                        <td class="check">✅</td>
+                        <td class="check">✅</td>
+                        <td class="check">✅</td>
+                    </tr>
+                    <tr>
+                        <td>任何页面可访问</td>
+                        <td class="check">✅</td>
+                        <td class="check">✅</td>
+                        <td class="check">✅</td>
+                        <td class="check">✅</td>
+                    </tr>
+                    <tr>
+                        <td>倒计时始终可见</td>
+                        <td class="check">✅</td>
+                        <td class="check">✅</td>
+                        <td class="cross">❌ 只能专注时看</td>
+                        <td class="check">✅</td>
+                    </tr>
+                    <tr>
+                        <td>不打断浏览上下文</td>
+                        <td class="check">✅</td>
+                        <td class="check">✅</td>
+                        <td class="cross">❌</td>
+                        <td class="check">✅</td>
+                    </tr>
+                    <tr>
+                        <td>沉浸式体验可选</td>
+                        <td class="cross">❌</td>
+                        <td class="cross">❌</td>
+                        <td class="check">✅</td>
+                        <td class="check">✅</td>
+                    </tr>
+                    <tr>
+                        <td>开发复杂度</td>
+                        <td>中等</td>
+                        <td>简单</td>
+                        <td>中等</td>
+                        <td>较高</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="note">
+                <strong>🏆 推荐实施方案 D（MVP 简化版）</strong><br>
+                第一阶段：先做<strong>侧边栏底部嵌入卡片</strong> + 点击弹出<strong>专注详情弹窗</strong><br>
+                第二阶段：再增加<strong>迷你浮动按钮</strong>（始终显示倒计时，可拖拽）
+            </div>
+        </div>
+
+        <!-- 侧边栏最终设计 -->
+        <div style="background: white; border-radius: 16px; padding: 24px; margin-top: 24px; border: 2px solid #A8E6CF;">
+            <h2 style="margin-top: 0;">📱 最终侧边栏设计（移除专注模式页面入口）</h2>
+            <div style="display: grid; grid-template-columns: 250px 1fr; gap: 32px; align-items: start;">
+                <pre style="background: #FAFAFA; padding: 16px; border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: 11px; line-height: 1.6;">
+┌───────────────┐
+│ Ξ             │
+│ <span style="color:#FF8C82">Trace AI</span>      │
+├───────────────┤
+│               │
+│ ◉ Dashboard   │
+│   Timeline    │
+│   Tasks       │
+│   Analytics   │
+│   Settings    │
+│               │
+│               │
+│               │
+├───────────────┤
+│ ╭───────────╮ │  ← 专注模式卡片
+│ │ 🧘 开始专注│ │    空闲时显示
+│ ╰───────────╯ │
+│               │
+│ ╭───────────╮ │  ← 进行中状态
+│ │ 🟢 15:42  │ │    倒计时 + 暂停
+│ ╰───────────╯ │
+│               │
+│ 👤 Alex Pro   │
+└───────────────┘
+                </pre>
+                <div>
+                    <h4 style="color: #3A3638; margin-bottom: 12px;">交互逻辑</h4>
+                    <ul style="color: #5C5658; font-size: 14px; line-height: 1.8;">
+                        <li><strong>空闲状态</strong>：显示"🧘 开始专注"按钮，蓝底白字</li>
+                        <li><strong>点击开始</strong>：弹出番茄时长选择（5/15/25/45/60分钟）+ 关联任务可选</li>
+                        <li><strong>进行中</strong>：卡片变为绿色，显示实时倒计时 + 暂停按钮</li>
+                        <li><strong>点击进行中卡片</strong>：弹出详情弹窗，显示今日统计、历史记录</li>
+                        <li><strong>结束/暂停</strong>：弹窗内操作，记录完成数据</li>
+                    </ul>
+                    <h4 style="color: #3A3638; margin: 16px 0 12px;">好处</h4>
+                    <ul style="color: #5C5658; font-size: 14px; line-height: 1.8;">
+                        <li>✅ 侧边栏导航保持整洁，只有5个核心页面</li>
+                        <li>✅ 专注模式作为"工具功能"而非"数据页面"</li>
+                        <li>✅ 状态始终可见，不需要专门进入页面查看</li>
+                        <li>✅ 弹窗详情足够放统计和设置</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>

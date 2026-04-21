@@ -149,9 +149,17 @@
   --radius-2xl: 24px;
   --radius-full: 9999px;
 
-  /* Sidebar — Figma: 256px */
-  --sidebar-width: 256px;
+  /* Sidebar — 13-inch optimized: 248px (down from 256px) */
+  --sidebar-width: 248px;
   --sidebar-width-collapsed: 68px;
+
+  /* Typography scale — 13-inch optimized base */
+  --font-size-xs: 11px;
+  --font-size-sm: 12px;
+  --font-size-base: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 18px;
+  --font-size-2xl: 24px;
 }
 
 /* ── Dark Mode ── */

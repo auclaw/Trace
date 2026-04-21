@@ -5,7 +5,6 @@ import { useAppStore } from './store/useAppStore';
 import { backgroundSkinConfigs } from './config/themes';
 import { ToastProvider } from './components/ui/Toast';
 import Sidebar from './components/Sidebar';
-import Onboarding from './components/Onboarding';
 // Beta: Pet feature disabled - import PetMiniWidget from './components/PetMiniWidget';
 import FocusStatusIndicator from './components/FocusStatusIndicator';
 import FocusStartedModal from './components/FocusStartedModal';
@@ -174,7 +173,6 @@ function AppContent() {
 
   return (
     <>
-      {isFirstLaunch && <Onboarding />}
       <div
         className={`flex h-screen ${bgClass} transition-colors duration-300 ${
           backgroundSkin === 'glass' ? 'glass-mode' : ''

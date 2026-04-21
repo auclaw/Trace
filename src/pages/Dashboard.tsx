@@ -1,93 +1,73 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
-import { BarChart3, Clock, ListTodo } from 'lucide-react'
+import { BarChart3, Clock, ListTodo, ChevronRight } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
-import { trackingService } from '../services/trackingService'
-
-// ── Helpers ──
+import NowEngineCard from '../components/NowEngineCard'
+import ActiveTrackingCard from '../components/Dashboard/ActiveTrackingCard'
+import PlanVsActualCard from '../components/Dashboard/PlanVsActualCard'
+import DailyReviewCard from '../components/Dashboard/DailyReviewCard'
 
 function todayStr(): string {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-function greeting(t: (key: string) => string): string {
-  const h = new Date().getHours()
-  if (h < 6) return t('dashboard.greeting.night')
-  if (h < 12) return t('dashboard.greeting.morning')
-  if (h < 14) return t('dashboard.greeting.noon')
-  if (h < 18) return t('dashboard.greeting.afternoon')
-  return t('dashboard.greeting.evening')
-}
-
-// ── Main Dashboard ──
-
 export default function Dashboard() {
-  const { t } = useTranslation()
   const navigate = useNavigate()
 
   const activities = useAppStore((s) => s.activities)
   const loadActivities = useAppStore((s) => s.loadActivities)
-
   const tasks = useAppStore((s) => s.tasks)
   const loadTasks = useAppStore((s) => s.loadTasks)
-
   const dailyGoalMinutes = useAppStore((s) => s.dailyGoalMinutes)
-
   const [loading, setLoading] = useState(true)
 
-  // Derived stats
   const today = todayStr()
   const todayActivities = activities.filter((a) => a.startTime.slice(0, 10) === today)
   const todayMinutes = Math.round(todayActivities.reduce((sum, a) => sum + (a.duration || 0), 0))
   const goalProgress = dailyGoalMinutes > 0 ? Math.min(100, Math.round((todayMinutes / dailyGoalMinutes) * 100)) : 0
 
+  const efficiencyScore = useMemo(() => {
+    if (todayActivities.length === 0) return 0
+    const baseScore = Math.min(70, goalProgress * 0.7)
+    const activityBonus = Math.min(30, todayActivities.length * 3)
+    return Math.min(100, Math.round(baseScore + activityBonus))
+  }, [goalProgress, todayActivities.length])
+
   const pendingTasks = tasks.filter((t) => t.status !== 'completed').length
 
-  // Load data on mount
   useEffect(() => {
     Promise.all([loadActivities(), loadTasks()]).finally(() => setLoading(false))
   }, [loadActivities, loadTasks])
-
-  // Track current activity
-  const [currentTracking, setCurrentTracking] = useState(trackingService.getCurrentActivity())
-
-  useEffect(() => {
-    const unsubscribe = trackingService.subscribe(() => {
-      setCurrentTracking(trackingService.getCurrentActivity())
-    })
-    return unsubscribe
-  }, [])
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--color-bg-base)' }}>
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 rounded-full border-2 border-[var(--color-accent)] border-t-transparent animate-spin" />
-          <span className="text-sm" style={{ color: 'var(--color-text-muted)' }}>{t('app.loading')}</span>
+          <span className="text-sm" style={{ color: 'var(--color-text-muted)' }}>Loading...</span>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen p-6" style={{ background: 'var(--color-bg-base)' }}>
-      {/* Greeting */}
+    <div className="min-h-screen px-8 py-8" style={{ background: 'var(--color-bg-base)' }}>
+      {/* Page Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold mb-1" style={{ color: 'var(--color-text-primary)' }}>
-          {greeting(t)} 👋
+        <h1 className="text-2xl font-bold mb-1" style={{ color: 'var(--color-text-primary)', fontFamily: 'Quicksand, sans-serif' }}>
+          Dashboard
         </h1>
         <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-          {t('dashboard.welcomeBack')}
+          {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
         </p>
       </div>
 
-      {/* ═══ BENTO GRID ROW 1: Stats Cards ═══ */}
+      {/* Stats Row - 4 Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {/* Focus Time - Macaron Blue */}
+        {/* Focus Time - Blue */}
         <div
-          className="p-6 rounded-2xl"
+          className="p-6 rounded-2xl cursor-pointer transition-all duration-200 hover:-translate-y-0.5"
           style={{
             background: '#79BEEB',
             border: '2px solid #5AACDF',
@@ -97,20 +77,20 @@ export default function Dashboard() {
           <div className="flex items-center gap-2 mb-3">
             <Clock size={20} style={{ color: '#2A4A5E' }} />
             <span className="text-sm font-semibold" style={{ color: '#2A4A5E' }}>
-              {t('dashboard.todayFocus')}
+              Focus Time
             </span>
           </div>
-          <div className="text-3xl font-bold mb-2" style={{ color: '#2A4A5E' }}>
+          <div className="text-3xl font-bold mb-2" style={{ color: '#2A4A5E', fontFamily: 'Quicksand, sans-serif' }}>
             {Math.floor(todayMinutes / 60)}h {todayMinutes % 60}m
           </div>
           <div className="text-xs" style={{ color: '#3D6A7E' }}>
-            {goalProgress}% {t('dashboard.ofDailyGoal')}
+            Today
           </div>
         </div>
 
-        {/* Goal Progress - Macaron Green */}
+        {/* Goal Progress - Green */}
         <div
-          className="p-6 rounded-2xl"
+          className="p-6 rounded-2xl cursor-pointer transition-all duration-200 hover:-translate-y-0.5"
           style={{
             background: '#A8E6CF',
             border: '2px solid #7DD4B0',
@@ -120,10 +100,10 @@ export default function Dashboard() {
           <div className="flex items-center gap-2 mb-3">
             <ListTodo size={20} style={{ color: '#2D5A4A' }} />
             <span className="text-sm font-semibold" style={{ color: '#2D5A4A' }}>
-              {t('dashboard.dailyGoal')}
+              Daily Goal
             </span>
           </div>
-          <div className="text-3xl font-bold mb-2" style={{ color: '#2D5A4A' }}>
+          <div className="text-3xl font-bold mb-2" style={{ color: '#2D5A4A', fontFamily: 'Quicksand, sans-serif' }}>
             {goalProgress}%
           </div>
           <div className="w-full h-2 rounded-full" style={{ background: '#D4F5E5' }}>
@@ -134,9 +114,32 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Activities - Neutral Gray (Style A2) */}
+        {/* Efficiency Score - Purple */}
         <div
-          className="p-6 rounded-2xl"
+          className="p-6 rounded-2xl cursor-pointer transition-all duration-200 hover:-translate-y-0.5"
+          style={{
+            background: '#D4C4FB',
+            border: '2px solid #B8A0E8',
+            boxShadow: '4px 4px 0px rgba(212, 196, 251, 0.4)',
+          }}
+        >
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-xl">⚡</span>
+            <span className="text-sm font-semibold" style={{ color: '#4A3A6A' }}>
+              Efficiency
+            </span>
+          </div>
+          <div className="text-3xl font-bold mb-2" style={{ color: '#4A3A6A', fontFamily: 'Quicksand, sans-serif' }}>
+            {efficiencyScore}
+          </div>
+          <div className="text-xs" style={{ color: '#6A5A8A' }}>
+            Better than {Math.min(98, Math.round((todayMinutes / 240) * 50 + (efficiencyScore / 100) * 30 + 20))}%
+          </div>
+        </div>
+
+        {/* Activities Count - Neutral */}
+        <div
+          className="p-6 rounded-2xl cursor-pointer transition-all duration-200 hover:-translate-y-0.5"
           style={{
             background: '#FFFFFF',
             border: '2px solid #D6D3CD',
@@ -146,74 +149,52 @@ export default function Dashboard() {
           <div className="flex items-center gap-2 mb-3">
             <BarChart3 size={20} color="#5C5658" />
             <span className="text-sm font-semibold" style={{ color: '#5C5658' }}>
-              {t('dashboard.activities')}
+              Activities
             </span>
           </div>
-          <div className="text-3xl font-bold mb-2" style={{ color: '#3A3638' }}>
+          <div className="text-3xl font-bold mb-2" style={{ color: '#3A3638', fontFamily: 'Quicksand, sans-serif' }}>
             {todayActivities.length}
           </div>
           <div className="text-xs" style={{ color: '#9E9899' }}>
-            {t('dashboard.today')}
-          </div>
-        </div>
-
-        {/* Streak - Macaron Lemon */}
-        <div
-          className="p-6 rounded-2xl"
-          style={{
-            background: '#FFD3B6',
-            border: '2px solid #FFBB8E',
-            boxShadow: '4px 4px 0px rgba(255, 211, 182, 0.4)',
-          }}
-        >
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-xl">🔥</span>
-            <span className="text-sm font-semibold" style={{ color: '#7A5A4A' }}>
-              {t('dashboard.streak')}
-            </span>
-          </div>
-          <div className="text-3xl font-bold mb-2" style={{ color: '#7A5A4A' }}>
-            7 {t('dashboard.days')}
-          </div>
-          <div className="text-xs" style={{ color: '#8A6A5A' }}>
-            {t('dashboard.keepItUp')}
+            Today
           </div>
         </div>
       </div>
 
-      {/* ═══ BENTO GRID ROW 2: Quick Navigation (Style A2 - Neutral) ═══ */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        {/* Timeline Card */}
-        <div
-          className="p-6 rounded-2xl cursor-pointer hover:scale-[1.02] transition-transform"
-          onClick={() => navigate('/timeline')}
-          style={{
-            background: '#FFFFFF',
-            border: '2px solid #D6D3CD',
-            boxShadow: '4px 4px 0px #D6D3CD',
-          }}
-        >
-          <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center mb-4"
-            style={{ background: 'rgba(121, 190, 235, 0.12)' }}
-          >
-            <Clock size={18} style={{ color: '#79BEEB' }} />
-          </div>
-          <h3 className="text-base font-semibold mb-2" style={{ color: '#3A3638' }}>
-            {t('dashboard.timeline')}
-          </h3>
-          <p className="text-sm mb-4" style={{ color: '#9E9899' }}>
-            {t('dashboard.viewTimeline')}
-          </p>
-          <div className="text-xs font-semibold" style={{ color: '#79BEEB' }}>
-            {t('common.open')} →
-          </div>
-        </div>
+      {/* NowEngine - Centerpiece */}
+      <div className="mb-6">
+        <NowEngineCard />
+      </div>
 
-        {/* Tasks Card */}
+      {/* Activity Tracking & Plan vs Actual Row - 2 Columns */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <ActiveTrackingCard
+          currentApp="VSCode - Dashboard.tsx"
+          duration={todayMinutes}
+          category="work"
+        />
+        <PlanVsActualCard
+          plannedMinutes={dailyGoalMinutes}
+          actualMinutes={todayMinutes}
+          goalMinutes={dailyGoalMinutes}
+        />
+      </div>
+
+      {/* Daily Review Card */}
+      <div className="mb-6">
+        <DailyReviewCard
+          totalMinutes={todayMinutes}
+          efficiencyScore={efficiencyScore}
+          completedTasks={tasks.filter((t) => t.status === 'completed').length}
+        />
+      </div>
+
+      {/* Function Cards Row - 3 Columns */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Review Activities */}
         <div
-          className="p-6 rounded-2xl cursor-pointer hover:scale-[1.02] transition-transform"
-          onClick={() => navigate('/task')}
+          className="p-6 rounded-2xl cursor-pointer transition-all duration-200 hover:translate-x-[-2px] hover:translate-y-[-2px]"
+          onClick={() => navigate('/timeline')}
           style={{
             background: '#FFFFFF',
             border: '2px solid #D6D3CD',
@@ -224,23 +205,24 @@ export default function Dashboard() {
             className="w-10 h-10 rounded-xl flex items-center justify-center mb-4"
             style={{ background: 'rgba(168, 230, 207, 0.12)' }}
           >
-            <ListTodo size={18} style={{ color: '#A8E6CF' }} />
+            <Clock size={18} style={{ color: '#7DD4B0' }} />
           </div>
-          <h3 className="text-base font-semibold mb-2" style={{ color: '#3A3638' }}>
-            {t('tasks.title')}
+          <h3 className="text-base font-semibold mb-2" style={{ color: '#3A3638', fontFamily: 'Quicksand, sans-serif' }}>
+            Review Activities
           </h3>
           <p className="text-sm mb-4" style={{ color: '#9E9899' }}>
-            {t('dashboard.manageTasks')}
+            Auto-classified by AI, click to confirm
           </p>
-          <div className="text-xs font-semibold" style={{ color: '#A8E6CF' }}>
-            {pendingTasks} {t('dashboard.pending')}
+          <div className="flex items-center text-xs font-semibold" style={{ color: '#7DD4B0' }}>
+            {Math.max(0, todayActivities.length - 3) || 5} items to review
+            <ChevronRight size={14} className="ml-1" />
           </div>
         </div>
 
-        {/* Analytics Card */}
+        {/* Priority Tasks */}
         <div
-          className="p-6 rounded-2xl cursor-pointer hover:scale-[1.02] transition-transform"
-          onClick={() => navigate('/analytics')}
+          className="p-6 rounded-2xl cursor-pointer transition-all duration-200 hover:translate-x-[-2px] hover:translate-y-[-2px]"
+          onClick={() => navigate('/task')}
           style={{
             background: '#FFFFFF',
             border: '2px solid #D6D3CD',
@@ -251,58 +233,48 @@ export default function Dashboard() {
             className="w-10 h-10 rounded-xl flex items-center justify-center mb-4"
             style={{ background: 'rgba(255, 211, 182, 0.12)' }}
           >
-            <BarChart3 size={18} style={{ color: '#FFD3B6' }} />
+            <ListTodo size={18} style={{ color: '#FFBB8E' }} />
           </div>
-          <h3 className="text-base font-semibold mb-2" style={{ color: '#3A3638' }}>
-            {t('dashboard.analytics')}
+          <h3 className="text-base font-semibold mb-2" style={{ color: '#3A3638', fontFamily: 'Quicksand, sans-serif' }}>
+            Priority Tasks
           </h3>
           <p className="text-sm mb-4" style={{ color: '#9E9899' }}>
-            {t('dashboard.viewReports')}
+            Important items to complete today
           </p>
-          <div className="text-xs font-semibold" style={{ color: '#FFD3B6' }}>
-            {t('common.viewDetails')} →
+          <div className="flex items-center text-xs font-semibold" style={{ color: '#FFBB8E' }}>
+            {pendingTasks} pending
+            <ChevronRight size={14} className="ml-1" />
+          </div>
+        </div>
+
+        {/* Daily Report */}
+        <div
+          className="p-6 rounded-2xl cursor-pointer transition-all duration-200 hover:translate-x-[-2px] hover:translate-y-[-2px]"
+          onClick={() => navigate('/analytics')}
+          style={{
+            background: '#FFFFFF',
+            border: '2px solid #D6D3CD',
+            boxShadow: '4px 4px 0px #D6D3CD',
+          }}
+        >
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center mb-4"
+            style={{ background: 'rgba(121, 190, 235, 0.12)' }}
+          >
+            <BarChart3 size={18} style={{ color: '#79BEEB' }} />
+          </div>
+          <h3 className="text-base font-semibold mb-2" style={{ color: '#3A3638', fontFamily: 'Quicksand, sans-serif' }}>
+            Daily Report
+          </h3>
+          <p className="text-sm mb-4" style={{ color: '#9E9899' }}>
+            Efficiency score {efficiencyScore} · Detailed insights
+          </p>
+          <div className="flex items-center text-xs font-semibold" style={{ color: '#79BEEB' }}>
+            View full analysis
+            <ChevronRight size={14} className="ml-1" />
           </div>
         </div>
       </div>
-
-      {/* ═══ BENTO GRID ROW 3: Tracking Banner (Macaron Blue) ═══ */}
-      {trackingService.isTracking() && currentTracking && (
-        <div
-          className="p-6 rounded-2xl mb-6"
-          style={{
-            background: 'linear-gradient(135deg, #79BEEB 0%, #5AACDF 100%)',
-            border: '2px solid #79BEEB',
-            boxShadow: '4px 4px 0px rgba(121, 190, 235, 0.4)',
-          }}
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div
-                className="w-3 h-3 rounded-full animate-pulse"
-                style={{ background: '#EF4444' }}
-              />
-              <div>
-                <div className="font-semibold" style={{ color: '#2A4A5E' }}>
-                  {currentTracking.name}
-                </div>
-                <div className="text-sm" style={{ color: '#3D6A7E' }}>
-                  {currentTracking.category}
-                </div>
-              </div>
-            </div>
-            <button
-              onClick={() => navigate('/timeline')}
-              className="px-4 py-2 rounded-xl font-semibold text-sm transition-colors"
-              style={{
-                background: '#2A4A5E',
-                color: 'white',
-              }}
-            >
-              {t('dashboard.viewDetails')}
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

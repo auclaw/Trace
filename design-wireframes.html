@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trace AI - 设计结构思维导图 & 线框图</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #F5F1EA; padding: 24px; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        h1 { text-align: center; color: #3A3638; margin-bottom: 32px; font-size: 28px; }
+        h2 { color: #3A3638; margin: 40px 0 20px; font-size: 20px; padding-left: 16px; border-left: 4px solid #79BEEB; }
+        .section { background: white; border-radius: 16px; padding: 24px; margin-bottom: 24px; box-shadow: 4px 4px 0px #D6D3CD; border: 2px solid #D6D3CD; }
+        .mermaid { display: flex; justify-content: center; }
+        .wireframe-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; }
+        .wireframe-card { background: white; border-radius: 12px; padding: 20px; border: 2px solid #D6D3CD; }
+        .wireframe-card h3 { color: #3A3638; margin-bottom: 16px; font-size: 16px; }
+        .wireframe-box { background: #FAFAFA; border: 1px dashed #9E9899; border-radius: 8px; padding: 12px; font-family: monospace; font-size: 11px; color: #5C5658; line-height: 1.6; white-space: pre; overflow-x: auto; }
+        .color-legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 16px; }
+        .color-item { display: flex; align-items: center; gap: 8px; }
+        .color-swatch { width: 20px; height: 20px; border-radius: 4px; border: 1px solid #D6D3CD; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 Trace AI - 设计结构思维导图 & 线框图</h1>
+
+        <!-- 思维导图 -->
+        <div class="section">
+            <h2>📐 整体架构思维导图</h2>
+            <div class="mermaid">
+mindmap
+  root((Trace AI))
+    侧边栏导航
+      Logo + 品牌标识
+      导航菜单
+        Dashboard
+        Timeline
+        Tasks
+        Analytics
+        Settings
+      用户资料卡片
+    Dashboard页面
+      问候语区域
+      统计卡片组 (4个)
+        今日专注时间
+        目标进度
+        活动数量
+        连续天数
+      NowEngine 智能分析
+      快速导航卡片 (3个)
+        Timeline
+        Tasks
+        Analytics
+      追踪中横幅
+    Timeline页面
+      顶部统计栏 (4个)
+        总时长
+        活动数
+        分类数
+        效率评分
+      NowEngine NOW标记
+      时间线条目列表
+        时间标记
+        活动卡片
+        分类标签
+      日历选择器
+    Tasks页面
+      任务统计头部
+      添加任务输入框
+      任务列表
+        待办
+        进行中
+        已完成
+      筛选/排序
+    Analytics页面
+      时间范围选择器
+      饼图 - 分类分布
+      柱状图 - 每日趋势
+      热力图 - 活动日历
+      数据表格
+    Settings页面
+      通用设置
+      外观主题
+      目标设置
+      AI分类设置
+      数据管理
+      账户信息
+    设计系统
+      Macaron配色
+        蓝色 #79BEEB
+        绿色 #A8E6CF
+        珊瑚 #FF8C82
+        柠檬 #FFD3B6
+        紫色 #D4C4FB
+      边框样式
+        A1 - 彩色阴影
+        A2 - 中性阴影
+        B1 - 柔光效果
+      排版
+        标题 Quicksand
+        正文 Inter
+            </div>
+        </div>
+
+        <!-- 配色图例 -->
+        <div class="section">
+            <h2>🎨 Macaron 配色系统</h2>
+            <div class="color-legend">
+                <div class="color-item"><div class="color-swatch" style="background: #79BEEB;"></div> 蓝色 - 主色/强调</div>
+                <div class="color-item"><div class="color-swatch" style="background: #A8E6CF;"></div> 绿色 - 成功/完成</div>
+                <div class="color-item"><div class="color-swatch" style="background: #FF8C82;"></div> 珊瑚 - 警告/危险</div>
+                <div class="color-item"><div class="color-swatch" style="background: #FFD3B6;"></div> 柠檬 - 提醒/温暖</div>
+                <div class="color-item"><div class="color-swatch" style="background: #D4C4FB;"></div> 紫色 - AI/智能</div>
+            </div>
+        </div>
+
+        <!-- 线框图网格 -->
+        <h2>📱 各页面粗糙线框图</h2>
+        <div class="wireframe-grid">
+
+            <!-- Dashboard -->
+            <div class="wireframe-card">
+                <h3>📊 Dashboard - 仪表盘</h3>
+                <div class="wireframe-box">
+┌─────────────────────────────────────┐
+│ 👋 早上好, Alex!                    │
+│ 欢迎回来                            │
+├─────────────────────────────────────┤
+│ ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐│
+│ │ ⏱️   │ │ 📈   │ │ 📊   │ │ 🔥   ││
+│ │ 2h30m│ │ 75%  │ │ 8个  │ │ 7天  ││
+│ └──────┘ └──────┘ └──────┘ └──────┘│
+├─────────────────────────────────────┤
+│ ╔═════════════════════════════════╗ │
+│ ║ 🔴 NOW: 正在工作 - 编码 (42m)  ║ │
+│ ║ AI 分析中...                    ║ │
+│ ╚═════════════════════════════════╝ │
+├─────────────────────────────────────┤
+│ ┌──────────┐ ┌──────────┐ ┌────────┐│
+│ │ ⏱️       │ │ ✅       │ │ 📊     ││
+│ │ Timeline │ │ Tasks    │ │ Analytics│
+│ │ 查看     │ │ 5个待办  │ │ 报告   ││
+│ └──────────┘ └──────────┘ └────────┘│
+└─────────────────────────────────────┘
+                </div>
+            </div>
+
+            <!-- Timeline -->
+            <div class="wireframe-card">
+                <h3>⏱️ Timeline - 时间线</h3>
+                <div class="wireframe-box">
+┌─────────────────────────────────────┐
+│ ┌──┐ ┌──┐ ┌──┐ ┌──┐  [📅 今天]    │
+│ │4h │ │12 │ │5  │ │A+ │            │
+│ └──┘ └──┘ └──┘ └──┘                │
+├─────────────────────────────────────┤
+│ 🔴 NOW ────────────────────────>    │
+│    [正在工作 - 42分钟]               │
+├─────────────────────────────────────┤
+│ 14:00 ┌────────────────────┐        │
+│       │ 🔵 编码            │        │
+│       │ 开发中...          │ 42m    │
+│       └────────────────────┘        │
+│                                      │
+│ 13:15 ┌────────────────────┐        │
+│       │ 🟢 会议            │        │
+│       │ 团队周会           │ 45m    │
+│       └────────────────────┘        │
+│                                      │
+│ 12:30 ┌────────────────────┐        │
+│       │ 🟡 休息            │        │
+│       │ 午餐时间           │ 45m    │
+│       └────────────────────┘        │
+└─────────────────────────────────────┘
+                </div>
+            </div>
+
+            <!-- Tasks -->
+            <div class="wireframe-card">
+                <h3>✅ Tasks - 任务管理</h3>
+                <div class="wireframe-box">
+┌─────────────────────────────────────┐
+│ 📋 任务管理           [+ 添加任务]  │
+├─────────────────────────────────────┤
+│ 🔍 搜索   [全部] [待办] [已完成]    │
+├─────────────────────────────────────┤
+│ ⏳ 待办 (3)                          │
+│ ┌─────────────────────────────────┐ │
+│ │ ◻  完成设计文档    📅 今天     │ │
+│ │ ◻  修复登录bug    📅 明天     │ │
+│ │ ◻  代码评审       📅 周五     │ │
+│ └─────────────────────────────────┘ │
+│                                      │
+│ 🔄 进行中 (1)                        │
+│ ┌─────────────────────────────────┐ │
+│ │ ◻  Dashboard重构    🔴 60%     │ │
+│ └─────────────────────────────────┘ │
+│                                      │
+│ ✅ 已完成 (5)                        │
+│ ┌─────────────────────────────────┐ │
+│ │ ✅ 侧边栏更新                   │ │
+│ │ ✅ 配色统一                     │ │
+│ └─────────────────────────────────┘ │
+└─────────────────────────────────────┘
+                </div>
+            </div>
+
+            <!-- Analytics -->
+            <div class="wireframe-card">
+                <h3>📈 Analytics - 数据分析</h3>
+                <div class="wireframe-box">
+┌─────────────────────────────────────┐
+│ 📊 数据分析       [本周 ▼] [导出]  │
+├─────────────────────────────────────┤
+│ ┌─────────────────────────────────┐ │
+│ │         时间分布饼图             │ │
+│ │                                 │ │
+│ │      🔵编码 40% 🟢会议20%       │ │
+│ │      🟡休息25% 🟣文档15%        │ │
+│ └─────────────────────────────────┘ │
+├─────────────────────────────────────┤
+│ ┌─────────────────────────────────┐ │
+│ │         每日趋势柱状图           │ │
+│ │   █    █    █    █    █    █   │ │
+│ │  周一 周二 周三 周四 周五 周六  │ │
+│ └─────────────────────────────────┘ │
+├─────────────────────────────────────┤
+│ ┌─────────────────────────────────┐ │
+│ │  📅 活动热力图                   │ │
+│ │  ░░▓▓░░▓░░░░▓▓░░                │ │
+│ │  ░▓▓▓▓▓▓▓▓▓▓▓░                 │ │
+│ │  ░░░▓░░▓░░▓░░░                 │ │
+│ └─────────────────────────────────┘ │
+└─────────────────────────────────────┘
+                </div>
+            </div>
+
+            <!-- Settings -->
+            <div class="wireframe-card">
+                <h3>⚙️ Settings - 设置</h3>
+                <div class="wireframe-box">
+┌─────────────────────────────────────┐
+│ ⚙️ 设置                             │
+├─────────────────────────────────────┤
+│ 🎨 外观                             │
+│    [亮色 ▼] 主题                    │
+│    [玻璃 ▼] 背景皮肤                │
+│                                      │
+│ 🎯 每日目标                         │
+│    [ 240 ] 分钟/天                  │
+│                                      │
+│ 🤖 AI 分类                          │
+│    启用自动分类 [✓]                 │
+│    模型: 文心一言 [▼]               │
+│                                      │
+│ 🔑 账户                             │
+│    Alex Trace                       │
+│    alex@aurum.tech                  │
+│    [退出登录]                       │
+│                                      │
+│ 💾 数据管理                         │
+│    [导出JSON]  [导出CSV]            │
+│    [清除所有数据]                   │
+│                                      │
+│ 🔗 快捷键                           │
+│    Cmd+Shift+S: 开始/停止追踪       │
+│    Cmd+Shift+F: 专注模式            │
+└─────────────────────────────────────┘
+                </div>
+            </div>
+
+            <!-- Focus Mode -->
+            <div class="wireframe-card">
+                <h3>🧘 Focus Mode - 专注模式</h3>
+                <div class="wireframe-box">
+┌─────────────────────────────────────┐
+│         🍅 番茄专注模式              │
+├─────────────────────────────────────┤
+│                                     │
+│             24:32                   │
+│           ╔══════╗                  │
+│           ║██████║                  │
+│           ╚══════╝                  │
+│                                     │
+│        🔕 勿扰模式已启用            │
+│                                     │
+│    [ ⏸ 暂停 ]  [ ⏹ 结束 ]         │
+│                                     │
+│  当前任务: Dashboard重构            │
+│                                     │
+│  📊 今日统计:                       │
+│     • 已完成 3 个番茄               │
+│     • 总计 75 分钟                  │
+│     • +75 XP                        │
+└─────────────────────────────────────┘
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="wireframe-card">
+                <h3>📱 Sidebar - 侧边栏</h3>
+                <div class="wireframe-box">
+┌───────────────┐
+│ Ξ Trace AI    │  [珊瑚色Logo]
+├───────────────┤
+│               │
+│ ◉ Dashboard   │  [选中-蓝色]
+│   Timeline    │
+│   Tasks       │
+│   Analytics   │
+│   Settings    │
+│               │
+│               │
+│               │
+│               │
+│               │
+├───────────────┤
+│ ┌─┐           │
+│ │👤│ Alex     │
+│ └─┘ Pro       │  [珊瑚色卡片]
+└───────────────┘
+                </div>
+            </div>
+
+            <!-- NowEngine Concept -->
+            <div class="wireframe-card">
+                <h3>🤖 NowEngine - 智能引擎</h3>
+                <div class="wireframe-box">
+┌─────────────────────────────────────┐
+│ 🔴 NOW ─────────────────────────>   │
+│                                     │
+│ ╔═════════════════════════════════╗ │
+│ ║  🤖 NowEngine 实时分析          ║ │
+│ ║                                 ║ │
+│ ║  当前活动: 编码                 ║ │
+│ ║  持续时间: 42 分钟              ║ │
+│ ║  效率评分: A+ 🎉                ║ │
+│ ║                                 ║ │
+│ ║  💡 洞察:                       ║ │
+│ ║  你今天早上的效率比平均高23%    ║ │
+│ ║  建议: 15分钟休息后继续工作     ║ │
+│ ║                                 ║ │
+│ ║  [⏱ 去时间线]  [✅ 添加任务]   ║ │
+│ ╚═════════════════════════════════╝ │
+│                                     │
+│  设计风格: Style B1 (柔光效果)      │
+│  配色: 紫色 #D4C4FB 渐变            │
+└─────────────────────────────────────┘
+                </div>
+            </div>
+
+        </div>
+
+        <!-- 设计系统总结 -->
+        <div class="section">
+            <h2>📐 设计系统总结</h2>
+            <div class="mermaid">
+graph TD
+    A[Dual Layer Macaron Design v3] --> B[Style A1 - 彩色卡片]
+    A --> C[Style A2 - 中性卡片]
+    A --> D[Style B1 - 柔光效果]
+
+    B --> B1[2px 彩色边框]
+    B --> B2[4px 彩色偏移阴影]
+    B --> B3[语义色: 蓝/绿/珊瑚/柠檬/紫]
+
+    C --> C1[2px #D6D3CD 边框]
+    C --> C2[4px 中性阴影]
+    C --> C3[白色背景]
+
+    D --> D1[1px 细边框]
+    D --> D2[柔和蓝色发光]
+    D --> D3[沉浸式内容]
+    D --> D4[NowEngine专用]
+
+    E[布局系统] --> E1[Bento Grid]
+    E --> E2[响应式栅格]
+    E --> E3[统一间距 8px 基准]
+
+    F[交互] --> F1[悬停缩放 1.02]
+    F --> F2[过渡动画 200ms]
+    F --> F3[圆角 12-16px]
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            themeVariables: {
+                primaryColor: '#79BEEB',
+                secondaryColor: '#A8E6CF',
+                tertiaryColor: '#FFD3B6',
+                primaryBorderColor: '#5AACDF',
+                lineColor: '#9E9899',
+                textColor: '#3A3638'
+            }
+        });
+    </script>
+</body>
+</html>

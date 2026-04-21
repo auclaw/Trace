@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useState, useMemo } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard,
@@ -10,6 +10,8 @@ import {
 } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import type { AppState } from '../store/useAppStore'
+import { trackingService } from '../services/trackingService'
+import FocusModal from './FocusModal'
 
 interface NavItem {
   key: string
@@ -36,6 +38,7 @@ const ALL_NAV_ITEMS: NavItem[] = [
 export default function Sidebar() {
   const activeModules = useAppStore((s: AppState) => s.activeModules)
   const location = useLocation()
+  const [showFocusModal, setShowFocusModal] = useState(false)
 
   const visibleItems = useMemo(
     () => ALL_NAV_ITEMS.filter((item) => activeModules.includes(item.key)),
@@ -43,10 +46,11 @@ export default function Sidebar() {
   )
 
   return (
-    <aside
-      className="relative flex flex-col h-screen bg-white border-r border-[#D6D3CD]"
-      style={{ width: '264px' }}
-    >
+    <>
+      <aside
+        className="relative flex flex-col h-screen bg-white border-r border-[#D6D3CD]"
+        style={{ width: '248px' }}
+      >
       {/* ── Brand Logo ── */}
       <div className="flex items-center gap-2 px-6 py-8 shrink-0">
         <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #79BEEB 0%, #5AACDF 100%)' }}>
@@ -70,8 +74,9 @@ export default function Sidebar() {
                   end={item.end}
                   className="flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200"
                   style={{
-                    background: isActive ? '#79BEEB' : 'transparent',
-                    color: isActive ? '#3A3638' : '#9E9899',
+                    background: isActive ? 'rgba(121, 190, 235, 0.2)' : 'transparent',
+                    color: isActive ? '#79BEEB' : '#9E9899',
+                    fontWeight: isActive ? 600 : 500,
                   }}
                   onMouseEnter={(e) => {
                     if (!isActive) {
@@ -97,18 +102,51 @@ export default function Sidebar() {
         </ul>
       </nav>
 
-      {/* ── User Profile Card (Macaron Coral) ── */}
+      {/* ── Focus Mode Card ── */}
+      <div className="shrink-0 px-4 pb-4">
+        <div
+          className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl cursor-pointer transition-all hover:scale-[1.02]"
+          style={{
+            background: trackingService.isTracking()
+              ? '#D4C4FB'
+              : 'rgba(212, 196, 251, 0.12)',
+            border: `2px solid ${trackingService.isTracking() ? '#B8A0E8' : '#D4C4FB'}`,
+          }}
+          onClick={() => setShowFocusModal(true)}
+        >
+          {trackingService.isTracking() ? (
+            <>
+              <div
+                className="w-2 h-2 rounded-full animate-pulse"
+                style={{ background: '#4A3A6A' }}
+              />
+              <span className="text-sm font-semibold" style={{ color: '#4A3A6A' }}>
+                24:32
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="text-lg">🧘</span>
+              <span className="text-sm font-semibold" style={{ color: '#9876D8' }}>
+                Start Focus
+              </span>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* ── User Profile Card (Macaron Blue) ── */}
       <div className="shrink-0 px-4 pb-6">
         <div
           className="flex items-center gap-3 px-4 py-3 rounded-2xl"
           style={{
-            background: 'rgba(255, 140, 130, 0.12)',
-            border: '1px solid #FF8C82',
+            background: 'rgba(121, 190, 235, 0.12)',
+            border: '1px solid #79BEEB',
           }}
         >
           <div
             className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-            style={{ background: '#FF8C82' }}
+            style={{ background: '#79BEEB' }}
           >
             <User size={16} color="white" />
           </div>
@@ -123,5 +161,8 @@ export default function Sidebar() {
         </div>
       </div>
     </aside>
+
+    <FocusModal isOpen={showFocusModal} onClose={() => setShowFocusModal(false)} />
+    </>
   )
 }

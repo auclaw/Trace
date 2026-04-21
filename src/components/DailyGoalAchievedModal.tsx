@@ -1,143 +1,131 @@
-import { useTranslation } from 'react-i18next'
-import { Modal } from './ui'
-import { useAppStore } from '../store/useAppStore'
-import type { AppState } from '../store/useAppStore'
+import { useEffect, useState } from 'react'
+import { X, Trophy, Target, Clock, Share2 } from 'lucide-react'
 
-/**
- * Popup shown when the user achieves their daily focus goal.
- */
-
-interface DailyGoalAchievedModalProps {
+interface Props {
   isOpen: boolean
   onClose: () => void
   totalMinutes: number
   goalMinutes: number
 }
 
-export default function DailyGoalAchievedModal({
-  isOpen,
-  onClose,
-  totalMinutes,
-  goalMinutes,
-}: DailyGoalAchievedModalProps) {
-  const { t } = useTranslation()
-  const pet = useAppStore((s: AppState) => s.pet)
+export default function DailyGoalAchievedModal({ isOpen, onClose, totalMinutes }: Props) {
+  const [visible, setVisible] = useState(false)
 
-  const percentage = Math.round((totalMinutes / goalMinutes) * 100)
+  useEffect(() => {
+    if (isOpen) {
+      setVisible(true)
+    }
+  }, [isOpen])
+
+  if (!isOpen || !visible) return null
+
   const hours = Math.floor(totalMinutes / 60)
   const mins = totalMinutes % 60
-  const goalHours = Math.floor(goalMinutes / 60)
-
-  const formatTime = (h: number, m: number) => {
-    let result = ''
-    if (h > 0) result += `${h} ${t('common.hours')}`
-    if (m > 0) result += `${result ? ' ' : ''}${m} ${t('common.minutes')}`
-    return result
-  }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="sm">
-      <div className="text-center space-y-5 py-2">
-        {/* Trophy */}
-        <div className="text-5xl">🏆</div>
-
-        {/* Title */}
-        <div>
-          <h2
-            className="text-lg font-bold"
-            style={{ color: 'var(--color-text-primary)' }}
-          >
-            {t('popups.dailyGoalAchieved')}
-          </h2>
-          <p
-            className="text-sm mt-1"
-            style={{ color: 'var(--color-text-secondary)' }}
-          >
-            {t('popups.dailyGoalAchievedHint')}
-          </p>
-        </div>
-
-        {/* Progress ring */}
-        <div className="flex justify-center">
-          <div className="relative w-28 h-28">
-            <svg width="112" height="112" viewBox="0 0 112 112">
-              {/* Background ring */}
-              <circle
-                cx="56" cy="56" r="48"
-                fill="none"
-                stroke="var(--color-bg-surface-2)"
-                strokeWidth="8"
-              />
-              {/* Progress ring */}
-              <circle
-                cx="56" cy="56" r="48"
-                fill="none"
-                stroke="var(--color-accent)"
-                strokeWidth="8"
-                strokeLinecap="round"
-                strokeDasharray={`${Math.min(percentage / 100, 1) * 301.6} 301.6`}
-                transform="rotate(-90 56 56)"
-                style={{ filter: 'drop-shadow(0 0 6px var(--color-accent-soft))' }}
-              />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span
-                className="text-xl font-bold"
-                style={{ color: 'var(--color-accent)' }}
-              >
-                {percentage}%
-              </span>
+    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(58, 54, 56, 0.5)' }}>
+      <div
+        className="mx-4 max-w-sm w-full transition-all duration-300 scale-100"
+        style={{
+          background: '#FFFFFF',
+          border: '2px solid #D6D3CD',
+          borderRadius: '24px',
+          boxShadow: '8px 8px 0px rgba(121, 190, 235, 0.3)',
+        }}
+      >
+        {/* Header */}
+        <div className="p-6 border-b" style={{ borderColor: '#E8E6E1' }}>
+          <div className="flex items-center justify-between mb-4">
+            <div className="w-8" />
+            <div
+              className="w-12 h-12 rounded-xl flex items-center justify-center"
+              style={{ background: 'linear-gradient(135deg, #FFD3B6 0%, #FF8C82 100%)' }}
+            >
+              <Trophy size={24} color="white" />
             </div>
+            <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: '#F5F1EA' }}>
+              <X size={16} style={{ color: '#9E9899' }} />
+            </button>
+          </div>
+
+          <div className="text-center">
+            <h2 className="text-xl font-bold mb-2" style={{ color: '#3A3638', fontFamily: 'Quicksand, sans-serif' }}>
+              You reached your daily goal!
+            </h2>
+            <p className="text-sm" style={{ color: '#9E9899' }}>
+              Wrap up your day and see how you did
+            </p>
           </div>
         </div>
 
         {/* Stats */}
-        <div
-          className="rounded-xl px-4 py-3"
-          style={{ background: 'var(--color-bg-surface-2)' }}
-        >
-          <div className="flex justify-between items-center text-sm">
-            <span style={{ color: 'var(--color-text-secondary)' }}>{t('dashboard.today')} {t('focus.totalFocusTime')}</span>
-            <span className="font-bold" style={{ color: 'var(--color-text-primary)' }}>
-              {formatTime(hours, mins)}
-            </span>
+        <div className="p-6">
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="p-4 rounded-xl text-center" style={{ background: '#79BEEB20' }}>
+              <Clock size={20} style={{ color: '#79BEEB' }} className="mx-auto mb-2" />
+              <p className="text-2xl font-bold" style={{ color: '#2A4A5E', fontFamily: 'Quicksand, sans-serif' }}>
+                {hours}h {mins}m
+              </p>
+              <p className="text-xs" style={{ color: '#9E9899' }}>Total Focus</p>
+            </div>
+            <div className="p-4 rounded-xl text-center" style={{ background: '#A8E6CF20' }}>
+              <Target size={20} style={{ color: '#A8E6CF' }} className="mx-auto mb-2" />
+              <p className="text-2xl font-bold" style={{ color: '#2D5A4A', fontFamily: 'Quicksand, sans-serif' }}>
+                100%
+              </p>
+              <p className="text-xs" style={{ color: '#9E9899' }}>Goal Completed</p>
+            </div>
           </div>
-          <div className="flex justify-between items-center text-sm mt-2">
-            <span style={{ color: 'var(--color-text-secondary)' }}>{t('settings.dailyGoal')}</span>
-            <span className="font-bold" style={{ color: 'var(--color-text-primary)' }}>
-              {goalHours} {t('common.hours')}
-            </span>
+
+          {/* Category Breakdown */}
+          <div className="p-4 rounded-xl mb-6" style={{ background: '#FAF7F2' }}>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#9E9899' }}>
+              Breakdown
+            </p>
+            <div className="space-y-3">
+              {[
+                { name: 'Work', color: '#79BEEB', minutes: 120, pct: 40 },
+                { name: 'Meeting', color: '#D4C4FB', minutes: 60, pct: 20 },
+                { name: 'Learning', color: '#FFD3B6', minutes: 50, pct: 17 },
+                { name: 'Other', color: '#9E9899', minutes: 70, pct: 23 },
+              ].map((cat) => (
+                <div key={cat.name} className="flex items-center gap-3">
+                  <div className="w-3 h-3 rounded-full" style={{ background: cat.color }} />
+                  <span className="text-xs font-medium w-16" style={{ color: '#5C5658' }}>{cat.name}</span>
+                  <div className="flex-1 h-2 rounded-full" style={{ background: '#E8E6E1' }}>
+                    <div
+                      className="h-full rounded-full"
+                      style={{ width: `${cat.pct}%`, background: cat.color }}
+                    />
+                  </div>
+                  <span className="text-xs font-semibold w-10 text-right" style={{ color: '#5C5658' }}>
+                    {Math.floor(cat.minutes / 60)}h {cat.minutes % 60}m
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="space-y-3">
+            <button
+              onClick={onClose}
+              className="w-full py-3 rounded-xl font-semibold text-white transition-all hover:scale-[1.02]"
+              style={{ background: 'linear-gradient(135deg, #79BEEB 0%, #5AACDF 100%)', boxShadow: '4px 4px 0px rgba(121, 190, 235, 0.3)' }}
+            >
+              View Full Report
+            </button>
+            <button
+              onClick={onClose}
+              className="w-full py-3 rounded-xl font-semibold transition-all"
+              style={{ background: '#F5F1EA', color: '#5C5658' }}
+            >
+              <Share2 size={16} className="inline mr-2" />
+              Share Achievement
+            </button>
           </div>
         </div>
-
-        {/* Pet celebration */}
-        <div
-          className="rounded-xl px-4 py-3 flex items-center gap-3"
-          style={{ background: 'var(--color-accent-soft)' }}
-        >
-          <span className="text-2xl">🐱</span>
-          <div className="text-left">
-            <p className="text-sm font-medium" style={{ color: 'var(--color-accent)' }}>
-              {pet.name} {t('popups.proudOfYou')}
-            </p>
-            <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-              {t('popups.rewardCoins')} +10
-            </p>
-          </div>
-        </div>
-
-        {/* Action */}
-        <button
-          onClick={onClose}
-          className="px-6 py-2.5 rounded-full text-sm font-semibold text-white transition-all duration-150 hover:opacity-90"
-          style={{
-            background: 'var(--color-accent)',
-            boxShadow: '0 2px 8px var(--color-accent-soft)',
-          }}
-        >
-          {t('popups.great')}
-        </button>
       </div>
-    </Modal>
+    </div>
   )
 }
