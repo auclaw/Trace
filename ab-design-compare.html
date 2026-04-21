@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trace Design 风格对比 A/B Test</title>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Plus Jakarta Sans', 'Noto Sans SC', sans-serif;
+      background: #FDFBF7;
+      color: #3A3638;
+      line-height: 1.6;
+    }
+
+    h1, h2, h3 { font-family: 'Quicksand', 'Noto Sans SC', sans-serif; }
+
+    .header {
+      text-align: center;
+      padding: 48px 32px;
+      background: linear-gradient(135deg, #FDFBF7, #FAF7F2);
+      border-bottom: 1px solid #F5F0EA;
+    }
+
+    .header h1 {
+      font-size: 36px;
+      margin: 0 0 8px;
+    }
+
+    .header p {
+      color: #9E9899;
+      margin: 0;
+    }
+
+    /* 两列对比布局 */
+    .compare-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+    }
+
+    /* 风格 A: 原设计 — Editorial Offset */
+    .style-a {
+      background: #FDFBF7;
+      padding: 48px 32px;
+      border-right: 2px solid #D6D3CD;
+    }
+
+    .style-a .card {
+      background: #FFFFFF;
+      border: 2px solid #D6D3CD;
+      border-radius: 24px;
+      box-shadow: 4px 4px 0px #D6D3CD;
+      padding: 32px;
+      margin-bottom: 24px;
+      transition: all 0.2s ease;
+    }
+
+    .style-a .card:hover {
+      box-shadow: 6px 6px 0px #D6D3CD;
+      transform: translate(-2px, -2px);
+    }
+
+    .style-a .btn-primary {
+      background: #79BEEB;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 12px 24px;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: 4px 4px 0px #D6D3CD;
+      cursor: pointer;
+    }
+
+    .style-a .btn-secondary {
+      background: #FFFFFF;
+      color: #3A3638;
+      border: 2px solid #D6D3CD;
+      border-radius: 12px;
+      padding: 12px 24px;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: 4px 4px 0px #D6D3CD;
+      cursor: pointer;
+    }
+
+    .style-a .tag {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      background: rgba(121,190,235,0.15);
+      color: #5AACDF;
+      margin-right: 8px;
+    }
+
+    .style-a .section-label {
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      color: #FF8C82;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 24px;
+    }
+
+    .style-a .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #D6D3CD;
+      border: 2px solid #D6D3CD;
+    }
+
+    .style-a .input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid #D6D3CD;
+      border-radius: 12px;
+      background: white;
+      font-size: 14px;
+      outline: none;
+    }
+
+    .style-a .input:focus {
+      border-color: #79BEEB;
+    }
+
+    /* 风格 B: 马卡龙奶油 — Macaron Cream */
+    .style-b {
+      background: #FDFBF7;
+      padding: 48px 32px;
+    }
+
+    .style-b .card {
+      background: #FFFFFF;
+      border: 1px solid #F5F0EA;
+      border-radius: 24px;
+      box-shadow: 0 8px 30px rgba(121,190,235,0.08), 0 2px 8px rgba(0,0,0,0.02);
+      padding: 32px;
+      margin-bottom: 24px;
+      transition: all 0.2s ease;
+    }
+
+    .style-b .card:hover {
+      box-shadow: 0 12px 40px rgba(121,190,235,0.12), 0 4px 12px rgba(0,0,0,0.03);
+      transform: translateY(-2px);
+    }
+
+    .style-b .btn-primary {
+      background: #79BEEB;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 12px 24px;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: 0 8px 30px rgba(121,190,235,0.15);
+      cursor: pointer;
+    }
+
+    .style-b .btn-secondary {
+      background: #FFFFFF;
+      color: #3A3638;
+      border: 1px solid #F5F0EA;
+      border-radius: 12px;
+      padding: 12px 24px;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(121,190,235,0.08);
+      cursor: pointer;
+    }
+
+    .style-b .tag {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      background: rgba(121,190,235,0.12);
+      color: #79BEEB;
+      margin-right: 8px;
+    }
+
+    .style-b .section-label {
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      color: #D4C4FB;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 24px;
+    }
+
+    .style-b .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #F5F0EA;
+      border: 1px solid #F5F0EA;
+      box-shadow: 0 2px 8px rgba(121,190,235,0.08);
+    }
+
+    .style-b .input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid #F5F0EA;
+      border-radius: 12px;
+      background: white;
+      font-size: 14px;
+      outline: none;
+      box-shadow: 0 2px 8px rgba(121,190,235,0.05);
+    }
+
+    .style-b .input:focus {
+      border-color: #79BEEB;
+      box-shadow: 0 4px 16px rgba(121,190,235,0.10);
+    }
+
+    /* 卡片标题 */
+    .card-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin: 0 0 16px;
+      color: #3A3638;
+    }
+
+    .card-desc {
+      font-size: 14px;
+      color: #5C5658;
+      margin: 0 0 16px;
+    }
+
+    .card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 16px;
+      padding-top: 16px;
+    }
+
+    .style-a .card-footer { border-top: 2px solid #D6D3CD; }
+    .style-b .card-footer { border-top: 1px solid #F5F0EA; }
+
+    /* 任务列表 */
+    .task-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border-radius: 12px;
+      margin-bottom: 8px;
+    }
+
+    .style-a .task-item { border: 2px solid #D6D3CD; }
+    .style-b .task-item { border: 1px solid #F5F0EA; }
+
+    .task-checkbox {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .style-a .task-checkbox { border: 2px solid #D6D3CD; }
+    .style-b .task-checkbox { border: 1px solid #F5F0EA; }
+
+    .task-text {
+      font-size: 14px;
+      color: #3A3638;
+    }
+
+    /* 颜色标签页 */
+    .color-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+
+    .color-tab {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+
+    .color-tab:hover {
+      transform: scale(1.1);
+    }
+
+    /* 投票区域 */
+    .vote-section {
+      padding: 48px 32px;
+      text-align: center;
+      background: linear-gradient(135deg, #FAF7F2, #FDFBF7);
+      border-top: 2px solid #D6D3CD;
+    }
+
+    .vote-section h2 {
+      margin: 0 0 16px;
+      font-size: 24px;
+    }
+
+    .vote-section p {
+      color: #9E9899;
+      margin: 0 0 24px;
+    }
+
+    .vote-buttons {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+    }
+
+    .vote-btn {
+      padding: 16px 32px;
+      border-radius: 16px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: 'Plus Jakarta Sans', 'Noto Sans SC', sans-serif;
+    }
+
+    .vote-btn-a {
+      background: white;
+      border: 2px solid #D6D3CD;
+      color: #3A3638;
+      box-shadow: 4px 4px 0px #D6D3CD;
+    }
+
+    .vote-btn-b {
+      background: #79BEEB;
+      border: none;
+      color: white;
+      box-shadow: 0 8px 30px rgba(121,190,235,0.20);
+    }
+
+    .vote-btn:hover {
+      transform: translateY(-2px);
+    }
+
+    /* 对比指标表格 */
+    .compare-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 32px;
+    }
+
+    .compare-table th,
+    .compare-table td {
+      padding: 16px;
+      text-align: center;
+      font-size: 14px;
+    }
+
+    .compare-table th {
+      font-family: 'Quicksand', sans-serif;
+      font-weight: 700;
+      font-size: 16px;
+    }
+
+    .compare-table td {
+      border-top: 1px solid #F5F0EA;
+    }
+
+    .check { color: #A8E6CF; font-weight: 700; }
+    .cross { color: #FF8C82; font-weight: 700; }
+
+    .style-a .card-purple {
+      box-shadow: 4px 4px 0px rgba(212,196,251,0.4);
+      border-color: #D4C4FB;
+    }
+
+    .style-b .card-purple {
+      box-shadow: 0 8px 30px rgba(212,196,251,0.15);
+      border-color: rgba(212,196,251,0.2);
+    }
+
+    .style-b .card-purple .section-label {
+      color: #D4C4FB;
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <h1>🎨 Trace Design A/B 对比</h1>
+    <p>两种设计风格直接对比 · 你更喜欢哪一个？</p>
+  </header>
+
+  <div class="compare-container">
+    <!-- 风格 A: Editorial Offset -->
+    <div class="style-a">
+      <div style="text-align: center; margin-bottom: 48px; padding-bottom: 24px; border-bottom: 2px solid #D6D3CD;">
+        <h2 style="margin: 0 0 8px;">风格 A — 硬朗印刷风</h2>
+        <p style="color: #9E9899; margin: 0;">Editorial Offset · 2px 粗边框 + 硬偏移阴影</p>
+      </div>
+
+      <!-- 卡片 1 -->
+      <div class="card">
+        <div class="section-label">Today's Focus</div>
+        <h3 class="card-title">现在该做什么</h3>
+        <p class="card-desc">智能排序你的任务，帮助你保持专注</p>
+
+        <div class="task-item">
+          <div class="task-checkbox"></div>
+          <span class="task-text">完成设计系统的更新</span>
+        </div>
+        <div class="task-item">
+          <div class="task-checkbox" style="background: #79BEEB; border-color: #79BEEB;"></div>
+          <span class="task-text" style="opacity: 0.5; text-decoration: line-through;">写项目文档</span>
+        </div>
+
+        <div class="card-footer">
+          <div style="display: flex; gap: 8px;">
+            <span class="tag">设计</span>
+            <span class="tag">重要</span>
+          </div>
+          <button class="btn-primary" style="padding: 8px 16px; font-size: 13px;">开始</button>
+        </div>
+      </div>
+
+      <!-- 卡片 2 -->
+      <div class="card" style="border-color: #D4C4FB; box-shadow: 4px 4px 0px #D4C4FB;">
+        <div class="section-label" style="color: #D4C4FB;">AI Guardian</div>
+        <h3 class="card-title">每日复盘</h3>
+        <p class="card-desc">今天完成了 8 个任务，专注时长 4.5 小时 🎉</p>
+        <div style="display: flex; gap: 12px; margin-top: 16px;">
+          <button class="btn-primary">查看详情</button>
+          <button class="btn-secondary">稍后再说</button>
+        </div>
+      </div>
+
+      <!-- 输入框演示 -->
+      <div class="card">
+        <div class="section-label">Input</div>
+        <h3 class="card-title">添加新任务</h3>
+        <input type="text" class="input" placeholder="输入任务名称...">
+      </div>
+
+      <!-- 颜色标签 -->
+      <div class="card">
+        <div class="section-label">Color Palette</div>
+        <div class="color-tabs">
+          <div class="color-tab" style="background: #79BEEB;"></div>
+          <div class="color-tab" style="background: #D4C4FB;"></div>
+          <div class="color-tab" style="background: #A8E6CF;"></div>
+          <div class="color-tab" style="background: #FFD3B6;"></div>
+          <div class="color-tab" style="background: #FF8C82;"></div>
+          <div class="color-tab" style="background: #FFB5D4;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 风格 B: Macaron Cream -->
+    <div class="style-b">
+      <div style="text-align: center; margin-bottom: 48px; padding-bottom: 24px; border-bottom: 1px solid #F5F0EA;">
+        <h2 style="margin: 0 0 8px; color: #79BEEB;">风格 B — 马卡龙奶油风</h2>
+        <p style="color: #9E9899; margin: 0;">Macaron Cream · 1px 淡奶油边框 + 柔和光晕阴影</p>
+      </div>
+
+      <!-- 卡片 1 -->
+      <div class="card">
+        <div class="section-label">Today's Focus</div>
+        <h3 class="card-title">现在该做什么</h3>
+        <p class="card-desc">智能排序你的任务，帮助你保持专注</p>
+
+        <div class="task-item">
+          <div class="task-checkbox"></div>
+          <span class="task-text">完成设计系统的更新</span>
+        </div>
+        <div class="task-item">
+          <div class="task-checkbox" style="background: #79BEEB; border-color: #79BEEB;"></div>
+          <span class="task-text" style="opacity: 0.5; text-decoration: line-through;">写项目文档</span>
+        </div>
+
+        <div class="card-footer">
+          <div style="display: flex; gap: 8px;">
+            <span class="tag">设计</span>
+            <span class="tag">重要</span>
+          </div>
+          <button class="btn-primary" style="padding: 8px 16px; font-size: 13px;">开始</button>
+        </div>
+      </div>
+
+      <!-- 卡片 2 -->
+      <div class="card card-purple">
+        <div class="section-label">AI Guardian</div>
+        <h3 class="card-title">每日复盘</h3>
+        <p class="card-desc">今天完成了 8 个任务，专注时长 4.5 小时 🎉</p>
+        <div style="display: flex; gap: 12px; margin-top: 16px;">
+          <button class="btn-primary">查看详情</button>
+          <button class="btn-secondary">稍后再说</button>
+        </div>
+      </div>
+
+      <!-- 输入框演示 -->
+      <div class="card">
+        <div class="section-label">Input</div>
+        <h3 class="card-title">添加新任务</h3>
+        <input type="text" class="input" placeholder="输入任务名称...">
+      </div>
+
+      <!-- 颜色标签 -->
+      <div class="card">
+        <div class="section-label">Color Palette</div>
+        <div class="color-tabs">
+          <div class="color-tab" style="background: #79BEEB; box-shadow: 0 4px 12px rgba(121,190,235,0.3);"></div>
+          <div class="color-tab" style="background: #D4C4FB; box-shadow: 0 4px 12px rgba(212,196,251,0.3);"></div>
+          <div class="color-tab" style="background: #A8E6CF; box-shadow: 0 4px 12px rgba(168,230,207,0.3);"></div>
+          <div class="color-tab" style="background: #FFD3B6; box-shadow: 0 4px 12px rgba(255,211,182,0.3);"></div>
+          <div class="color-tab" style="background: #FF8C82; box-shadow: 0 4px 12px rgba(255,140,130,0.3);"></div>
+          <div class="color-tab" style="background: #FFB5D4; box-shadow: 0 4px 12px rgba(255,181,212,0.3);"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 对比表格 -->
+  <div style="padding: 48px 32px; max-width: 900px; margin: 0 auto;">
+    <h2 style="text-align: center; margin-bottom: 8px;">📊 详细对比</h2>
+    <p style="text-align: center; color: #9E9899; margin-bottom: 32px;">两种风格的视觉差异一览</p>
+
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th style="text-align: left;">对比项目</th>
+          <th style="color: #FF8C82;">风格 A — 硬朗印刷风</th>
+          <th style="color: #79BEEB;">风格 B — 马卡龙奶油风</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="text-align: left; font-weight: 600;">边框粗细</td>
+          <td>2px 粗边框</td>
+          <td>1px 细边框</td>
+        </tr>
+        <tr>
+          <td style="text-align: left; font-weight: 600;">边框颜色</td>
+          <td>#D6D3CD — 中灰色</td>
+          <td>#F5F0EA — 奶油色（几乎看不见）</td>
+        </tr>
+        <tr>
+          <td style="text-align: left; font-weight: 600;">阴影类型</td>
+          <td>硬偏移 — <code>4px 4px 0px</code></td>
+          <td>柔和光晕 — 蓝色调模糊阴影</td>
+        </tr>
+        <tr>
+          <td style="text-align: left; font-weight: 600;">悬停效果</td>
+          <td>阴影偏移变大 + 左上位移</td>
+          <td>阴影光晕扩散 + 向上悬浮</td>
+        </tr>
+        <tr>
+          <td style="text-align: left; font-weight: 600;">视觉感受</td>
+          <td>复古印刷、清晰锐利、有力量感</td>
+          <td>现代柔和、轻盈通透、长时间专注舒适</td>
+        </tr>
+        <tr>
+          <td style="text-align: left; font-weight: 600;">黑色边框</td>
+          <td class="cross">✗ 接近深灰 (#D6D3CD)</td>
+          <td class="check">✓ 奶油色，不突兀</td>
+        </tr>
+        <tr>
+          <td style="text-align: left; font-weight: 600;">Figma 还原度</td>
+          <td class="check">✓ 完全按 Figma 代码</td>
+          <td class="check">✓ Figma 配色但边框柔和化</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 投票区域 -->
+  <div class="vote-section">
+    <h2>🗳️ 你更喜欢哪一种风格？</h2>
+    <p>在浏览器打开这个 HTML 后告诉我你的选择即可</p>
+    <div class="vote-buttons">
+      <button class="vote-btn vote-btn-a">我喜欢 A — 硬朗印刷风</button>
+      <button class="vote-btn vote-btn-b">我喜欢 B — 马卡龙奶油风</button>
+    </div>
+  </div>
+
+</body>
+</html>

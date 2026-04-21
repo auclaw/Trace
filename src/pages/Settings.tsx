@@ -39,10 +39,9 @@ const MODULE_LABELS: Record<string, string> = {
 export default function Settings() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const { isDark, colorTheme, backgroundSkin } = useTheme()
+  const { isDark, backgroundSkin } = useTheme()
 
   const setTheme = useAppStore((s) => s.setTheme)
-  const setColorTheme = useAppStore((s) => s.setColorTheme)
   const setBackgroundSkin = useAppStore((s) => s.setBackgroundSkin)
   const activeModules = useAppStore((s) => s.activeModules)
   const setActiveModules = useAppStore((s) => s.setActiveModules)
@@ -747,10 +746,8 @@ export default function Settings() {
       <AppearanceSection
         index={1}
         isDark={isDark}
-        colorTheme={colorTheme}
         backgroundSkin={backgroundSkin}
         setTheme={setTheme}
-        setColorTheme={setColorTheme}
         setBackgroundSkin={setBackgroundSkin}
       />
 

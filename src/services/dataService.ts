@@ -33,6 +33,7 @@ export interface Subtask {
 
 export type TaskStatus = 'pending' | 'in_progress' | 'completed';
 export type RepeatType = 'none' | 'daily' | 'weekly' | 'monthly';
+export type EmotionalTag = 'easy' | 'neutral' | 'resist';
 
 export interface Task {
   id: string;
@@ -46,6 +47,9 @@ export interface Task {
   dueDate: string;
   repeatType: RepeatType;
   createdAt: string;
+  // Guardian Beta fields
+  firstStep?: string;
+  emotionalTag?: EmotionalTag;
 }
 
 export type HabitCategory = 'health' | 'learning' | 'fitness' | 'mindfulness' | 'other';

@@ -3,7 +3,7 @@
 // Typography: Quicksand (headings), Plus Jakarta Sans (body), JetBrains Mono (code/labels)
 
 export type Theme = 'light' | 'dark'
-export type ColorTheme = 'coral' | 'blue' | 'mint' | 'lilac' | 'lemon'
+export type ColorTheme = 'coral' | 'blue' | 'mint' | 'lilac' | 'lemon' | 'pink'
 export type BackgroundSkin = 'gradient' | 'solid' | 'glass'
 
 export interface ColorThemeConfig {
@@ -55,6 +55,14 @@ export const colorThemeConfigs: Record<ColorTheme, ColorThemeConfig> = {
     accentHover: '#FFBB8E',
     accentSoft: 'rgba(255, 211, 182, 0.12)',
     description: '温暖柔和，充满灵感',
+  },
+  pink: {
+    name: '马卡龙粉',
+    nameEn: 'Macaron Pink',
+    accent: '#FFB5D4',
+    accentHover: '#FF8FC0',
+    accentSoft: 'rgba(255, 181, 212, 0.12)',
+    description: '温柔甜美，治愈系配色',
   },
 }
 

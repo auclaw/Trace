@@ -1,12 +1,12 @@
 import React, { Suspense, useEffect, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAppStore } from './store/useAppStore';
 import { backgroundSkinConfigs } from './config/themes';
 import { ToastProvider } from './components/ui/Toast';
 import Sidebar from './components/Sidebar';
 import Onboarding from './components/Onboarding';
-import PetMiniWidget from './components/PetMiniWidget';
+// Beta: Pet feature disabled - import PetMiniWidget from './components/PetMiniWidget';
 import FocusStatusIndicator from './components/FocusStatusIndicator';
 import FocusStartedModal from './components/FocusStartedModal';
 import FocusCompletedModal from './components/FocusCompletedModal';
@@ -20,12 +20,13 @@ export { colorThemeConfigs, backgroundSkinConfigs } from './config/themes';
 /* ─ Lazy-loaded pages ── */
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
 const Timeline = React.lazy(() => import('./pages/Timeline'));
-const Planner = React.lazy(() => import('./pages/Planner'));
-const FocusMode = React.lazy(() => import('./pages/FocusMode'));
-const Statistics = React.lazy(() => import('./pages/Statistics'));
-const Habits = React.lazy(() => import('./pages/Habits'));
-const VirtualPet = React.lazy(() => import('./pages/VirtualPet'));
+const Task = React.lazy(() => import('./pages/Task'));
+const Analytics = React.lazy(() => import('./pages/Analytics'));
 const Settings = React.lazy(() => import('./pages/Settings'));
+// Legacy pages - hidden from navigation but still accessible
+const FocusMode = React.lazy(() => import('./pages/FocusMode'));
+const Habits = React.lazy(() => import('./pages/Habits'));
+// Beta: Pet feature disabled - const VirtualPet = React.lazy(() => import('./pages/VirtualPet'));
 // Team collaboration feature flag - hidden until backend implementation is complete
 // const Team = React.lazy(() => import('./pages/Team'))
 const PrivacyPolicy = React.lazy(() => import('./pages/PrivacyPolicy'));
@@ -43,12 +44,12 @@ function PageLoader() {
   );
 }
 
-/* ── Pet widget that hides on /pet page ── */
-function PetWidgetWrapper() {
-  const location = useLocation();
-  if (location.pathname === '/pet') return null;
-  return <PetMiniWidget />;
-}
+/* ── Beta: Pet feature disabled ── */
+// function PetWidgetWrapper() {
+//   const location = useLocation();
+//   if (location.pathname === '/pet') return null;
+//   return <PetMiniWidget />;
+// }
 
 /* ── Focus session popup orchestrator ── */
 import type { AppState, Activity } from './store/useAppStore';
@@ -186,12 +187,16 @@ function AppContent() {
               <Routes>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/timeline" element={<Timeline />} />
-                <Route path="/planner" element={<Planner />} />
-                <Route path="/focus" element={<FocusMode />} />
-                <Route path="/statistics" element={<Statistics />} />
-                <Route path="/habits" element={<Habits />} />
-                <Route path="/pet" element={<VirtualPet />} />
+                <Route path="/task" element={<Task />} />
+                <Route path="/analytics" element={<Analytics />} />
                 <Route path="/settings" element={<Settings />} />
+                {/* Compatibility redirects for legacy URLs */}
+                <Route path="/planner" element={<Navigate to="/task" replace />} />
+                <Route path="/statistics" element={<Navigate to="/analytics" replace />} />
+                {/* Beta: Disabled legacy routes - will be removed in future cleanup */}
+                <Route path="/focus" element={<FocusMode />} />
+                <Route path="/habits" element={<Habits />} />
+                {/* <Route path="/pet" element={<VirtualPet />} /> */}
                 {/* Team collaboration feature flag - hidden until backend implementation is complete */}
                 {/* <Route path="/team" element={<Team />} /> */}
                 <Route path="/privacy" element={<PrivacyPolicy />} />
@@ -200,7 +205,7 @@ function AppContent() {
           </Suspense>
         </main>
       </div>
-      <PetWidgetWrapper />
+      {/* Beta: Pet feature disabled - <PetWidgetWrapper /> */}
       <FocusStatusIndicator />
       <FocusPopupManager />
     </>

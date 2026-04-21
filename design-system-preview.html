@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trace Design System v3 — Macaron Cream</title>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* Canvas */
+      --color-bg-base: #FDFBF7;
+      --color-bg-surface-1: #FFFFFF;
+      --color-bg-surface-2: #FAF7F2;
+      --color-bg-surface-3: #F5F1EA;
+
+      /* Text */
+      --color-text-primary: #3A3638;
+      --color-text-secondary: #5C5658;
+      --color-text-muted: #9E9899;
+      --color-text-inverse: #FDFBF7;
+
+      /* Borders — 绝对没有黑色边框 */
+      --color-border-subtle: #F5F0EA;
+      --color-border-light: #EDE8E2;
+      --color-border-strong: #E5DFD9;
+
+      /* Macaron Palette */
+      --color-blue: #79BEEB;
+      --color-blue-soft: rgba(121, 190, 235, 0.12);
+      --color-purple: #D4C4FB;
+      --color-purple-soft: rgba(212, 196, 251, 0.12);
+      --color-green: #A8E6CF;
+      --color-green-soft: rgba(168, 230, 207, 0.12);
+      --color-lemon: #FFD3B6;
+      --color-lemon-soft: rgba(255, 211, 182, 0.12);
+      --color-coral: #FF8C82;
+      --color-coral-soft: rgba(255, 140, 130, 0.12);
+      --color-pink: #FFB5D4;
+      --color-pink-soft: rgba(255, 181, 212, 0.12);
+
+      /* Shadows — 柔和光晕，无硬偏移 */
+      --shadow-card: 0 8px 30px rgba(121, 190, 235, 0.08), 0 2px 8px rgba(0, 0, 0, 0.02);
+      --shadow-card-hover: 0 12px 40px rgba(121, 190, 235, 0.12), 0 4px 12px rgba(0, 0, 0, 0.03);
+
+      /* Radius */
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 20px;
+      --radius-2xl: 24px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Plus Jakarta Sans', 'Noto Sans SC', sans-serif;
+      background: var(--color-bg-base);
+      color: var(--color-text-primary);
+      line-height: 1.6;
+    }
+
+    h1, h2, h3 { font-family: 'Quicksand', 'Noto Sans SC', sans-serif; }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 48px 32px;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 64px;
+    }
+
+    .header h1 {
+      font-size: 48px;
+      font-weight: 700;
+      margin: 0 0 16px;
+      background: linear-gradient(135deg, var(--color-blue), var(--color-purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header p {
+      font-size: 18px;
+      color: var(--color-text-muted);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--color-bg-surface-1);
+      border: 1px solid var(--color-border-subtle);
+      border-radius: var(--radius-2xl);
+      box-shadow: var(--shadow-card);
+      padding: 32px;
+      margin-bottom: 32px;
+      transition: box-shadow 0.2s ease, transform 0.2s ease;
+    }
+
+    .card:hover {
+      box-shadow: var(--shadow-card-hover);
+      transform: translateY(-2px);
+    }
+
+    .card-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin: 0 0 24px;
+      color: var(--color-text-primary);
+    }
+
+    /* Color Palette */
+    .color-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 16px;
+    }
+
+    .color-item {
+      text-align: center;
+    }
+
+    .color-swatch {
+      width: 100%;
+      height: 80px;
+      border-radius: var(--radius-lg);
+      margin-bottom: 8px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .color-name {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--color-text-secondary);
+    }
+
+    .color-hex {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--color-text-muted);
+    }
+
+    /* Card Examples */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .demo-card {
+      padding: 24px;
+      border-radius: var(--radius-2xl);
+      background: var(--color-bg-surface-1);
+    }
+
+    .demo-card-primary {
+      border: 1px solid var(--color-border-subtle);
+      box-shadow: var(--shadow-card);
+    }
+
+    .demo-card-blue {
+      border: 1px solid var(--color-blue-soft);
+      box-shadow: 0 8px 30px rgba(121,190,235,0.12);
+    }
+
+    .demo-card-green {
+      border: 1px solid var(--color-green-soft);
+      box-shadow: 0 8px 30px rgba(168,230,207,0.12);
+    }
+
+    .demo-card h4 {
+      margin: 0 0 8px;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .demo-card p {
+      margin: 0;
+      font-size: 13px;
+      color: var(--color-text-muted);
+    }
+
+    /* Buttons */
+    .button-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border-radius: var(--radius-md);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: none;
+    }
+
+    .btn-primary {
+      background: var(--color-blue);
+      color: white;
+      box-shadow: 0 8px 30px rgba(121,190,235,0.15);
+    }
+
+    .btn-primary:hover {
+      background: #5AACDF;
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: white;
+      color: var(--color-text-primary);
+      border: 1px solid var(--color-border-subtle);
+      box-shadow: 0 2px 8px rgba(121,190,235,0.08);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--color-border-light);
+    }
+
+    .btn-success {
+      background: var(--color-green);
+      color: white;
+      box-shadow: 0 8px 30px rgba(168,230,207,0.15);
+    }
+
+    .btn-warning {
+      background: var(--color-lemon);
+      color: var(--color-text-primary);
+      box-shadow: 0 8px 30px rgba(255,211,182,0.15);
+    }
+
+    .btn-danger {
+      background: var(--color-coral);
+      color: white;
+      box-shadow: 0 8px 30px rgba(255,140,130,0.15);
+    }
+
+    .btn-ai {
+      background: var(--color-purple);
+      color: white;
+      box-shadow: 0 8px 30px rgba(212,196,251,0.15);
+    }
+
+    .btn-pink {
+      background: var(--color-pink);
+      color: white;
+      box-shadow: 0 8px 30px rgba(255,181,212,0.15);
+    }
+
+    /* Typography showcase */
+    .typography-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+    }
+
+    .type-item h1 {
+      font-size: 48px;
+      margin: 0;
+      color: var(--color-text-primary);
+    }
+
+    .type-item h2 {
+      font-size: 32px;
+      margin: 0;
+      color: var(--color-text-primary);
+    }
+
+    .type-item h3 {
+      font-size: 24px;
+      margin: 0;
+      color: var(--color-text-primary);
+    }
+
+    .type-item .body {
+      font-size: 16px;
+      line-height: 1.6;
+      color: var(--color-text-secondary);
+      margin: 0;
+    }
+
+    .type-item .caption {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--color-text-muted);
+      margin: 0;
+    }
+
+    .font-label {
+      font-size: 11px;
+      color: var(--color-text-muted);
+      margin-bottom: 8px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Shadow showcase */
+    .shadow-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+    }
+
+    .shadow-demo {
+      height: 80px;
+      background: white;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      color: var(--color-text-muted);
+    }
+
+    .shadow-xs { box-shadow: 0 1px 3px rgba(121, 190, 235, 0.05); }
+    .shadow-sm { box-shadow: 0 2px 8px rgba(121, 190, 235, 0.08); }
+    .shadow-md { box-shadow: 0 4px 16px rgba(121, 190, 235, 0.10); }
+    .shadow-lg { box-shadow: 0 8px 30px rgba(121, 190, 235, 0.12); }
+
+    footer {
+      text-align: center;
+      padding: 48px;
+      color: var(--color-text-muted);
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>🧁 Macaron Cream</h1>
+      <p>Trace Design System v3 — 马卡龙奶油设计系统<br>柔和奶油色边框 + 蓝色调光晕阴影 · 无黑色边框</p>
+    </header>
+
+    <!-- Color Palette -->
+    <div class="card">
+      <h2 class="card-title">🎨 六色马卡龙系统</h2>
+      <div class="color-grid">
+        <div class="color-item">
+          <div class="color-swatch" style="background: #79BEEB; box-shadow: 0 8px 30px rgba(121,190,235,0.12);"></div>
+          <div class="color-name">Macaron Blue</div>
+          <div class="color-hex">#79BEEB</div>
+        </div>
+        <div class="color-item">
+          <div class="color-swatch" style="background: #D4C4FB; box-shadow: 0 8px 30px rgba(212,196,251,0.15);"></div>
+          <div class="color-name">Macaron Purple</div>
+          <div class="color-hex">#D4C4FB</div>
+        </div>
+        <div class="color-item">
+          <div class="color-swatch" style="background: #A8E6CF; box-shadow: 0 8px 30px rgba(168,230,207,0.12);"></div>
+          <div class="color-name">Macaron Green</div>
+          <div class="color-hex">#A8E6CF</div>
+        </div>
+        <div class="color-item">
+          <div class="color-swatch" style="background: #FFD3B6; box-shadow: 0 8px 30px rgba(255,211,182,0.15);"></div>
+          <div class="color-name">Macaron Lemon</div>
+          <div class="color-hex">#FFD3B6</div>
+        </div>
+        <div class="color-item">
+          <div class="color-swatch" style="background: #FF8C82; box-shadow: 0 8px 30px rgba(255,140,130,0.12);"></div>
+          <div class="color-name">Macaron Coral</div>
+          <div class="color-hex">#FF8C82</div>
+        </div>
+        <div class="color-item">
+          <div class="color-swatch" style="background: #FFB5D4; box-shadow: 0 8px 30px rgba(255,181,212,0.12);"></div>
+          <div class="color-name">Macaron Pink</div>
+          <div class="color-hex">#FFB5D4</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card Examples -->
+    <div class="card">
+      <h2 class="card-title">🃏 卡片样式</h2>
+      <div class="card-grid">
+        <div class="demo-card demo-card-primary">
+          <h4>主卡片</h4>
+          <p>奶油色边框 + 蓝色调光晕阴影</p>
+        </div>
+        <div class="demo-card demo-card-blue">
+          <h4>蓝色主题</h4>
+          <p>蓝色边框 + 蓝色阴影</p>
+        </div>
+        <div class="demo-card demo-card-green">
+          <h4>绿色主题</h4>
+          <p>绿色边框 + 绿色阴影</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Buttons -->
+    <div class="card">
+      <h2 class="card-title">🔘 按钮样式</h2>
+      <div class="button-grid">
+        <button class="btn btn-primary">主要按钮</button>
+        <button class="btn btn-secondary">次要按钮</button>
+        <button class="btn btn-success">成功</button>
+        <button class="btn btn-warning">警告</button>
+        <button class="btn btn-danger">危险</button>
+        <button class="btn btn-ai">AI</button>
+        <button class="btn btn-pink">庆祝</button>
+      </div>
+    </div>
+
+    <!-- Shadows -->
+    <div class="card">
+      <h2 class="card-title">✨ 阴影系统 — 蓝色调柔和光晕</h2>
+      <div class="shadow-grid">
+        <div class="shadow-demo shadow-xs">XS</div>
+        <div class="shadow-demo shadow-sm">SM</div>
+        <div class="shadow-demo shadow-md">MD</div>
+        <div class="shadow-demo shadow-lg">LG</div>
+      </div>
+    </div>
+
+    <!-- Typography -->
+    <div class="card">
+      <h2 class="card-title">📝 字体系统</h2>
+      <div class="typography-grid">
+        <div class="type-item">
+          <div class="font-label">Quicksand 700 · 48px</div>
+          <h1>Display</h1>
+        </div>
+        <div class="type-item">
+          <div class="font-label">Quicksand 700 · 32px</div>
+          <h2>Heading 2</h2>
+        </div>
+        <div class="type-item">
+          <div class="font-label">Quicksand 700 · 24px</div>
+          <h3>Heading 3</h3>
+        </div>
+        <div class="type-item">
+          <div class="font-label">Plus Jakarta Sans 400 · 16px</div>
+          <p class="body">Body text for longer content. 马卡龙奶油设计系统，柔和舒适。</p>
+        </div>
+        <div class="type-item">
+          <div class="font-label">JetBrains Mono 400 · 12px</div>
+          <p class="caption">Monospace caption text</p>
+        </div>
+        <div class="type-item">
+          <div class="font-label">Noto Sans SC 500 · 16px</div>
+          <p class="body">中文文本展示，马卡龙奶油风格</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Design Principles -->
+    <div class="card" style="background: linear-gradient(135deg, var(--color-bg-surface-1), var(--color-bg-surface-2));">
+      <h2 class="card-title">🎯 设计原则</h2>
+      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px;">
+        <div style="padding: 20px; background: var(--color-bg-surface-1); border-radius: var(--radius-lg); border: 1px solid var(--color-border-subtle);">
+          <h4 style="margin: 0 0 8px; color: var(--color-blue);">✓ 正确做法</h4>
+          <ul style="margin: 0; padding-left: 20px; color: var(--color-text-secondary); font-size: 14px; line-height: 1.8;">
+            <li>1px 淡奶油色边框</li>
+            <li>蓝色调柔和光晕阴影</li>
+            <li>马卡龙蓝作为主色</li>
+            <li>24px 圆角卡片</li>
+          </ul>
+        </div>
+        <div style="padding: 20px; background: var(--color-coral-soft); border-radius: var(--radius-lg); border: 1px solid var(--color-coral-soft);">
+          <h4 style="margin: 0 0 8px; color: var(--color-coral);">✗ 设计禁忌</h4>
+          <ul style="margin: 0; padding-left: 20px; color: var(--color-text-secondary); font-size: 14px; line-height: 1.8;">
+            <li>黑色/深色边框 (#000, #222, #333)</li>
+            <li>硬 offset 偏移阴影 (4px 4px 0px)</li>
+            <li>2px 粗实线边框</li>
+            <li>纯白色背景 (#FFFFFF)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <p>Trace Design System v3 — Macaron Cream 🧁</p>
+      <p style="font-size: 12px; margin-top: 8px;">柔和奶油色边框 + 蓝色调光晕阴影 · 无黑色边框</p>
+    </footer>
+  </div>
+</body>
+</html>

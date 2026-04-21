@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trace Design System v3 — Dual Layer Macaron 双层马卡龙</title>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --color-bg-base: #FDFBF7;
+      --color-bg-surface-1: #FFFFFF;
+      --color-bg-surface-2: #FAF7F2;
+      --color-text-primary: #3A3638;
+      --color-text-secondary: #5C5658;
+      --color-text-muted: #9E9899;
+      --color-border-subtle: #F5F0EA;
+      --color-border-strong: #D6D3CD;
+      --color-blue: #79BEEB;
+      --color-purple: #D4C4FB;
+      --color-green: #A8E6CF;
+      --color-lemon: #FFD3B6;
+      --color-coral: #FF8C82;
+      --color-pink: #FFB5D4;
+      --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Plus Jakarta Sans', 'Noto Sans SC', sans-serif;
+      background: var(--color-bg-base);
+      color: var(--color-text-primary);
+      line-height: 1.6;
+    }
+
+    h1, h2, h3, h4 {
+      font-family: 'Quicksand', 'Noto Sans SC', sans-serif;
+      font-weight: 700;
+      margin: 0;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 48px 32px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 64px;
+    }
+
+    .header h1 {
+      font-size: 36px;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, var(--color-blue), var(--color-purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header p {
+      color: var(--color-text-muted);
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
+    .section-title {
+      font-size: 24px;
+      margin-bottom: 24px;
+      color: var(--color-text-primary);
+    }
+
+    .section-desc {
+      font-size: 14px;
+      color: var(--color-text-muted);
+      margin-bottom: 24px;
+    }
+
+    .demo-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+      margin-bottom: 64px;
+    }
+
+    .demo-col h4 {
+      font-size: 16px;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--color-border-strong);
+    }
+
+    /* ========== Style A — 硬朗印刷风 ========== */
+    .style-a-demo .card-a {
+      background: white;
+      border: 2px solid var(--color-border-strong);
+      border-radius: 24px;
+      box-shadow: 4px 4px 0px var(--color-border-strong);
+      padding: 24px;
+      margin-bottom: 16px;
+      transition: all 0.2s ease;
+    }
+    .style-a-demo .card-a:hover {
+      box-shadow: 6px 6px 0px var(--color-border-strong);
+      transform: translate(-2px, -2px);
+    }
+
+    .style-a-demo .card-blue {
+      border-color: var(--color-blue);
+      box-shadow: 4px 4px 0px rgba(121,190,235,0.4);
+    }
+    .style-a-demo .card-purple {
+      border-color: var(--color-purple);
+      box-shadow: 4px 4px 0px rgba(212,196,251,0.4);
+    }
+    .style-a-demo .card-green {
+      border-color: var(--color-green);
+      box-shadow: 4px 4px 0px rgba(168,230,207,0.4);
+    }
+    .style-a-demo .card-lemon {
+      border-color: var(--color-lemon);
+      box-shadow: 4px 4px 0px rgba(255,211,182,0.4);
+    }
+    .style-a-demo .card-coral {
+      border-color: var(--color-coral);
+      box-shadow: 4px 4px 0px rgba(255,140,130,0.4);
+    }
+    .style-a-demo .card-pink {
+      border-color: var(--color-pink);
+      box-shadow: 4px 4px 0px rgba(255,181,212,0.4);
+    }
+
+    .style-a-demo .btn-a {
+      padding: 10px 20px;
+      border-radius: 12px;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      border: none;
+      background: var(--color-blue);
+      color: white;
+      box-shadow: 4px 4px 0px var(--color-border-strong);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-right: 8px;
+      margin-bottom: 8px;
+    }
+    .style-a-demo .btn-a:hover {
+      box-shadow: 6px 6px 0px var(--color-border-strong);
+      transform: translate(-2px, -2px);
+    }
+    .style-a-demo .btn-secondary {
+      background: white;
+      color: var(--color-text-primary);
+      border: 2px solid var(--color-border-strong);
+    }
+
+    .style-a-demo .tag-a {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      background: rgba(121,190,235,0.15);
+      color: var(--color-blue);
+      margin-right: 6px;
+    }
+
+    /* ========== Style B — 马卡龙奶油风 ========== */
+    .style-b-demo .card-b {
+      background: white;
+      border: 1px solid var(--color-border-subtle);
+      border-radius: 24px;
+      box-shadow: 0 8px 30px rgba(121,190,235,0.08), 0 2px 8px rgba(0,0,0,0.02);
+      padding: 24px;
+      margin-bottom: 16px;
+      transition: all 0.2s ease;
+    }
+    .style-b-demo .card-b:hover {
+      box-shadow: 0 12px 40px rgba(121,190,235,0.12), 0 4px 12px rgba(0,0,0,0.03);
+      transform: translateY(-2px);
+    }
+
+    .style-b-demo .card-blue {
+      border-color: rgba(121,190,235,0.15);
+      box-shadow: 0 8px 30px rgba(121,190,235,0.12);
+    }
+    .style-b-demo .card-purple {
+      border-color: rgba(212,196,251,0.15);
+      box-shadow: 0 8px 30px rgba(212,196,251,0.15);
+    }
+    .style-b-demo .card-green {
+      border-color: rgba(168,230,207,0.15);
+      box-shadow: 0 8px 30px rgba(168,230,207,0.12);
+    }
+    .style-b-demo .card-lemon {
+      border-color: rgba(255,211,182,0.15);
+      box-shadow: 0 8px 30px rgba(255,211,182,0.15);
+    }
+    .style-b-demo .card-coral {
+      border-color: rgba(255,140,130,0.15);
+      box-shadow: 0 8px 30px rgba(255,140,130,0.12);
+    }
+    .style-b-demo .card-pink {
+      border-color: rgba(255,181,212,0.15);
+      box-shadow: 0 8px 30px rgba(255,181,212,0.12);
+    }
+
+    .style-b-demo .btn-b {
+      padding: 10px 20px;
+      border-radius: 12px;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      border: none;
+      background: var(--color-blue);
+      color: white;
+      box-shadow: 0 8px 30px rgba(121,190,235,0.20);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-right: 8px;
+      margin-bottom: 8px;
+    }
+    .style-b-demo .btn-b:hover {
+      box-shadow: 0 12px 40px rgba(121,190,235,0.25);
+      transform: translateY(-2px);
+    }
+    .style-b-demo .btn-secondary {
+      background: white;
+      color: var(--color-text-primary);
+      border: 1px solid var(--color-border-subtle);
+      box-shadow: 0 2px 8px rgba(121,190,235,0.08);
+    }
+
+    .style-b-demo .tag-b {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      background: rgba(121,190,235,0.12);
+      color: var(--color-blue);
+      margin-right: 6px;
+    }
+
+    /* Flat Card — 无边框无阴影 */
+    .card-flat {
+      background: white;
+      border: none;
+      border-radius: 24px;
+      padding: 24px;
+      margin-bottom: 16px;
+    }
+
+    .card-minimal {
+      background: var(--color-bg-surface-2);
+      border: 1px solid transparent;
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+    }
+
+    .card-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      font-family: 'Quicksand', sans-serif;
+    }
+    .card-desc {
+      font-size: 13px;
+      color: var(--color-text-muted);
+      margin-bottom: 12px;
+    }
+    .card-meta {
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--color-text-muted);
+    }
+
+    /* Usage Guide Table */
+    .usage-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 64px;
+      background: white;
+      border: 2px solid var(--color-border-strong);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 4px 4px 0px var(--color-border-strong);
+    }
+    .usage-table th,
+    .usage-table td {
+      padding: 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--color-border-subtle);
+      font-size: 14px;
+    }
+    .usage-table th {
+      background: var(--color-bg-surface-2);
+      font-family: 'Quicksand', sans-serif;
+      font-weight: 700;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--color-text-secondary);
+    }
+    .usage-table tr:last-child td {
+      border-bottom: none;
+    }
+    .check { color: var(--color-green); font-weight: 700; }
+    .cross { color: var(--color-coral); font-weight: 700; }
+
+    /* Color Palette */
+    .color-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 16px;
+      margin-bottom: 64px;
+    }
+    .color-item {
+      text-align: center;
+    }
+    .color-swatch {
+      width: 100%;
+      height: 64px;
+      border-radius: 12px;
+      margin-bottom: 8px;
+      border: 2px solid var(--color-border-strong);
+      box-shadow: 4px 4px 0px var(--color-border-strong);
+    }
+    .color-name {
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .color-hex {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--color-text-muted);
+    }
+
+    /* Badge */
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+    .badge-a {
+      background: var(--color-coral);
+      color: white;
+      border: 2px solid var(--color-coral);
+      box-shadow: 2px 2px 0px rgba(255,140,130,0.4);
+    }
+    .badge-b {
+      background: var(--color-purple);
+      color: white;
+      box-shadow: 0 4px 12px rgba(212,196,251,0.3);
+    }
+
+    footer {
+      text-align: center;
+      padding: 48px;
+      color: var(--color-text-muted);
+      font-size: 14px;
+      border-top: 2px solid var(--color-border-subtle);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>🧁 Dual Layer Macaron 双层马卡龙</h1>
+      <p>Trace Design System v3 · 两种边框风格 · 语义化颜色 · 按需使用</p>
+    </header>
+
+    <!-- 六色系统 -->
+    <h2 class="section-title">🎨 马卡龙六色语义系统</h2>
+    <p class="section-desc">不同颜色的边框代表不同含义，配合同色 offset 阴影使用</p>
+    <div class="color-grid">
+      <div class="color-item">
+        <div class="color-swatch" style="background: #79BEEB;"></div>
+        <div class="color-name">Blue</div>
+        <div class="color-hex">#79BEEB</div>
+        <div class="color-hex">主色、信息、专注</div>
+      </div>
+      <div class="color-item">
+        <div class="color-swatch" style="background: #D4C4FB;"></div>
+        <div class="color-name">Purple</div>
+        <div class="color-hex">#D4C4FB</div>
+        <div class="color-hex">AI、创意、智能</div>
+      </div>
+      <div class="color-item">
+        <div class="color-swatch" style="background: #A8E6CF;"></div>
+        <div class="color-name">Green</div>
+        <div class="color-hex">#A8E6CF</div>
+        <div class="color-hex">成功、完成、休息</div>
+      </div>
+      <div class="color-item">
+        <div class="color-swatch" style="background: #FFD3B6;"></div>
+        <div class="color-name">Lemon</div>
+        <div class="color-hex">#FFD3B6</div>
+        <div class="color-hex">警告、提示、温暖</div>
+      </div>
+      <div class="color-item">
+        <div class="color-swatch" style="background: #FF8C82;"></div>
+        <div class="color-name">Coral</div>
+        <div class="color-hex">#FF8C82</div>
+        <div class="color-hex">危险、删除、紧急</div>
+      </div>
+      <div class="color-item">
+        <div class="color-swatch" style="background: #FFB5D4;"></div>
+        <div class="color-name">Pink</div>
+        <div class="color-hex">#FFB5D4</div>
+        <div class="color-hex">庆祝、奖励、治愈</div>
+      </div>
+    </div>
+
+    <!-- 两种风格对比 -->
+    <h2 class="section-title">🃏 两种边框风格对比</h2>
+    <p class="section-desc">Style A 硬朗印刷风 · Style B 马卡龙奶油风</p>
+
+    <div class="demo-grid">
+      <!-- Style A -->
+      <div class="style-a-demo">
+        <h4>Style A — 硬朗印刷风 (2px 边框 + Offset 阴影)</h4>
+
+        <div class="card-a">
+          <span class="badge badge-a">A2 默认</span>
+          <div class="card-title">灰色边框卡片</div>
+          <div class="card-desc">2px #D6D3CD 边框 + 4px 同色 Offset 阴影</div>
+          <div class="card-meta">border: 2px solid #D6D3CD</div>
+          <div class="card-meta">box-shadow: 4px 4px 0px #D6D3CD</div>
+        </div>
+
+        <div class="card-a card-blue">
+          <span class="badge badge-a">A1 语义色</span>
+          <div class="card-title">蓝色语义卡片</div>
+          <div class="card-desc">用于主色、信息、专注状态</div>
+          <div class="tag-a">设计</div>
+          <div class="tag-a">开发</div>
+        </div>
+
+        <div class="card-a card-purple">
+          <div class="card-title">紫色语义卡片</div>
+          <div class="card-desc">用于 AI Guardian、智能推荐、创意功能</div>
+        </div>
+
+        <div class="card-a card-green">
+          <div class="card-title">绿色语义卡片</div>
+          <div class="card-desc">用于成功状态、已完成、休息时间</div>
+        </div>
+
+        <div style="margin-top: 16px;">
+          <button class="btn-a">主要按钮</button>
+          <button class="btn-a btn-secondary">次要按钮</button>
+        </div>
+      </div>
+
+      <!-- Style B -->
+      <div class="style-b-demo">
+        <h4>Style B — 马卡龙奶油风 (1px 边框 + 光晕阴影)</h4>
+
+        <div class="card-b">
+          <span class="badge badge-b">B1 奶油风</span>
+          <div class="card-title">奶油色边框卡片</div>
+          <div class="card-desc">1px #F5F0EA 边框 + 蓝色调柔和光晕阴影</div>
+          <div class="card-meta">border: 1px solid #F5F0EA</div>
+          <div class="card-meta">box-shadow: 0 8px 30px rgba(121,190,235,0.08)</div>
+        </div>
+
+        <div class="card-b card-blue">
+          <span class="badge badge-b">B1 语义色</span>
+          <div class="card-title">蓝色光晕卡片</div>
+          <div class="card-desc">淡蓝色边框 + 蓝色光晕阴影</div>
+          <div class="tag-b">设计</div>
+          <div class="tag-b">开发</div>
+        </div>
+
+        <div class="card-b card-purple">
+          <div class="card-title">紫色光晕卡片</div>
+          <div class="card-desc">淡紫色边框 + 紫色光晕阴影</div>
+        </div>
+
+        <div class="card-b card-green">
+          <div class="card-title">绿色光晕卡片</div>
+          <div class="card-desc">淡绿色边框 + 绿色光晕阴影</div>
+        </div>
+
+        <div style="margin-top: 16px;">
+          <button class="btn-b">主要按钮</button>
+          <button class="btn-b btn-secondary">次要按钮</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 极简风格 -->
+    <h2 class="section-title">🤍 额外两种变体</h2>
+    <p class="section-desc">不是所有卡片都需要边框和阴影，按需选择</p>
+    <div class="demo-grid">
+      <div>
+        <h4>Style B2 — Flat 无边框无阴影</h4>
+        <div class="card-flat">
+          <div class="card-title">纯净卡片</div>
+          <div class="card-desc">无边框，无阴影，只靠圆角和背景区分层次</div>
+          <div class="card-meta">border: none; box-shadow: none;</div>
+        </div>
+      </div>
+      <div>
+        <h4>Style Minimal — 极简透明边框</h4>
+        <div class="card-minimal">
+          <div class="card-title">极简卡片</div>
+          <div class="card-desc">透明边框 + 极淡阴影，适合次要内容和分组容器</div>
+          <div class="card-meta">border: 1px solid transparent;</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 使用指南 -->
+    <h2 class="section-title">📖 使用场景指南</h2>
+    <table class="usage-table">
+      <thead>
+        <tr>
+          <th>页面/组件</th>
+          <th>推荐风格</th>
+          <th>原因</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>任务列表 Task</td>
+          <td><span class="check">A2 (默认)</span> + A1 (语义色强调)</td>
+          <td>待办任务需要清晰的边界，印刷风的明确感最合适</td>
+        </tr>
+        <tr>
+          <td>首页 Dashboard</td>
+          <td><span class="check">混合使用</span></td>
+          <td>重点数据卡片用 A1 彩色边框，常规卡片用 A2，次要内容用 B2</td>
+        </tr>
+        <tr>
+          <td>日历视图 Calendar</td>
+          <td><span class="check">B1 奶油风</span></td>
+          <td>日历需要柔和、不拥挤的视觉体验，光晕阴影更舒适</td>
+        </tr>
+        <tr>
+          <td>统计页面 Analytics</td>
+          <td><span class="check">混合使用</span></td>
+          <td>图表卡片用 B1 柔和风，关键指标卡片用 A1 彩色边框突出</td>
+        </tr>
+        <tr>
+          <td>设置页面 Settings</td>
+          <td><span class="check">A2 统一</span></td>
+          <td>设置页面需要清晰的分组边界，印刷风更合适</td>
+        </tr>
+        <tr>
+          <td>弹窗 Modal</td>
+          <td><span class="check">A1 语义色边框</span></td>
+          <td>弹窗需要吸引注意力，彩色边框 + 阴影效果更好</td>
+        </tr>
+        <tr>
+          <td>AI Guardian 相关功能</td>
+          <td><span class="check">A1 紫色边框</span></td>
+          <td>紫色 = AI/智能，统一视觉语言</td>
+        </tr>
+        <tr>
+          <td>成功/完成状态</td>
+          <td><span class="check">A1 绿色边框</span></td>
+          <td>绿色 = 成功/完成，清晰的正反馈</td>
+        </tr>
+        <tr>
+          <td>删除/危险操作</td>
+          <td><span class="check">A1 珊瑚色边框</span></td>
+          <td>珊瑚色 = 危险，清晰的视觉警示</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- 设计禁忌 -->
+    <h2 class="section-title">🚫 设计禁忌</h2>
+    <div class="card-a card-coral">
+      <div class="card-title">绝对禁止使用纯黑色边框</div>
+      <div class="card-desc">
+        任何情况下都不要使用 #000, #111, #222, #333 等深色边框。<br>
+        最暗的边框颜色是 #D6D3CD（中灰色），保证视觉柔和不刺眼。
+      </div>
+      <div style="margin-top: 12px; font-size: 12px; color: var(--color-coral); font-weight: 600;">
+        border-color: #000 → ❌ 禁止<br>
+        border-color: #D6D3CD → ✅ 可以
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    <p>Trace Design System v3 — Dual Layer Macaron 🧁</p>
+    <p style="font-size: 12px; margin-top: 4px;">双层马卡龙灵活设计系统 · 四种边框风格 · 六色语义系统</p>
+  </footer>
+</body>
+</html>

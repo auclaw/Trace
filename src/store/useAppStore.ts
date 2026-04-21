@@ -1,11 +1,11 @@
 import { create } from 'zustand'
 import dataService from '../services/dataService'
-import type { Activity, Task, Habit, Pet, FocusSession, HabitCategory } from '../services/dataService'
+import type { Activity, Task, Habit, Pet, FocusSession, HabitCategory, EmotionalTag } from '../services/dataService'
 import type { ColorTheme, BackgroundSkin } from '../config/themes'
 import { colorThemeConfigs, DEFAULT_MODULES } from '../config/themes'
 
 // Re-export types for convenience
-export type { Activity, Task, Habit, Pet, FocusSession, HabitCategory }
+export type { Activity, Task, Habit, Pet, FocusSession, HabitCategory, EmotionalTag }
 
 // ─── Focus settings ───
 export interface FocusSettings {
@@ -32,6 +32,11 @@ const LS = {
   FIRST_LAUNCH: 'trace-first-launch-done',
   FOCUS_SETTINGS: 'trace-focus-settings',
   DASHBOARD_WIDGETS: 'trace-dashboard-widget-order',
+  // Guardian Beta localStorage keys
+  GUARDIAN_LAST_MORNING: 'trace-guardian-last-morning',
+  GUARDIAN_LAST_REVIEW: 'trace-guardian-last-review',
+  GUARDIAN_TOMORROW_TOP: 'trace-guardian-tomorrow-top',
+  GUARDIAN_SETTINGS: 'trace-guardian-settings',
 }
 
 function loadJSON<T>(key: string, fallback: T): T {
@@ -149,6 +154,29 @@ export interface AppState {
   // Dashboard customizable widget order
   dashboardWidgetOrder: string[]
   setDashboardWidgetOrder: (order: string[]) => void
+
+  // Guardian Beta state
+  isFocusModeOpen: boolean
+  currentFocusTaskId: string | null
+  currentRecommendedTaskId: string | null
+  lastMorningRitualDate: string | null
+  lastDailyReviewDate: string | null
+  tomorrowTopTaskId: string | null
+  guardianSettings: {
+    morningRitualEnabled: boolean
+    dailyReviewEnabled: boolean
+    launchBoostEnabled: boolean
+  }
+
+  // Guardian Beta actions
+  setIsFocusModeOpen: (open: boolean) => void
+  setCurrentFocusTaskId: (id: string | null) => void
+  setCurrentRecommendedTaskId: (id: string | null) => void
+  setLastMorningRitualDate: (date: string) => void
+  setLastDailyReviewDate: (date: string) => void
+  setTomorrowTopTaskId: (id: string | null) => void
+  updateGuardianSettings: (settings: Partial<AppState['guardianSettings']>) => void
+  getRecommendedTask: () => Task | null
 }
 
 // ─── Store ───
@@ -495,6 +523,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
 
   // ── Dashboard customizable widget order ──
   dashboardWidgetOrder: loadJSON<string[]>(LS.DASHBOARD_WIDGETS, [
+    'nowEngine',
     'trackingBanner',
     'quickActions',
     'statsRow',
@@ -506,6 +535,77 @@ export const useAppStore = create<AppState>()((set, get) => ({
   setDashboardWidgetOrder: (order) => {
     localStorage.setItem(LS.DASHBOARD_WIDGETS, JSON.stringify(order))
     set({ dashboardWidgetOrder: order })
+  },
+
+  // ── Guardian Beta State ──
+  isFocusModeOpen: false,
+  currentFocusTaskId: null,
+  currentRecommendedTaskId: null,
+  lastMorningRitualDate: localStorage.getItem(LS.GUARDIAN_LAST_MORNING),
+  lastDailyReviewDate: localStorage.getItem(LS.GUARDIAN_LAST_REVIEW),
+  tomorrowTopTaskId: localStorage.getItem(LS.GUARDIAN_TOMORROW_TOP),
+  guardianSettings: loadJSON(LS.GUARDIAN_SETTINGS, {
+    morningRitualEnabled: true,
+    dailyReviewEnabled: true,
+    launchBoostEnabled: true,
+  }),
+
+  setIsFocusModeOpen: (open) => set({ isFocusModeOpen: open }),
+  setCurrentFocusTaskId: (id) => set({ currentFocusTaskId: id }),
+  setCurrentRecommendedTaskId: (id) => set({ currentRecommendedTaskId: id }),
+  setLastMorningRitualDate: (date) => {
+    localStorage.setItem(LS.GUARDIAN_LAST_MORNING, date)
+    set({ lastMorningRitualDate: date })
+  },
+  setLastDailyReviewDate: (date) => {
+    localStorage.setItem(LS.GUARDIAN_LAST_REVIEW, date)
+    set({ lastDailyReviewDate: date })
+  },
+  setTomorrowTopTaskId: (id) => {
+    if (id) {
+      localStorage.setItem(LS.GUARDIAN_TOMORROW_TOP, id)
+    } else {
+      localStorage.removeItem(LS.GUARDIAN_TOMORROW_TOP)
+    }
+    set({ tomorrowTopTaskId: id })
+  },
+  updateGuardianSettings: (settings) => {
+    const merged = { ...get().guardianSettings, ...settings }
+    localStorage.setItem(LS.GUARDIAN_SETTINGS, JSON.stringify(merged))
+    set({ guardianSettings: merged })
+  },
+
+  // Beta deterministic recommendation logic
+  getRecommendedTask: () => {
+    const { tasks, currentFocusTaskId, tomorrowTopTaskId } = get()
+
+    // 1. If there's an active focus task, return that
+    if (currentFocusTaskId) {
+      const active = tasks.find((t) => t.id === currentFocusTaskId)
+      if (active) return active
+    }
+
+    // 2. If tomorrow's top task is being reviewed on a new day, prioritize it
+    // This handles the handoff from Daily Review to next morning
+    if (tomorrowTopTaskId) {
+      const saved = tasks.find((t) => t.id === tomorrowTopTaskId)
+      // Check if the saved task was from yesterday (simple date comparison for now)
+      if (saved) return saved
+    }
+
+    // 3. Find first incomplete task with highest priority
+    const pending = tasks.filter((t) => t.status !== 'completed')
+    if (pending.length === 0) return null
+
+    // Sort by priority (5 = highest), then due date
+    pending.sort((a, b) => {
+      if (b.priority !== a.priority) return b.priority - a.priority
+      const dueA = a.dueDate || '9999-12-31'
+      const dueB = b.dueDate || '9999-12-31'
+      return dueA.localeCompare(dueB)
+    })
+
+    return pending[0]
   },
 
   // ── Init ──

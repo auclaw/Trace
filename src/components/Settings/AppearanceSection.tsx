@@ -2,29 +2,24 @@
 
 import { useTranslation } from 'react-i18next'
 import {
-  colorThemeConfigs,
   backgroundSkinConfigs,
 } from '../../config/themes'
-import type { ColorTheme, BackgroundSkin } from '../../config/themes'
+import type { BackgroundSkin } from '../../config/themes'
 import { Section, Toggle } from './components'
 
 interface AppearanceSectionProps {
   index: number
   isDark: boolean
-  colorTheme: ColorTheme
   backgroundSkin: BackgroundSkin
   setTheme: (theme: 'light' | 'dark') => void
-  setColorTheme: (theme: ColorTheme) => void
   setBackgroundSkin: (skin: BackgroundSkin) => void
 }
 
 export default function AppearanceSection({
   index,
   isDark,
-  colorTheme,
   backgroundSkin,
   setTheme,
-  setColorTheme,
   setBackgroundSkin,
 }: AppearanceSectionProps) {
   const { t } = useTranslation()
@@ -64,72 +59,20 @@ export default function AppearanceSection({
         />
       </div>
 
-      {/* Color theme grid */}
-      <div>
-        <p
-          className="text-xs mb-3 font-medium"
-          style={{ color: 'var(--color-text-muted)' }}
-        >
-          {t('settings.colorTheme')}
+      {/* Macaron system info */}
+      <div
+        className="p-4 rounded-xl mb-4"
+        style={{
+          background: 'var(--color-bg-surface-2)',
+          border: '1px solid var(--color-border-subtle)',
+        }}
+      >
+        <p className="text-sm font-medium mb-2" style={{ color: 'var(--color-text-primary)' }}>
+          🧁 马卡龙设计系统
         </p>
-        <div className="grid grid-cols-5 gap-4">
-          {(Object.entries(colorThemeConfigs) as [ColorTheme, (typeof colorThemeConfigs)[ColorTheme]][]).map(
-            ([key, cfg]) => {
-              const selected = colorTheme === key
-              return (
-                <button
-                  key={key}
-                  onClick={() => setColorTheme(key)}
-                  title={cfg.name}
-                  style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: '50%',
-                    backgroundColor: cfg.accent,
-                    border: 'none',
-                    cursor: 'pointer',
-                    transition: 'transform 0.25s ease, box-shadow 0.25s ease',
-                    transform: selected ? 'scale(1.15)' : 'scale(1)',
-                    boxShadow: selected
-                      ? '0 0 0 3px var(--color-bg-surface-1), 0 0 0 5px var(--color-accent), 0 4px 12px rgba(44,24,16,0.15)'
-                      : '0 2px 6px rgba(44,24,16,0.08)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    position: 'relative',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!selected) e.currentTarget.style.transform = 'scale(1.08) translateY(-2px)'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = selected ? 'scale(1.15)' : 'scale(1)'
-                  }}
-                >
-                  {selected && (
-                    <svg
-                      className="settings-check-pop"
-                      width="18"
-                      height="18"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="#fff"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                  )}
-                </button>
-              )
-            },
-          )}
-        </div>
-        <p
-          className="text-xs mt-3"
-          style={{ color: 'var(--color-text-muted)' }}
-        >
-          {t('settings.current')}: {colorThemeConfigs[colorTheme].name} — {colorThemeConfigs[colorTheme].description}
+        <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+          柔和奶油色边框 + 蓝色调光晕，为长时间专注打造舒适视觉体验。
+          内置六种马卡龙配色用于不同功能场景（任务分类、状态标签等）。
         </p>
       </div>
 

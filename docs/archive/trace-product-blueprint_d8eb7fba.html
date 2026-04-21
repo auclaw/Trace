@@ -1,0 +1,1354 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trace 时迹 — 执行守护系统产品蓝图</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Noto+Sans+SC:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: {
+        sans: ['Inter', 'Noto Sans SC', 'system-ui', 'sans-serif'],
+        mono: ['JetBrains Mono', 'monospace'],
+        display: ['Inter', 'Noto Sans SC', 'sans-serif'],
+      },
+      colors: {
+        accent: { 50:'#fff7ed',100:'#ffedd5',200:'#fed7aa',300:'#fdba74',400:'#fb923c',500:'#f97316',600:'#ea580c',700:'#c2410c',800:'#9a3412',900:'#7c2d12' },
+        surface: { 50:'#f8fafc',100:'#f1f5f9',200:'#e2e8f0',300:'#cbd5e1',400:'#94a3b8',500:'#64748b',600:'#475569',700:'#334155',800:'#1e293b',900:'#0f172a',950:'#020617' },
+      }
+    }
+  }
+}
+</script>
+<style>
+:root {
+  --accent: #f97316;
+  --accent-soft: rgba(249,115,22,0.15);
+  --glass-bg: rgba(15,23,42,0.6);
+  --glass-border: rgba(148,163,184,0.12);
+  --glass-glow: rgba(249,115,22,0.08);
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --green: #22c55e;
+  --blue: #3b82f6;
+  --purple: #a855f7;
+  --pink: #ec4899;
+  --red: #ef4444;
+  --cyan: #06b6d4;
+}
+*{ box-sizing:border-box; margin:0; padding:0; }
+html{ scroll-behavior:smooth; }
+body{
+  font-family:'Inter','Noto Sans SC',system-ui,sans-serif;
+  background:#020617;
+  color:var(--text-primary);
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+/* ---- Mesh Gradient Background ---- */
+.mesh-bg{
+  position:fixed; inset:0; z-index:0; pointer-events:none;
+  background:
+    radial-gradient(ellipse 80% 60% at 10% 20%, rgba(249,115,22,0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 80% at 90% 80%, rgba(168,85,247,0.06) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 50% at 50% 50%, rgba(6,182,212,0.04) 0%, transparent 60%),
+    #020617;
+}
+/* ---- Noise Texture Overlay ---- */
+.noise-overlay{
+  position:fixed; inset:0; z-index:1; pointer-events:none; opacity:0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat:repeat; background-size:128px;
+}
+/* ---- Glass Card ---- */
+.glass{
+  background:var(--glass-bg);
+  border:1px solid var(--glass-border);
+  backdrop-filter:blur(24px) saturate(1.2);
+  -webkit-backdrop-filter:blur(24px) saturate(1.2);
+  border-radius:20px;
+  box-shadow: 0 0 40px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04);
+}
+.glass-sm{ border-radius:14px; }
+.glass-xs{ border-radius:10px; }
+.glass-hover{ transition: all 0.3s ease; }
+.glass-hover:hover{
+  border-color:rgba(249,115,22,0.25);
+  box-shadow: 0 0 40px rgba(0,0,0,0.3), 0 0 20px var(--glass-glow), inset 0 1px 0 rgba(255,255,255,0.06);
+  transform: translateY(-2px);
+}
+/* ---- Progress Bar ---- */
+#reading-progress{
+  position:fixed; top:0; left:0; height:3px; z-index:9999;
+  background: linear-gradient(90deg, var(--accent), var(--purple));
+  transition: width 0.15s ease;
+  box-shadow: 0 0 10px rgba(249,115,22,0.5);
+}
+/* ---- Section Titles ---- */
+.section-title{
+  font-size:clamp(2rem,4vw,3.2rem); font-weight:800; line-height:1.15;
+  letter-spacing:-0.03em;
+}
+.section-subtitle{
+  font-size:clamp(1rem,1.8vw,1.25rem); font-weight:400; line-height:1.7;
+  color:var(--text-secondary); max-width:680px;
+}
+/* ---- Badge / Tag ---- */
+.tag{
+  display:inline-flex; align-items:center; gap:6px;
+  padding:4px 12px; border-radius:100px; font-size:0.75rem; font-weight:600;
+  letter-spacing:0.02em;
+}
+.tag-orange{ background:rgba(249,115,22,0.15); color:#fb923c; }
+.tag-blue{ background:rgba(59,130,246,0.15); color:#60a5fa; }
+.tag-green{ background:rgba(34,197,94,0.15); color:#4ade80; }
+.tag-purple{ background:rgba(168,85,247,0.15); color:#c084fc; }
+.tag-pink{ background:rgba(236,72,153,0.15); color:#f472b6; }
+.tag-cyan{ background:rgba(6,182,212,0.15); color:#22d3ee; }
+.tag-red{ background:rgba(239,68,68,0.15); color:#f87171; }
+/* ---- Phase Badge ---- */
+.phase-badge{
+  display:inline-flex; align-items:center; gap:6px;
+  padding:6px 16px; border-radius:100px; font-size:0.8rem; font-weight:700;
+  text-transform:uppercase; letter-spacing:0.08em;
+}
+.phase-v1{ background:rgba(34,197,94,0.15); color:#4ade80; border:1px solid rgba(34,197,94,0.25); }
+.phase-v2{ background:rgba(59,130,246,0.15); color:#60a5fa; border:1px solid rgba(59,130,246,0.25); }
+.phase-v3{ background:rgba(168,85,247,0.15); color:#c084fc; border:1px solid rgba(168,85,247,0.25); }
+.phase-v4{ background:rgba(236,72,153,0.15); color:#f472b6; border:1px solid rgba(236,72,153,0.25); }
+/* ---- Feature Card ---- */
+.feature-card{
+  padding:28px; border-radius:18px;
+  background:rgba(15,23,42,0.5); border:1px solid var(--glass-border);
+  backdrop-filter:blur(12px); transition: all 0.3s ease;
+}
+.feature-card:hover{
+  border-color:rgba(249,115,22,0.2); transform:translateY(-3px);
+  box-shadow:0 12px 40px rgba(0,0,0,0.3);
+}
+/* ---- Flow Diagram Styles ---- */
+.flow-node{
+  padding:14px 20px; border-radius:14px; font-size:0.85rem; font-weight:600;
+  text-align:center; position:relative; min-width:140px;
+  backdrop-filter:blur(12px); border:1px solid var(--glass-border);
+}
+.flow-arrow{
+  color:var(--text-muted); font-size:1.5rem; display:flex; align-items:center; justify-content:center;
+}
+/* ---- Page Card ---- */
+.page-card{
+  padding:32px; border-radius:20px;
+  background:linear-gradient(135deg, rgba(15,23,42,0.7), rgba(15,23,42,0.4));
+  border:1px solid var(--glass-border);
+  backdrop-filter:blur(16px); transition:all 0.4s ease;
+}
+.page-card:hover{
+  border-color:rgba(249,115,22,0.2);
+  box-shadow:0 16px 48px rgba(0,0,0,0.35), 0 0 24px var(--glass-glow);
+}
+/* ---- Scroll Reveal ---- */
+.reveal{ opacity:0; transform:translateY(40px); }
+/* ---- Connector Lines for Flow ---- */
+.connector-h{ height:2px; background:linear-gradient(90deg, transparent, var(--text-muted), transparent); flex:1; min-width:20px; }
+.connector-v{ width:2px; background:linear-gradient(180deg, transparent, var(--text-muted), transparent); min-height:20px; align-self:center; }
+/* ---- Psych Badge ---- */
+.psych-pill{
+  display:inline-flex; align-items:center; gap:5px;
+  padding:3px 10px; border-radius:8px; font-size:0.7rem; font-weight:500;
+  background:rgba(6,182,212,0.1); color:#22d3ee; border:1px solid rgba(6,182,212,0.15);
+}
+/* ---- Table Styling ---- */
+.data-table{ width:100%; border-collapse:separate; border-spacing:0; }
+.data-table th{
+  padding:14px 18px; text-align:left; font-size:0.75rem; font-weight:600;
+  text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted);
+  border-bottom:1px solid var(--glass-border);
+}
+.data-table td{
+  padding:14px 18px; font-size:0.875rem; color:var(--text-secondary);
+  border-bottom:1px solid rgba(148,163,184,0.06);
+}
+.data-table tr:hover td{ color:var(--text-primary); background:rgba(249,115,22,0.03); }
+/* ---- TOC ---- */
+.toc-link{
+  display:flex; align-items:center; gap:10px; padding:10px 16px; border-radius:12px;
+  color:var(--text-secondary); text-decoration:none; font-size:0.9rem; font-weight:500;
+  transition:all 0.25s ease; border:1px solid transparent;
+}
+.toc-link:hover{
+  color:var(--text-primary); background:rgba(249,115,22,0.06);
+  border-color:rgba(249,115,22,0.12);
+}
+/* ---- Callout ---- */
+.callout{
+  padding:20px 24px; border-radius:14px; border-left:3px solid;
+  background:rgba(15,23,42,0.5); backdrop-filter:blur(8px);
+}
+.callout-orange{ border-color:var(--accent); background:rgba(249,115,22,0.05); }
+.callout-blue{ border-color:var(--blue); background:rgba(59,130,246,0.05); }
+.callout-green{ border-color:var(--green); background:rgba(34,197,94,0.05); }
+.callout-purple{ border-color:var(--purple); background:rgba(168,85,247,0.05); }
+.callout-cyan{ border-color:var(--cyan); background:rgba(6,182,212,0.05); }
+/* ---- Keyframe Animations ---- */
+@keyframes float{ 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+@keyframes pulse-glow{ 0%,100%{box-shadow:0 0 20px rgba(249,115,22,0.15)} 50%{box-shadow:0 0 40px rgba(249,115,22,0.3)} }
+@keyframes gradient-shift{ 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+.float-anim{ animation:float 4s ease-in-out infinite; }
+.pulse-glow-anim{ animation:pulse-glow 3s ease-in-out infinite; }
+/* ---- Responsive ---- */
+@media(max-width:768px){
+  .section-title{ font-size:1.75rem; }
+  .page-card,.feature-card{ padding:20px; }
+  .glass{ padding:16px; }
+}
+</style>
+</head>
+<body class="bg-slate-950 text-white">
+<!-- Mesh BG + Noise -->
+<div class="mesh-bg"></div>
+<div class="noise-overlay"></div>
+<!-- Reading Progress -->
+<div id="reading-progress" style="width:0%"></div>
+
+<!-- ==================== HERO SECTION ==================== -->
+<header class="relative z-10 min-h-screen flex flex-col items-center justify-center px-6 text-center">
+  <div class="reveal">
+    <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-white/10 bg-white/5 text-sm text-slate-400 mb-8">
+      <span class="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span>
+      Trace 时迹 · 产品蓝图 v2.0
+    </div>
+    <h1 class="font-display font-900 text-5xl md:text-7xl lg:text-8xl leading-[0.95] tracking-tight mb-6">
+      <span class="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-amber-300 to-orange-500" style="background-size:200% 200%;animation:gradient-shift 6s ease infinite;">执行守护</span><br>
+      <span class="text-slate-200">系统</span>
+    </h1>
+    <p class="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto leading-relaxed mb-4">
+      从「计划了但做不到」到「被温和地引导着完成」<br>
+      一套解决注意力碎片化、启动困难、拖延循环的完整产品方案
+    </p>
+    <p class="text-sm text-slate-500 max-w-xl mx-auto mb-12">基于 Trace 时迹现有架构 · 融合行为心理学与认知科学 · 分四阶段迭代交付</p>
+    <div class="flex flex-wrap gap-3 justify-center mb-16">
+      <span class="phase-badge phase-v1">V1 核心执行</span>
+      <span class="phase-badge phase-v2">V2 智能守护</span>
+      <span class="phase-badge phase-v3">V3 认知训练</span>
+      <span class="phase-badge phase-v4">V4 社交生态</span>
+    </div>
+  </div>
+  <div class="reveal absolute bottom-12 text-slate-600 text-sm flex flex-col items-center gap-2">
+    <span>向下滚动探索完整方案</span>
+    <svg class="w-5 h-5 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>
+  </div>
+</header>
+
+<!-- ==================== TABLE OF CONTENTS ==================== -->
+<nav id="toc" class="relative z-10 max-w-5xl mx-auto px-6 py-20">
+  <div class="reveal glass p-8 md:p-12">
+    <h2 class="text-2xl font-bold mb-2">目录</h2>
+    <p class="text-sm text-slate-500 mb-8">点击跳转到对应章节</p>
+    <div class="grid md:grid-cols-2 gap-3">
+      <a href="#sec-problem" class="toc-link"><span class="tag tag-red text-xs">01</span>问题诊断：为什么计划了还是做不到</a>
+      <a href="#sec-theory" class="toc-link"><span class="tag tag-cyan text-xs">02</span>理论框架：行为心理学基础</a>
+      <a href="#sec-arch" class="toc-link"><span class="tag tag-orange text-xs">03</span>产品架构：执行守护系统全景</a>
+      <a href="#sec-flow" class="toc-link"><span class="tag tag-purple text-xs">04</span>功能逻辑图：页面与功能关联</a>
+      <a href="#sec-pages" class="toc-link"><span class="tag tag-blue text-xs">05</span>逐页详解：每一页的功能与设计理据</a>
+      <a href="#sec-guidance" class="toc-link"><span class="tag tag-green text-xs">06</span>用户引导：产品内教育与能力培养</a>
+      <a href="#sec-phases" class="toc-link"><span class="tag tag-pink text-xs">07</span>开发阶段：四版迭代路线图</a>
+      <a href="#sec-metrics" class="toc-link"><span class="tag tag-orange text-xs">08</span>衡量标准：如何知道方案有效</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ==================== SEC 01: PROBLEM DIAGNOSIS ==================== -->
+<section id="sec-problem" class="relative z-10 max-w-5xl mx-auto px-6 py-20">
+  <div class="reveal">
+    <span class="tag tag-red mb-6">01 · 问题诊断</span>
+    <h2 class="section-title mt-4 mb-4">为什么计划了<br>还是做不到？</h2>
+    <p class="section-subtitle mb-12">你不是缺少任务管理工具，而是缺少一个在执行过程中持续帮你「拉回来」的机制。</p>
+  </div>
+
+  <!-- 3 layers of the problem -->
+  <div class="grid md:grid-cols-3 gap-6 mb-12">
+    <div class="reveal feature-card">
+      <div class="text-3xl mb-4">🧊</div>
+      <h3 class="text-lg font-bold mb-2 text-slate-200">启动冻结</h3>
+      <p class="text-sm text-slate-400 leading-relaxed mb-4">面对 20 条任务列表却无法动手。选择本身消耗认知资源，列表越长越瘫痪。大脑在「选哪个」和「怎么开始」之间反复空转。</p>
+      <div class="psych-pill">决策疲劳 · 选择过载</div>
+    </div>
+    <div class="reveal feature-card">
+      <div class="text-3xl mb-4">💨</div>
+      <h3 class="text-lg font-bold mb-2 text-slate-200">上下文蒸发</h3>
+      <p class="text-sm text-slate-400 leading-relaxed mb-4">好不容易开始了，被打断后完全忘了在做什么、做到哪、为什么做。工作记忆只有 4±1 个槽位，一次打断就足以清空全部。</p>
+      <div class="psych-pill">工作记忆有限 · 上下文切换成本</div>
+    </div>
+    <div class="reveal feature-card">
+      <div class="text-3xl mb-4">🌀</div>
+      <h3 class="text-lg font-bold mb-2 text-slate-200">拖延螺旋</h3>
+      <p class="text-sm text-slate-400 leading-relaxed mb-4">拖延 → 内疚 → 焦虑 → 更难启动 → 更拖延。每一次「忙了一天但什么都没完成」都在强化这个循环，可能进一步导致习得性无助与抑郁。</p>
+      <div class="psych-pill">负反馈循环 · 习得性无助</div>
+    </div>
+  </div>
+
+  <!-- The deeper insight -->
+  <div class="reveal callout callout-orange">
+    <p class="text-sm font-semibold text-orange-300 mb-2">核心洞察</p>
+    <p class="text-slate-300 leading-relaxed">
+      你描述的模式本质上是<strong class="text-white">「被动响应式注意力」</strong>——注意力跟着外部刺激走，而非被内部计划驱动。这不是个人缺陷，而是一个从未被训练过的能力。从小到大，父母、老师、老板扮演了「外部执行系统」的角色。当这个外部指令源消失，你需要自驱时，大脑没有现成的回路可用。<br><br>
+      <strong class="text-orange-300">Trace 需要扮演的角色：一个温和但坚定的「内化执行教练」</strong>——不是监工，不是老板，而是一个始终在场、主动引导、在你脱轨时温和拉你回来的系统。目标是在使用过程中，逐渐帮用户建立起自己的执行功能。
+    </p>
+  </div>
+
+  <!-- Vicious cycle chart -->
+  <div class="reveal mt-12">
+    <div id="chart-cycle" style="width:100%;height:380px;"></div>
+  </div>
+</section>
+
+<!-- ==================== SEC 02: THEORY ==================== -->
+<section id="sec-theory" class="relative z-10 max-w-5xl mx-auto px-6 py-20">
+  <div class="reveal">
+    <span class="tag tag-cyan mb-6">02 · 理论框架</span>
+    <h2 class="section-title mt-4 mb-4">行为心理学基础</h2>
+    <p class="section-subtitle mb-12">产品中的每一个设计决策都基于经过验证的心理学原理。以下是核心理论支柱。</p>
+  </div>
+
+  <div class="grid md:grid-cols-2 gap-6 mb-8">
+    <div class="reveal feature-card">
+      <h3 class="text-base font-bold mb-3 text-cyan-300">🧠 执行功能理论 (Executive Function)</h3>
+      <p class="text-sm text-slate-400 leading-relaxed mb-3">执行功能包括：工作记忆、认知灵活性、抑制控制。这三项能力决定了你能否「计划→启动→维持→完成」一件事。ADHD 研究表明，执行功能是可以通过外部支架（scaffold）来增强的。</p>
+      <p class="text-xs text-slate-500"><strong>产品应用：</strong>「此刻该做什么」功能充当外部工作记忆；「打断拦截」充当外部抑制控制。</p>
+    </div>
+    <div class="reveal feature-card">
+      <h3 class="text-base font-bold mb-3 text-cyan-300">⏱️ 时间感知障碍 (Time Blindness)</h3>
+      <p class="text-sm text-slate-400 leading-relaxed mb-3">拖延者往往有「时间盲」——无法准确感知时间的流逝。10 分钟和 60 分钟在主观上没有明显差异。这导致计划不切实际、截止日期总是突然到来。</p>
+      <p class="text-xs text-slate-500"><strong>产品应用：</strong>常驻状态条实时显示已用时间/剩余时间；时间块让时间「可见」。</p>
+    </div>
+    <div class="reveal feature-card">
+      <h3 class="text-base font-bold mb-3 text-cyan-300">🔁 习惯回路 (Habit Loop — Duhigg)</h3>
+      <p class="text-sm text-slate-400 leading-relaxed mb-3">提示(Cue) → 惯常行为(Routine) → 奖励(Reward)。拖延本身也是一个习惯回路：焦虑(提示) → 刷手机(惯常行为) → 暂时缓解(奖励)。要改变行为，需要替换惯常行为并保留奖励。</p>
+      <p class="text-xs text-slate-500"><strong>产品应用：</strong>检测到「漫游模式」时提供替代行为（帮你选一个任务开始），完成后给予正反馈（宠物奖励）。</p>
+    </div>
+    <div class="reveal feature-card">
+      <h3 class="text-base font-bold mb-3 text-cyan-300">🎯 自我决定理论 (SDT — Deci & Ryan)</h3>
+      <p class="text-sm text-slate-400 leading-relaxed mb-3">内在动机来自三个基本心理需求：自主性(Autonomy)、胜任感(Competence)、归属感(Relatedness)。监控式工具破坏自主性，过难的任务破坏胜任感。</p>
+      <p class="text-xs text-slate-500"><strong>产品应用：</strong>每个提醒都保留「别管我」选项（自主性）；「只要 15 分钟」降低门槛（胜任感）；宠物提供情感连接（归属感）。</p>
+    </div>
+    <div class="reveal feature-card">
+      <h3 class="text-base font-bold mb-3 text-cyan-300">🧱 实施意图 (Implementation Intentions — Gollwitzer)</h3>
+      <p class="text-sm text-slate-400 leading-relaxed mb-3">「我打算在 X 时间、X 地点做 X 事」的 if-then 计划比模糊的目标意图（「我要写报告」）执行率高 2-3 倍。关键是预先绑定时间、地点和行为。</p>
+      <p class="text-xs text-slate-500"><strong>产品应用：</strong>时间块系统将任务绑定到具体时段；晨间启动仪式帮用户形成 if-then 计划。</p>
+    </div>
+    <div class="reveal feature-card">
+      <h3 class="text-base font-bold mb-3 text-cyan-300">📉 情绪调节与拖延 (Sirois & Pychyl)</h3>
+      <p class="text-sm text-slate-400 leading-relaxed mb-3">拖延的核心不是时间管理问题，而是情绪管理问题。人们回避任务是因为任务引发了不愉快的情绪（焦虑、无聊、挫败），拖延是短期情绪调节策略。</p>
+      <p class="text-xs text-slate-500"><strong>产品应用：</strong>「换一个任务」时收集原因数据；AI 识别情绪性回避模式并提供温和的认知重构建议。</p>
+    </div>
+  </div>
+
+  <div class="reveal callout callout-cyan">
+    <p class="text-sm font-semibold text-cyan-300 mb-2">设计原则</p>
+    <p class="text-slate-300 leading-relaxed">
+      基于以上理论，产品的每一个干预都遵循三条原则：<br>
+      <strong class="text-white">① 降低启动摩擦</strong> — 让开始一件事变得比不开始更容易<br>
+      <strong class="text-white">② 增加脱轨摩擦</strong> — 让偏离计划变成一个有意识的决定，而非无意识的滑动<br>
+      <strong class="text-white">③ 建立正反馈闭环</strong> — 让每一次「完成」都被看见、被庆祝、被记住
+    </p>
+  </div>
+</section>
+
+<!-- ==================== SEC 03: ARCHITECTURE ==================== -->
+<section id="sec-arch" class="relative z-10 max-w-5xl mx-auto px-6 py-20">
+  <div class="reveal">
+    <span class="tag tag-orange mb-6">03 · 产品架构</span>
+    <h2 class="section-title mt-4 mb-4">执行守护系统<br>全景架构</h2>
+    <p class="section-subtitle mb-12">三层架构：感知层已有 → 计划层已有 → 新增「执行守护层」连接两者。</p>
+  </div>
+
+  <!-- 3-layer arch diagram -->
+  <div class="reveal glass p-8 md:p-12 mb-12">
+    <div class="space-y-6">
+      <!-- Layer 3: Execution Guardian (NEW) -->
+      <div class="rounded-2xl p-6 border-2 border-orange-500/30 bg-orange-500/5">
+        <div class="flex items-center gap-3 mb-4">
+          <span class="phase-badge phase-v1 text-xs">新增核心</span>
+          <h3 class="text-lg font-bold text-orange-300">执行守护层 — Execution Guardian</h3>
+        </div>
+        <div class="grid sm:grid-cols-2 md:grid-cols-4 gap-3">
+          <div class="glass-xs p-3 text-center text-xs"><div class="text-base mb-1">🎯</div><strong class="text-slate-200">此刻引擎</strong><br><span class="text-slate-500">决定现在该做什么</span></div>
+          <div class="glass-xs p-3 text-center text-xs"><div class="text-base mb-1">🚀</div><strong class="text-slate-200">启动助推</strong><br><span class="text-slate-500">第一步建议 + 15min门槛</span></div>
+          <div class="glass-xs p-3 text-center text-xs"><div class="text-base mb-1">🛡️</div><strong class="text-slate-200">打断拦截</strong><br><span class="text-slate-500">脱轨检测 + 温和提醒</span></div>
+          <div class="glass-xs p-3 text-center text-xs"><div class="text-base mb-1">📸</div><strong class="text-slate-200">上下文快照</strong><br><span class="text-slate-500">被打断时保存进度</span></div>
+        </div>
+        <div class="grid sm:grid-cols-2 md:grid-cols-4 gap-3 mt-3">
+          <div class="glass-xs p-3 text-center text-xs"><div class="text-base mb-1">📊</div><strong class="text-slate-200">状态常驻条</strong><br><span class="text-slate-500">始终显示当前任务+时间</span></div>
+          <div class="glass-xs p-3 text-center text-xs"><div class="text-base mb-1">🌅</div><strong class="text-slate-200">晨间仪式</strong><br><span class="text-slate-500">每日启动确认计划</span></div>
+          <div class="glass-xs p-3 text-center text-xs"><div class="text-base mb-1">🌙</div><strong class="text-slate-200">日终闭环</strong><br><span class="text-slate-500">计划 vs 实际对账</span></div>
+          <div class="glass-xs p-3 text-center text-xs"><div class="text-base mb-1">👀</div><strong class="text-slate-200">漫游检测</strong><br><span class="text-slate-500">发呆/无目的切换识别</span></div>
+        </div>
+      </div>
+
+      <div class="flex justify-center"><div class="text-slate-600 text-2xl">⬆ 连接 ⬇</div></div>
+
+      <!-- Layer 2: Planning (EXISTS) -->
+      <div class="rounded-2xl p-6 border border-blue-500/20 bg-blue-500/5">
+        <div class="flex items-center gap-3 mb-4">
+          <span class="tag tag-blue text-xs">已有 · 增强</span>
+          <h3 class="text-lg font-bold text-blue-300">计划层 — Planning Layer</h3>
+        </div>
+        <div class="grid sm:grid-cols-2 md:grid-cols-4 gap-3">
+          <div class="glass-xs p-3 text-center text-xs"><div class="text-base mb-1">📋</div><strong class="text-slate-200">任务管理</strong><br><span class="text-slate-500">优先级·子任务·看板</span></div>
+          <div class="glass-xs p-3 text-center text-xs"><div class="text-base mb-1">📅</div><strong class="text-slate-200">时间块</strong><br><span class="text-slate-500">将任务绑定到时段</span></div>
+          <div class="glass-xs p-3 text-center text-xs"><div class="text-base mb-1">🎯</div><strong class="text-slate-200">每日目标</strong><br><span class="text-slate-500">设定当日必须完成项</span></div>
+          <div class="glass-xs p-3 text-center text-xs"><div class="text-base mb-1">🤖</div><strong class="text-slate-200">AI 排序</strong><br><span class="text-slate-500">智能推荐任务顺序</span></div>
+        </div>
+      </div>
+
+      <div class="flex justify-center"><div class="text-slate-600 text-2xl">⬆ 数据 ⬇</div></div>
+
+      <!-- Layer 1: Perception (EXISTS) -->
+      <div class="rounded-2xl p-6 border border-green-500/20 bg-green-500/5">
+        <div class="flex items-center gap-3 mb-4">
+          <span class="tag tag-green text-xs">已有</span>
+          <h3 class="text-lg font-bold text-green-300">感知层 — Perception Layer</h3>
+        </div>
+        <div class="grid sm:grid-cols-2 md:grid-cols-4 gap-3">
+          <div class="glass-xs p-3 text-center text-xs"><div class="text-base mb-1">👁️</div><strong class="text-slate-200">窗口监控</strong><br><span class="text-slate-500">每秒检测活跃应用</span></div>
+          <div class="glass-xs p-3 text-center text-xs"><div class="text-base mb-1">🏷️</div><strong class="text-slate-200">AI 分类</strong><br><span class="text-slate-500">自动归类活动类型</span></div>
+          <div class="glass-xs p-3 text-center text-xs"><div class="text-base mb-1">💤</div><strong class="text-slate-200">空闲检测</strong><br><span class="text-slate-500">5min无操作自动暂停</span></div>
+          <div class="glass-xs p-3 text-center text-xs"><div class="text-base mb-1">⏱️</div><strong class="text-slate-200">时间记录</strong><br><span class="text-slate-500">精确到秒的时间追踪</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="reveal callout callout-orange">
+    <p class="text-sm font-semibold text-orange-300 mb-2">架构关键点</p>
+    <p class="text-slate-300 text-sm leading-relaxed">
+      Trace 已经有了强大的感知层（知道你在做什么）和计划层（知道你应该做什么）。缺失的是中间的<strong class="text-white">执行守护层</strong>——实时比对「正在做的」和「应该做的」，在偏差发生时主动介入。这不需要重构现有架构，而是在 Tauri 原生层和 React UI 之间加入一个新的事件处理管道。
+    </p>
+  </div>
+</section>
+
+<!-- ==================== SEC 04: FLOW DIAGRAM ==================== -->
+<section id="sec-flow" class="relative z-10 max-w-5xl mx-auto px-6 py-20">
+  <div class="reveal">
+    <span class="tag tag-purple mb-6">04 · 功能逻辑图</span>
+    <h2 class="section-title mt-4 mb-4">页面与功能<br>关联全景</h2>
+    <p class="section-subtitle mb-12">每个功能涉及哪些页面，页面之间如何联动。</p>
+  </div>
+
+  <!-- User Day Flow -->
+  <div class="reveal glass p-8 md:p-12 mb-8">
+    <h3 class="text-lg font-bold mb-6 text-slate-200">用户一天的使用流程</h3>
+    <div class="flex flex-wrap items-center gap-2 md:gap-0 justify-center text-xs">
+      <div class="flow-node bg-amber-500/10 border-amber-500/25 text-amber-300">🌅 晨间启动<br><span class="text-slate-500">Dashboard</span></div>
+      <div class="flow-arrow hidden md:flex">→</div>
+      <div class="flow-node bg-blue-500/10 border-blue-500/25 text-blue-300">📋 确认计划<br><span class="text-slate-500">Planner</span></div>
+      <div class="flow-arrow hidden md:flex">→</div>
+      <div class="flow-node bg-orange-500/10 border-orange-500/25 text-orange-300">🎯 此刻引擎<br><span class="text-slate-500">StatusBar</span></div>
+      <div class="flow-arrow hidden md:flex">→</div>
+      <div class="flow-node bg-green-500/10 border-green-500/25 text-green-300">⏱️ 专注执行<br><span class="text-slate-500">Focus</span></div>
+      <div class="flow-arrow hidden md:flex">→</div>
+      <div class="flow-node bg-red-500/10 border-red-500/25 text-red-300">🛡️ 打断处理<br><span class="text-slate-500">Popup</span></div>
+      <div class="flow-arrow hidden md:flex">→</div>
+      <div class="flow-node bg-purple-500/10 border-purple-500/25 text-purple-300">🌙 日终闭环<br><span class="text-slate-500">Review</span></div>
+    </div>
+  </div>
+
+  <!-- Feature-Page Matrix -->
+  <div class="reveal glass p-6 md:p-10 mb-8 overflow-x-auto">
+    <h3 class="text-lg font-bold mb-6 text-slate-200">功能 × 页面 关联矩阵</h3>
+    <table class="data-table text-xs min-w-[700px]">
+      <thead>
+        <tr>
+          <th class="sticky left-0 bg-surface-950/90 backdrop-blur-sm">功能模块</th>
+          <th>Dashboard</th>
+          <th>Planner</th>
+          <th>Focus</th>
+          <th>Timeline</th>
+          <th>Statistics</th>
+          <th>StatusBar</th>
+          <th>Review</th>
+          <th>Settings</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td class="sticky left-0 bg-surface-950/90 backdrop-blur-sm font-semibold text-orange-300">🎯 此刻引擎</td><td>●</td><td>◐</td><td>◐</td><td></td><td></td><td>●</td><td></td><td>◐</td></tr>
+        <tr><td class="sticky left-0 bg-surface-950/90 backdrop-blur-sm font-semibold text-orange-300">🚀 启动助推</td><td>●</td><td>●</td><td>●</td><td></td><td></td><td>●</td><td></td><td></td></tr>
+        <tr><td class="sticky left-0 bg-surface-950/90 backdrop-blur-sm font-semibold text-orange-300">🛡️ 打断拦截</td><td></td><td></td><td>●</td><td>◐</td><td>◐</td><td>●</td><td>●</td><td>●</td></tr>
+        <tr><td class="sticky left-0 bg-surface-950/90 backdrop-blur-sm font-semibold text-orange-300">📸 上下文快照</td><td></td><td>◐</td><td>●</td><td>◐</td><td></td><td>●</td><td></td><td></td></tr>
+        <tr><td class="sticky left-0 bg-surface-950/90 backdrop-blur-sm font-semibold text-orange-300">📊 状态常驻条</td><td>●</td><td>●</td><td>●</td><td>●</td><td>●</td><td>●</td><td>●</td><td>●</td></tr>
+        <tr><td class="sticky left-0 bg-surface-950/90 backdrop-blur-sm font-semibold text-orange-300">🌅 晨间仪式</td><td>●</td><td>●</td><td></td><td></td><td></td><td></td><td></td><td>◐</td></tr>
+        <tr><td class="sticky left-0 bg-surface-950/90 backdrop-blur-sm font-semibold text-orange-300">🌙 日终闭环</td><td>●</td><td>◐</td><td></td><td>◐</td><td>●</td><td></td><td>●</td><td></td></tr>
+        <tr><td class="sticky left-0 bg-surface-950/90 backdrop-blur-sm font-semibold text-orange-300">👀 漫游检测</td><td></td><td></td><td></td><td>◐</td><td>◐</td><td>●</td><td>●</td><td>●</td></tr>
+      </tbody>
+    </table>
+    <p class="text-xs text-slate-600 mt-4">● = 主要涉及页面 &nbsp; ◐ = 数据关联或辅助显示</p>
+  </div>
+
+  <!-- Psychological Pipeline -->
+  <div class="reveal glass p-8 md:p-12">
+    <h3 class="text-lg font-bold mb-2 text-slate-200">心理干预管道：从拖延到完成</h3>
+    <p class="text-xs text-slate-500 mb-6">每个功能在行为改变过程中的定位</p>
+    <div class="space-y-4">
+      <div class="flex items-start gap-4">
+        <div class="w-10 h-10 rounded-xl bg-red-500/15 flex items-center justify-center text-red-400 font-bold text-sm shrink-0">1</div>
+        <div>
+          <p class="text-sm font-semibold text-red-300 mb-1">觉察阶段 — "我在拖延"</p>
+          <p class="text-xs text-slate-400">漫游检测 + 状态常驻条 → 让用户意识到自己正处于无目的状态</p>
+          <div class="flex gap-2 mt-1"><span class="tag tag-red text-xs">漫游检测</span><span class="tag tag-orange text-xs">状态常驻条</span></div>
+        </div>
+      </div>
+      <div class="flex items-start gap-4">
+        <div class="w-10 h-10 rounded-xl bg-orange-500/15 flex items-center justify-center text-orange-400 font-bold text-sm shrink-0">2</div>
+        <div>
+          <p class="text-sm font-semibold text-orange-300 mb-1">决策阶段 — "我应该做什么"</p>
+          <p class="text-xs text-slate-400">此刻引擎自动推荐一个任务 → 消除选择瘫痪</p>
+          <div class="flex gap-2 mt-1"><span class="tag tag-orange text-xs">此刻引擎</span><span class="tag tag-blue text-xs">AI排序</span></div>
+        </div>
+      </div>
+      <div class="flex items-start gap-4">
+        <div class="w-10 h-10 rounded-xl bg-amber-500/15 flex items-center justify-center text-amber-400 font-bold text-sm shrink-0">3</div>
+        <div>
+          <p class="text-sm font-semibold text-amber-300 mb-1">启动阶段 — "第一步做什么"</p>
+          <p class="text-xs text-slate-400">启动助推给出具体第一步 + "只要 15 分钟" → 降低门槛到几乎为零</p>
+          <div class="flex gap-2 mt-1"><span class="tag tag-orange text-xs">启动助推</span><span class="tag tag-green text-xs">专注模式</span></div>
+        </div>
+      </div>
+      <div class="flex items-start gap-4">
+        <div class="w-10 h-10 rounded-xl bg-green-500/15 flex items-center justify-center text-green-400 font-bold text-sm shrink-0">4</div>
+        <div>
+          <p class="text-sm font-semibold text-green-300 mb-1">维持阶段 — "保持专注"</p>
+          <p class="text-xs text-slate-400">打断拦截 + 上下文快照 → 防止脱轨，脱轨后能快速恢复</p>
+          <div class="flex gap-2 mt-1"><span class="tag tag-orange text-xs">打断拦截</span><span class="tag tag-orange text-xs">上下文快照</span><span class="tag tag-green text-xs">干扰屏蔽</span></div>
+        </div>
+      </div>
+      <div class="flex items-start gap-4">
+        <div class="w-10 h-10 rounded-xl bg-blue-500/15 flex items-center justify-center text-blue-400 font-bold text-sm shrink-0">5</div>
+        <div>
+          <p class="text-sm font-semibold text-blue-300 mb-1">完成阶段 — "我做到了"</p>
+          <p class="text-xs text-slate-400">正反馈机制 → 宠物奖励 + 成就感 + 可视化进度</p>
+          <div class="flex gap-2 mt-1"><span class="tag tag-purple text-xs">宠物系统</span><span class="tag tag-green text-xs">习惯打卡</span><span class="tag tag-blue text-xs">进度可视化</span></div>
+        </div>
+      </div>
+      <div class="flex items-start gap-4">
+        <div class="w-10 h-10 rounded-xl bg-purple-500/15 flex items-center justify-center text-purple-400 font-bold text-sm shrink-0">6</div>
+        <div>
+          <p class="text-sm font-semibold text-purple-300 mb-1">反思阶段 — "今天怎么样"</p>
+          <p class="text-xs text-slate-400">日终闭环先展示成就，再温和复盘 → 打破负反馈循环</p>
+          <div class="flex gap-2 mt-1"><span class="tag tag-purple text-xs">日终闭环</span><span class="tag tag-blue text-xs">统计分析</span><span class="tag tag-cyan text-xs">AI 洞察</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== SEC 05: PAGE DETAILS ==================== -->
+<section id="sec-pages" class="relative z-10 max-w-5xl mx-auto px-6 py-20">
+  <div class="reveal">
+    <span class="tag tag-blue mb-6">05 · 逐页详解</span>
+    <h2 class="section-title mt-4 mb-4">每一页的功能<br>与设计理据</h2>
+    <p class="section-subtitle mb-12">所有页面按用户使用流程排列。每个功能说明「是什么」「为什么这样设计」「在心理训练中扮演的角色」。</p>
+  </div>
+
+  <!-- PAGE: Dashboard -->
+  <div class="reveal page-card mb-8">
+    <div class="flex items-center gap-3 mb-6">
+      <div class="w-12 h-12 rounded-2xl bg-amber-500/15 flex items-center justify-center text-2xl">🏠</div>
+      <div>
+        <h3 class="text-xl font-bold text-slate-100">Dashboard 仪表盘</h3>
+        <p class="text-xs text-slate-500">主页 · 用户每天的第一个接触点</p>
+      </div>
+      <span class="phase-badge phase-v1 ml-auto text-xs">V1</span>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-6">
+      <!-- Feature: Morning Ritual -->
+      <div class="glass-sm glass-hover p-5">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="text-base">🌅</span>
+          <h4 class="text-sm font-bold text-amber-300">晨间启动仪式</h4>
+          <span class="phase-badge phase-v1 text-xs ml-auto">V1</span>
+        </div>
+        <p class="text-xs text-slate-400 leading-relaxed mb-3">打开 app 时不是空白桌面，而是一个结构化的启动流程：显示今日时间块概览 → 展示昨日未完成任务 → 确认/调整计划 → 一键进入第一个任务。</p>
+        <div class="callout callout-cyan p-3 mb-3">
+          <p class="text-xs text-slate-400"><strong class="text-cyan-300">设计理据：</strong>实施意图理论(Gollwitzer)证明，预先确认「几点做什么」比模糊计划执行率高 2-3 倍。晨间仪式将 if-then 计划仪式化。</p>
+        </div>
+        <div class="psych-pill">实施意图 · 降低启动摩擦</div>
+      </div>
+
+      <!-- Feature: Now Engine -->
+      <div class="glass-sm glass-hover p-5">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="text-base">🎯</span>
+          <h4 class="text-sm font-bold text-orange-300">此刻引擎 · 单一任务展示</h4>
+          <span class="phase-badge phase-v1 text-xs ml-auto">V1</span>
+        </div>
+        <p class="text-xs text-slate-400 leading-relaxed mb-3">Dashboard 中央不再是 todo list，而是一个大字展示：「现在 → 写季度报告」+ 预估时间 + 已拖延天数。只给一个任务，只需点「开始」。点「换一个」需说明原因。</p>
+        <div class="callout callout-cyan p-3 mb-3">
+          <p class="text-xs text-slate-400"><strong class="text-cyan-300">设计理据：</strong>Hick's Law——选项数量越多，决策时间越长。当任务列表有 20 条时，大脑在选择上花的精力可能比做任务本身还多。给出一个答案，而不是一个列表。</p>
+        </div>
+        <div class="psych-pill">Hick's Law · 消除选择瘫痪</div>
+      </div>
+
+      <!-- Feature: Activity Tracking Display -->
+      <div class="glass-sm glass-hover p-5">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="text-base">📊</span>
+          <h4 class="text-sm font-bold text-green-300">实时活动追踪</h4>
+          <span class="phase-badge phase-v1 text-xs ml-auto">V1</span>
+        </div>
+        <p class="text-xs text-slate-400 leading-relaxed mb-3">已有功能。脉冲动画显示当前追踪状态，今日时间线预览，分类统计卡片。保留并作为感知层的可视化输出。</p>
+        <div class="psych-pill">自我监控 · 行为觉察</div>
+      </div>
+
+      <!-- Feature: Plan vs Actual -->
+      <div class="glass-sm glass-hover p-5">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="text-base">⚖️</span>
+          <h4 class="text-sm font-bold text-blue-300">计划 vs 实际对比</h4>
+          <span class="phase-badge phase-v1 text-xs ml-auto">V1</span>
+        </div>
+        <p class="text-xs text-slate-400 leading-relaxed mb-3">已有功能增强。当前时间块的计划任务与实际追踪到的活动并排显示。偏差时高亮提示。是执行守护层的可视化入口。</p>
+        <div class="psych-pill">反馈闭环 · 目标-现实差距感知</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE: Planner -->
+  <div class="reveal page-card mb-8">
+    <div class="flex items-center gap-3 mb-6">
+      <div class="w-12 h-12 rounded-2xl bg-blue-500/15 flex items-center justify-center text-2xl">📋</div>
+      <div>
+        <h3 class="text-xl font-bold text-slate-100">Planner 计划中心</h3>
+        <p class="text-xs text-slate-500">任务管理 · 时间块 · AI 排序</p>
+      </div>
+      <span class="phase-badge phase-v1 ml-auto text-xs">V1</span>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-6">
+      <div class="glass-sm glass-hover p-5">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="text-base">📝</span>
+          <h4 class="text-sm font-bold text-blue-300">任务管理（增强）</h4>
+          <span class="phase-badge phase-v1 text-xs ml-auto">V1</span>
+        </div>
+        <p class="text-xs text-slate-400 leading-relaxed mb-3">已有功能基础上增加：每个任务新增「第一步」字段——创建任务时必须写出第一个具体动作（如"打开文档，从第三节开始"而非"写报告"）。任务卡片增加「情绪标签」，标记这个任务让你感觉如何（轻松/中性/抗拒）。</p>
+        <div class="callout callout-cyan p-3 mb-3">
+          <p class="text-xs text-slate-400"><strong class="text-cyan-300">设计理据：</strong>「第一步」字段利用 Zeigarnik 效应——未完成的具体行为比未完成的抽象目标更能吸引大脑注意。「情绪标签」帮助 AI 识别情绪性回避模式。</p>
+        </div>
+        <div class="flex gap-2 flex-wrap"><div class="psych-pill">Zeigarnik 效应</div><div class="psych-pill">情绪觉察</div></div>
+      </div>
+
+      <div class="glass-sm glass-hover p-5">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="text-base">📅</span>
+          <h4 class="text-sm font-bold text-blue-300">时间块系统（增强）</h4>
+          <span class="phase-badge phase-v1 text-xs ml-auto">V1</span>
+        </div>
+        <p class="text-xs text-slate-400 leading-relaxed mb-3">已有功能增强：时间块自动关联到「此刻引擎」——到了时间块的开始时间，系统主动推送该任务。增加「缓冲时间」概念——每个时间块之间自动插入 5-10 分钟缓冲。增加「能量曲线」参考——根据历史数据显示你在每个时段的平均专注度。</p>
+        <div class="psych-pill">实施意图 · 能量管理</div>
+      </div>
+
+      <div class="glass-sm glass-hover p-5">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="text-base">🤖</span>
+          <h4 class="text-sm font-bold text-blue-300">AI 智能排序（增强）</h4>
+          <span class="phase-badge phase-v2 text-xs ml-auto">V2</span>
+        </div>
+        <p class="text-xs text-slate-400 leading-relaxed mb-3">现有 AI 排序增强：加入「情绪标签」权重——当用户连续回避某个「抗拒」标签的任务时，AI 建议将其拆分成更小的子任务，或安排在用户历史上最高能量的时段。加入「拖延天数衰减」——拖延越久优先级越高，但同时推荐更小的第一步。</p>
+        <div class="psych-pill">自适应难度 · 情绪调节</div>
+      </div>
+
+      <div class="glass-sm glass-hover p-5">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="text-base">🔄</span>
+          <h4 class="text-sm font-bold text-blue-300">「换一个」日志</h4>
+          <span class="phase-badge phase-v2 text-xs ml-auto">V2</span>
+        </div>
+        <p class="text-xs text-slate-400 leading-relaxed mb-3">当用户在此刻引擎中选择「换一个任务」时，需简单说明原因（下拉选项 + 自定义）：被叫去开会 / 需要等别人的材料 / 就是不想做 / 有更紧急的事。这些数据汇总后在统计页展示回避模式。</p>
+        <div class="psych-pill">元认知 · 拖延模式识别</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE: Focus -->
+  <div class="reveal page-card mb-8">
+    <div class="flex items-center gap-3 mb-6">
+      <div class="w-12 h-12 rounded-2xl bg-green-500/15 flex items-center justify-center text-2xl">⏱️</div>
+      <div>
+        <h3 class="text-xl font-bold text-slate-100">Focus 专注模式</h3>
+        <p class="text-xs text-slate-500">沉浸式执行 · 打断防护 · 启动助推</p>
+      </div>
+      <span class="phase-badge phase-v1 ml-auto text-xs">V1</span>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-6">
+      <div class="glass-sm glass-hover p-5">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="text-base">🚀</span>
+          <h4 class="text-sm font-bold text-green-300">启动助推 · 第一步引导</h4>
+          <span class="phase-badge phase-v1 text-xs ml-auto">V1</span>
+        </div>
+        <p class="text-xs text-slate-400 leading-relaxed mb-3">点击「开始专注」后，不是直接开始计时，而是先弹出一个轻量引导：「你打算先做哪一小步？」给出 AI 建议的 2-3 个具体动作 + 自定义输入框。底部提示：「只要 15 分钟就好。」确认后才开始倒计时。</p>
+        <div class="callout callout-cyan p-3 mb-3">
+          <p class="text-xs text-slate-400"><strong class="text-cyan-300">设计理据：</strong>启动是拖延的最大障碍。"只要15分钟"利用了 foot-in-the-door 效应——一旦开始，惯性会让你继续。具体的第一步消除了模糊性（模糊是拖延的温床）。</p>
+        </div>
+        <div class="psych-pill">Foot-in-the-door · 去模糊化</div>
+      </div>
+
+      <div class="glass-sm glass-hover p-5">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="text-base">🛡️</span>
+          <h4 class="text-sm font-bold text-orange-300">打断拦截器</h4>
+          <span class="phase-badge phase-v1 text-xs ml-auto">V1</span>
+        </div>
+        <p class="text-xs text-slate-400 leading-relaxed mb-3">专注执行期间，如果检测到切换到计划外应用超过 2 分钟，弹出温和提醒：「你已经离开 [当前任务] X 分钟了。」三个选项：回去继续 / 只是看一眼（3min倒计时）/ 确实有急事，暂停任务。语气是提醒，不是责备。</p>
+        <div class="callout callout-cyan p-3 mb-3">
+          <p class="text-xs text-slate-400"><strong class="text-cyan-300">设计理据：</strong>很多时候人不是故意拖延，是真的没意识到自己已经切走了。一个温和的提醒就足以重新激活抑制控制（执行功能的一部分）。三个选项尊重自主性（SDT），避免变成监控工具。</p>
+        </div>
+        <div class="psych-pill">抑制控制激活 · 自主性保护</div>
+      </div>
+
+      <div class="glass-sm glass-hover p-5">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="text-base">📸</span>
+          <h4 class="text-sm font-bold text-orange-300">上下文快照</h4>
+          <span class="phase-badge phase-v1 text-xs ml-auto">V1</span>
+        </div>
+        <p class="text-xs text-slate-400 leading-relaxed mb-3">选择「暂停任务」时自动保存：当前任务名 + 已投入时间 + 用户写的一句话备注（弹窗快速输入"做到哪了"）。恢复时显示：「你之前在做 X，已投入 Y 分钟，你的备注是 Z，要继续吗？」</p>
+        <div class="callout callout-cyan p-3 mb-3">
+          <p class="text-xs text-slate-400"><strong class="text-cyan-300">设计理据：</strong>工作记忆只有 4±1 个槽位。一次打断足以清空全部上下文。快照充当外部工作记忆，消除"回到之前状态"的认知成本。</p>
+        </div>
+        <div class="psych-pill">外部工作记忆 · 恢复成本归零</div>
+      </div>
+
+      <div class="glass-sm glass-hover p-5">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="text-base">🎵</span>
+          <h4 class="text-sm font-bold text-green-300">已有功能保留</h4>
+          <span class="phase-badge phase-v1 text-xs ml-auto">V1</span>
+        </div>
+        <p class="text-xs text-slate-400 leading-relaxed mb-3">番茄钟计时器（25/5/15可配）、呼吸动画、环境音（雨声/咖啡馆/森林等）、干扰网站屏蔽、宠物迷你组件、专注会话记录与 XP 奖励。这些已有功能与新增的执行守护功能形成完整的专注闭环。</p>
+        <div class="psych-pill">环境建构 · 巴甫洛夫条件反射</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE: StatusBar (NEW) -->
+  <div class="reveal page-card mb-8">
+    <div class="flex items-center gap-3 mb-6">
+      <div class="w-12 h-12 rounded-2xl bg-orange-500/15 flex items-center justify-center text-2xl">📊</div>
+      <div>
+        <h3 class="text-xl font-bold text-slate-100">StatusBar 状态常驻条</h3>
+        <p class="text-xs text-slate-500">全新 · 系统托盘 / 桌面悬浮窗 · 全局可见</p>
+      </div>
+      <span class="phase-badge phase-v1 ml-auto text-xs">V1</span>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-6">
+      <div class="glass-sm glass-hover p-5">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="text-base">🔍</span>
+          <h4 class="text-sm font-bold text-orange-300">常驻信息展示</h4>
+        </div>
+        <p class="text-xs text-slate-400 leading-relaxed mb-3">始终显示三行信息：① 当前正在执行的任务名；② 已用时间 / 预估时间 的进度条；③ 下一个计划任务是什么。不管用户在看什么 app，一瞥就知道自己「此刻的状态」。</p>
+        <div class="callout callout-cyan p-3 mb-3">
+          <p class="text-xs text-slate-400"><strong class="text-cyan-300">设计理据：</strong>时间盲(Time Blindness)的核心问题是缺乏持续的时间感知。常驻条让时间和任务变得始终可见，相当于一个外部化的时间感知器官。</p>
+        </div>
+        <div class="psych-pill">时间盲矫正 · 持续感知</div>
+      </div>
+
+      <div class="glass-sm glass-hover p-5">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="text-base">👀</span>
+          <h4 class="text-sm font-bold text-orange-300">漫游模式检测</h4>
+        </div>
+        <p class="text-xs text-slate-400 leading-relaxed mb-3">检测模式：5 分钟内切换窗口超过 15 次、每个停留不到 20 秒 → 判定为「漫游」状态。或者：在非生产力应用上停留超过阈值、无明确任务关联。检测到后温和介入：「看起来你不太确定要做什么。要不要我帮你选一个任务？」</p>
+        <div class="callout callout-cyan p-3 mb-3">
+          <p class="text-xs text-slate-400"><strong class="text-cyan-300">设计理据：</strong>很多人的拖延表现不是"什么都不做"，而是"什么都做一点但都不深入"。漫游检测识别这种无意识的注意力分散，在用户陷入空转时提供一个决策锚点。</p>
+        </div>
+        <div class="psych-pill">元认知激活 · 行为模式识别</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE: Timeline -->
+  <div class="reveal page-card mb-8">
+    <div class="flex items-center gap-3 mb-6">
+      <div class="w-12 h-12 rounded-2xl bg-teal-500/15 flex items-center justify-center text-2xl">📐</div>
+      <div>
+        <h3 class="text-xl font-bold text-slate-100">Timeline 时间线</h3>
+        <p class="text-xs text-slate-500">逐小时活动回顾 · 批量编辑 · 上下文切换可视化</p>
+      </div>
+      <span class="phase-badge phase-v1 ml-auto text-xs">V1</span>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-6">
+      <div class="glass-sm glass-hover p-5">
+        <h4 class="text-sm font-bold text-teal-300 mb-2">已有功能</h4>
+        <p class="text-xs text-slate-400 leading-relaxed mb-2">垂直时间轴 · 颜色编码活动块 · 批量重分类 · 上下文切换计数 · 工作时间高亮 · 隐私级别切换 · NOW 标记线。</p>
+        <div class="psych-pill">自我监控 · 行为可视化</div>
+      </div>
+      <div class="glass-sm glass-hover p-5">
+        <h4 class="text-sm font-bold text-orange-300 mb-2">新增：打断标记</h4>
+        <p class="text-xs text-slate-400 leading-relaxed mb-2">在时间线上标记每次「打断」事件——红色小旗帜 + 打断原因。累计后可视化一天的打断模式：什么时段最容易被打断、被什么打断、打断后恢复用了多久。</p>
+        <div class="psych-pill">模式识别 · 打断成本可视化</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE: Review (NEW) -->
+  <div class="reveal page-card mb-8">
+    <div class="flex items-center gap-3 mb-6">
+      <div class="w-12 h-12 rounded-2xl bg-purple-500/15 flex items-center justify-center text-2xl">🌙</div>
+      <div>
+        <h3 class="text-xl font-bold text-slate-100">Review 日终复盘</h3>
+        <p class="text-xs text-slate-500">全新页面 · 计划vs实际对账 · 正反馈优先 · 明日预设</p>
+      </div>
+      <span class="phase-badge phase-v1 ml-auto text-xs">V1</span>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-6">
+      <div class="glass-sm glass-hover p-5">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="text-base">✅</span>
+          <h4 class="text-sm font-bold text-green-300">先说做了什么</h4>
+        </div>
+        <p class="text-xs text-slate-400 leading-relaxed mb-3">页面顶部首先展示：你今天实际工作了多少时间 + 完成了哪些任务 + 有进展但未完成的任务。语气积极。不是「你有 5 个任务没完成」，而是「你完成了 3 个任务，还有 2 个有了进展」。</p>
+        <div class="callout callout-cyan p-3 mb-3">
+          <p class="text-xs text-slate-400"><strong class="text-cyan-300">设计理据：</strong>打破负反馈循环的关键是先给正反馈。Sirois & Pychyl 的研究表明，自我同情(self-compassion)比自我批评更能减少拖延。先看到自己做了什么，再看改进空间。</p>
+        </div>
+        <div class="psych-pill">自我同情 · 正反馈优先</div>
+      </div>
+
+      <div class="glass-sm glass-hover p-5">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="text-base">📊</span>
+          <h4 class="text-sm font-bold text-purple-300">结构化对账</h4>
+        </div>
+        <p class="text-xs text-slate-400 leading-relaxed mb-3">计划 vs 实际的逐项对比：每个任务显示计划时间/实际时间/差异原因。打断统计：共 N 次，其中自发 / 外部。时间黑洞：累计最长的非计划活动（如微信 95min，分散在 12 个片段中）。</p>
+        <div class="psych-pill">元认知 · 时间黑洞可视化</div>
+      </div>
+
+      <div class="glass-sm glass-hover p-5">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="text-base">🤖</span>
+          <h4 class="text-sm font-bold text-cyan-300">AI 模式洞察</h4>
+          <span class="phase-badge phase-v2 text-xs ml-auto">V2</span>
+        </div>
+        <p class="text-xs text-slate-400 leading-relaxed mb-3">AI 基于多天数据给出具体洞察：「你连续 3 天在下午 2-3 点注意力最分散，建议把低优先级任务放在这个时段」「你在标记为"抗拒"的任务上平均拖延 3.2 天，试试把它们拆成 15 分钟的小块」。</p>
+        <div class="psych-pill">个性化洞察 · 模式打破</div>
+      </div>
+
+      <div class="glass-sm glass-hover p-5">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="text-base">🌅</span>
+          <h4 class="text-sm font-bold text-amber-300">明日一件事</h4>
+        </div>
+        <p class="text-xs text-slate-400 leading-relaxed mb-3">页面最后一个交互：「明天最重要的一件事是什么？」单一输入框，写完即闭合今日循环。这件事会在明天晨间仪式中作为第一个推荐任务出现。</p>
+        <div class="callout callout-cyan p-3 mb-3">
+          <p class="text-xs text-slate-400"><strong class="text-cyan-300">设计理据：</strong>Ivy Lee Method（100 年前的高效方法）：每天结束时确定明天最重要的一件事。减少明天早上的决策负担，让启动变得几乎自动。</p>
+        </div>
+        <div class="psych-pill">Ivy Lee Method · 预决策</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE: Statistics -->
+  <div class="reveal page-card mb-8">
+    <div class="flex items-center gap-3 mb-6">
+      <div class="w-12 h-12 rounded-2xl bg-indigo-500/15 flex items-center justify-center text-2xl">📈</div>
+      <div>
+        <h3 class="text-xl font-bold text-slate-100">Statistics 统计分析</h3>
+        <p class="text-xs text-slate-500">周/月数据 · 深度工作分析 · 拖延模式 · 能量曲线</p>
+      </div>
+      <span class="phase-badge phase-v1 ml-auto text-xs">V1</span>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-6">
+      <div class="glass-sm glass-hover p-5">
+        <h4 class="text-sm font-bold text-indigo-300 mb-2">已有功能</h4>
+        <p class="text-xs text-slate-400 leading-relaxed">周/月总览 · 饼图分类分布 · 深度工作分数 · 每小时热力图 · AI 建议 · JSON/CSV 导出。</p>
+      </div>
+      <div class="glass-sm glass-hover p-5">
+        <h4 class="text-sm font-bold text-orange-300 mb-2">新增：执行守护统计</h4>
+        <p class="text-xs text-slate-400 leading-relaxed">新增 Tab：① 打断分析——每日打断次数趋势、打断来源 Top 5、打断后恢复平均时长；② 拖延模式——被回避最多的任务类型、回避原因分布、任务停滞天数分布；③ 能量曲线——基于历史数据的每小时平均专注度，帮助安排高/低能量任务。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE: Habits -->
+  <div class="reveal page-card mb-8">
+    <div class="flex items-center gap-3 mb-6">
+      <div class="w-12 h-12 rounded-2xl bg-emerald-500/15 flex items-center justify-center text-2xl">✨</div>
+      <div>
+        <h3 class="text-xl font-bold text-slate-100">Habits 习惯打卡</h3>
+        <p class="text-xs text-slate-500">连续打卡 · 热力图 · 鼓励动画</p>
+      </div>
+      <span class="phase-badge phase-v2 ml-auto text-xs">V2</span>
+    </div>
+    <div class="glass-sm p-5">
+      <p class="text-xs text-slate-400 leading-relaxed mb-3">已有功能完善。连续天数火焰徽章、多次打卡进度条、30 日热力图、鼓励气泡。心理角色：通过条纹不中断的损失厌恶(loss aversion)驱动每日坚持，通过打卡完成的即时奖励建立习惯回路。V2 增加与「执行数据」的关联——比如自动将「今日专注超过 4 小时」计入「深度工作」习惯。</p>
+      <div class="flex gap-2 flex-wrap"><div class="psych-pill">损失厌恶</div><div class="psych-pill">习惯回路</div><div class="psych-pill">变化奖励</div></div>
+    </div>
+  </div>
+
+  <!-- PAGE: Pet -->
+  <div class="reveal page-card mb-8">
+    <div class="flex items-center gap-3 mb-6">
+      <div class="w-12 h-12 rounded-2xl bg-pink-500/15 flex items-center justify-center text-2xl">🐱</div>
+      <div>
+        <h3 class="text-xl font-bold text-slate-100">Virtual Pet 虚拟宠物</h3>
+        <p class="text-xs text-slate-500">情感激励 · 生产力货币化 · 养成系统</p>
+      </div>
+      <span class="phase-badge phase-v2 ml-auto text-xs">V2</span>
+    </div>
+    <div class="glass-sm p-5">
+      <p class="text-xs text-slate-400 leading-relaxed mb-3">已有功能。像素宠物 + 喂食/玩耍/互动 + 等级系统 + 金币商店。心理角色：提供SDT理论中的「归属感」——宠物作为情感连接对象，将生产力行为转化为「照顾另一个生命」的动机。沉没成本效应让用户不忍心放弃已经投入精力培养的宠物。V3 增加宠物会根据执行守护数据「说话」——比如「你今天被打断了 7 次呢，要不要试试屏蔽微信？」</p>
+      <div class="flex gap-2 flex-wrap"><div class="psych-pill">归属感</div><div class="psych-pill">沉没成本</div><div class="psych-pill">情感连接</div></div>
+    </div>
+  </div>
+
+  <!-- PAGE: Settings -->
+  <div class="reveal page-card mb-8">
+    <div class="flex items-center gap-3 mb-6">
+      <div class="w-12 h-12 rounded-2xl bg-slate-500/15 flex items-center justify-center text-2xl">⚙️</div>
+      <div>
+        <h3 class="text-xl font-bold text-slate-100">Settings 设置</h3>
+        <p class="text-xs text-slate-500">个性化配置 · 执行守护参数 · 隐私控制</p>
+      </div>
+      <span class="phase-badge phase-v1 ml-auto text-xs">V1</span>
+    </div>
+    <div class="glass-sm p-5">
+      <p class="text-xs text-slate-400 leading-relaxed mb-3">已有功能全部保留。新增「执行守护」设置区：打断检测灵敏度（宽松/标准/严格）、漫游检测阈值、提醒语气（温和/中性/直接）、晨间仪式开关、日终复盘自动弹出时间。所有提醒都可以关闭——产品是教练不是监工，用户始终有最终控制权。</p>
+      <div class="psych-pill">自主性保护 · 个性化适配</div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== SEC 06: USER GUIDANCE ==================== -->
+<section id="sec-guidance" class="relative z-10 max-w-5xl mx-auto px-6 py-20">
+  <div class="reveal">
+    <span class="tag tag-green mb-6">06 · 用户引导</span>
+    <h2 class="section-title mt-4 mb-4">产品内教育<br>与能力培养</h2>
+    <p class="section-subtitle mb-12">不只是一个工具，而是在使用过程中帮用户建立「执行功能」这项能力。</p>
+  </div>
+
+  <div class="reveal callout callout-green mb-8">
+    <p class="text-sm font-semibold text-green-300 mb-2">设计哲学：脚手架式教育</p>
+    <p class="text-slate-300 text-sm leading-relaxed">
+      「脚手架」(Scaffolding) 是教育学概念：提供临时支撑，让学习者完成原本无法独立完成的任务，然后逐步撤除支撑。Trace 的执行守护系统就是脚手架——初期高度辅助，随着用户能力增长，逐渐降低干预频率，最终用户能独立管理执行。
+    </p>
+  </div>
+
+  <div class="space-y-6">
+    <div class="reveal feature-card">
+      <h3 class="text-base font-bold mb-3 text-green-300">📖 知识卡片系统 (Knowledge Cards)</h3>
+      <p class="text-sm text-slate-400 leading-relaxed mb-3">在产品的关键触点嵌入 30 秒可读完的心理学知识卡片。不是独立的「学习中心」，而是在上下文中自然出现。</p>
+      <div class="grid sm:grid-cols-2 gap-4 mt-4">
+        <div class="glass-xs p-4 text-xs">
+          <p class="text-green-300 font-semibold mb-1">触发场景：第一次被打断拦截时</p>
+          <p class="text-slate-400">「<strong class="text-slate-300">你知道吗？</strong>研究表明，被打断后平均需要 23 分钟才能完全恢复到之前的专注状态。这就是为什么我们在你切走时提醒你——不是不信任你，而是帮你省下那 23 分钟。」</p>
+        </div>
+        <div class="glass-xs p-4 text-xs">
+          <p class="text-green-300 font-semibold mb-1">触发场景：第一次使用「只要15分钟」</p>
+          <p class="text-slate-400">「<strong class="text-slate-300">为什么是15分钟？</strong>心理学中的"foot-in-the-door"效应：一旦开始一个小行动，你的大脑会自然想要继续。大多数人在开始 15 分钟后会选择继续——因为启动才是最难的部分。」</p>
+        </div>
+        <div class="glass-xs p-4 text-xs">
+          <p class="text-green-300 font-semibold mb-1">触发场景：日终复盘时看到时间黑洞</p>
+          <p class="text-slate-400">「<strong class="text-slate-300">关于时间盲</strong>：很多人低估了"刷一会儿"的实际时间。这不是自控力差，而是大脑天生不擅长感知时间流逝。这就是为什么我们让时间始终可见——帮你建立准确的时间感知。」</p>
+        </div>
+        <div class="glass-xs p-4 text-xs">
+          <p class="text-green-300 font-semibold mb-1">触发场景：连续 3 天回避同一个任务</p>
+          <p class="text-slate-400">「<strong class="text-slate-300">拖延不是时间管理问题</strong>，而是情绪管理问题。你回避这个任务，可能是因为它引发了不愉快的情绪（焦虑？无聊？害怕失败？）。试试把它拆成一个 10 分钟的小步骤，降低情绪门槛。」</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="reveal feature-card">
+      <h3 class="text-base font-bold mb-3 text-green-300">📈 能力成长可视化</h3>
+      <p class="text-sm text-slate-400 leading-relaxed mb-3">追踪并展示用户在以下维度的成长趋势（V3），让能力增长变得可见：</p>
+      <div class="grid sm:grid-cols-3 gap-3">
+        <div class="glass-xs p-3 text-center text-xs">
+          <p class="text-lg mb-1">⏱️</p>
+          <p class="font-semibold text-slate-200 mb-1">时间感知准确度</p>
+          <p class="text-slate-500">预估时间 vs 实际时间的偏差率趋势</p>
+        </div>
+        <div class="glass-xs p-3 text-center text-xs">
+          <p class="text-lg mb-1">🛡️</p>
+          <p class="font-semibold text-slate-200 mb-1">打断恢复速度</p>
+          <p class="text-slate-500">从脱轨到恢复执行的平均时间趋势</p>
+        </div>
+        <div class="glass-xs p-3 text-center text-xs">
+          <p class="text-lg mb-1">🚀</p>
+          <p class="font-semibold text-slate-200 mb-1">自主启动率</p>
+          <p class="text-slate-500">不需要系统提醒就主动开始的比例</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="reveal feature-card">
+      <h3 class="text-base font-bold mb-3 text-green-300">🎓 渐进式脚手架撤除</h3>
+      <p class="text-sm text-slate-400 leading-relaxed mb-3">系统会根据用户行为数据自动调整干预强度（V3）：</p>
+      <div class="space-y-3">
+        <div class="flex items-start gap-3">
+          <span class="tag tag-red text-xs shrink-0">初期</span>
+          <p class="text-xs text-slate-400">高频提醒。晨间仪式自动弹出，打断检测灵敏，每 25 分钟状态确认，日终复盘自动触发。像一个认真的新手教练。</p>
+        </div>
+        <div class="flex items-start gap-3">
+          <span class="tag tag-orange text-xs shrink-0">中期</span>
+          <p class="text-xs text-slate-400">当用户连续 2 周打断恢复速度 &lt; 5min 且自主启动率 &gt; 60%，系统降低干预频率。打断检测延迟到 3 分钟，状态确认改为 45 分钟。像一个放手的教练。</p>
+        </div>
+        <div class="flex items-start gap-3">
+          <span class="tag tag-green text-xs shrink-0">后期</span>
+          <p class="text-xs text-slate-400">当各项指标持续达标 1 个月，系统进入「安静模式」——只在检测到明显异常时才介入。用户已经内化了执行能力。像一个在场但不干预的顾问。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="reveal feature-card">
+      <h3 class="text-base font-bold mb-3 text-green-300">💬 Onboarding 引导流程优化</h3>
+      <p class="text-sm text-slate-400 leading-relaxed">首次使用时的引导从「功能教学」升级为「理念引导」：不只是教你怎么用按钮，而是告诉你为什么这样设计——「我们不会给你一个 20 条的任务列表让你选，因为选择本身就消耗精力。我们每次只告诉你一件事。」让用户从一开始就理解产品的设计理念，建立信任。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== SEC 07: PHASES ==================== -->
+<section id="sec-phases" class="relative z-10 max-w-5xl mx-auto px-6 py-20">
+  <div class="reveal">
+    <span class="tag tag-pink mb-6">07 · 开发阶段</span>
+    <h2 class="section-title mt-4 mb-4">四版迭代<br>路线图</h2>
+    <p class="section-subtitle mb-12">从核心执行能力到完整生态，每一版都交付完整可用的产品。</p>
+  </div>
+
+  <!-- Phase chart -->
+  <div class="reveal mb-12">
+    <div id="chart-phases" style="width:100%;height:420px;"></div>
+  </div>
+
+  <!-- V1 -->
+  <div class="reveal glass p-8 md:p-10 mb-8 border-l-4 border-green-500">
+    <div class="flex items-center gap-3 mb-6">
+      <span class="phase-badge phase-v1">V1</span>
+      <div>
+        <h3 class="text-xl font-bold text-slate-100">核心执行 — MVP</h3>
+        <p class="text-xs text-slate-500">时间追踪 + 任务管理 + 执行守护核心</p>
+      </div>
+    </div>
+    <div class="grid md:grid-cols-2 gap-4 mb-4">
+      <div>
+        <p class="text-xs text-green-300 font-semibold mb-2">包含功能</p>
+        <ul class="text-xs text-slate-400 space-y-1.5">
+          <li>• 自动活动追踪（窗口监控 + AI 分类）</li>
+          <li>• 时间线可视化（逐小时回顾 + 批量编辑）</li>
+          <li>• 任务管理（优先级 + 子任务 + 「第一步」字段）</li>
+          <li>• 时间块系统（任务绑定时段 + 缓冲时间）</li>
+          <li>• 专注模式（番茄钟 + 环境音 + 干扰屏蔽）</li>
+          <li class="text-orange-300 font-semibold">• 🆕 此刻引擎（单一任务推荐）</li>
+          <li class="text-orange-300 font-semibold">• 🆕 启动助推（第一步引导 + 15 分钟门槛）</li>
+          <li class="text-orange-300 font-semibold">• 🆕 打断拦截器（温和提醒 + 三选项）</li>
+          <li class="text-orange-300 font-semibold">• 🆕 上下文快照（暂停保存 + 恢复引导）</li>
+          <li class="text-orange-300 font-semibold">• 🆕 状态常驻条（任务+时间+下一个）</li>
+          <li class="text-orange-300 font-semibold">• 🆕 晨间启动仪式</li>
+          <li class="text-orange-300 font-semibold">• 🆕 日终闭环复盘（正反馈优先 + 对账 + 明日一件事）</li>
+          <li>• 基础统计（周/月总览 + 深度工作分数）</li>
+          <li>• 设置（外观 + 追踪 + 执行守护参数）</li>
+        </ul>
+      </div>
+      <div>
+        <p class="text-xs text-green-300 font-semibold mb-2">涉及页面</p>
+        <div class="flex flex-wrap gap-2 mb-4">
+          <span class="tag tag-green text-xs">Dashboard</span>
+          <span class="tag tag-green text-xs">Planner</span>
+          <span class="tag tag-green text-xs">Focus</span>
+          <span class="tag tag-green text-xs">Timeline</span>
+          <span class="tag tag-green text-xs">Statistics</span>
+          <span class="tag tag-orange text-xs">StatusBar 🆕</span>
+          <span class="tag tag-orange text-xs">Review 🆕</span>
+          <span class="tag tag-green text-xs">Settings</span>
+        </div>
+        <p class="text-xs text-green-300 font-semibold mb-2">核心价值</p>
+        <p class="text-xs text-slate-400 leading-relaxed">解决最核心的三个问题：不知道做什么（此刻引擎）、启动不了（启动助推）、做着做着忘了（打断拦截 + 上下文快照）。用户第一天就能感受到「被温和引导着完成任务」的体验。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- V2 -->
+  <div class="reveal glass p-8 md:p-10 mb-8 border-l-4 border-blue-500">
+    <div class="flex items-center gap-3 mb-6">
+      <span class="phase-badge phase-v2">V2</span>
+      <div>
+        <h3 class="text-xl font-bold text-slate-100">智能守护 — AI 增强</h3>
+        <p class="text-xs text-slate-500">AI 深度分析 + 行为模式识别 + 游戏化激励</p>
+      </div>
+    </div>
+    <div class="grid md:grid-cols-2 gap-4 mb-4">
+      <div>
+        <p class="text-xs text-blue-300 font-semibold mb-2">新增功能</p>
+        <ul class="text-xs text-slate-400 space-y-1.5">
+          <li>• AI 智能排序增强（情绪权重 + 拖延衰减）</li>
+          <li>• 「换一个」日志与回避模式分析</li>
+          <li>• AI 模式洞察（日终复盘中的个性化建议）</li>
+          <li>• 漫游模式检测（无目的切换识别）</li>
+          <li>• 执行守护统计 Tab（打断/拖延/能量分析）</li>
+          <li>• 习惯打卡系统（连续天数 + 热力图 + 鼓励动画）</li>
+          <li>• 虚拟宠物系统（像素宠物 + 等级 + 金币商店）</li>
+          <li>• 知识卡片系统（上下文嵌入的心理学教育）</li>
+          <li>• 能量曲线（历史专注度热力图指导排程）</li>
+        </ul>
+      </div>
+      <div>
+        <p class="text-xs text-blue-300 font-semibold mb-2">新增页面</p>
+        <div class="flex flex-wrap gap-2 mb-4">
+          <span class="tag tag-blue text-xs">Habits 🆕</span>
+          <span class="tag tag-blue text-xs">VirtualPet 🆕</span>
+        </div>
+        <p class="text-xs text-blue-300 font-semibold mb-2">核心价值</p>
+        <p class="text-xs text-slate-400 leading-relaxed">从「被动提醒」升级为「主动理解」。AI 开始识别用户的个人行为模式，给出越来越精准的建议。游戏化系统提供外在动机补充，在用户内在动机不足时（"就是不想做"）提供额外的推动力。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- V3 -->
+  <div class="reveal glass p-8 md:p-10 mb-8 border-l-4 border-purple-500">
+    <div class="flex items-center gap-3 mb-6">
+      <span class="phase-badge phase-v3">V3</span>
+      <div>
+        <h3 class="text-xl font-bold text-slate-100">认知训练 — 能力内化</h3>
+        <p class="text-xs text-slate-500">脚手架撤除 + 能力成长可视化 + 自适应干预</p>
+      </div>
+    </div>
+    <div class="grid md:grid-cols-2 gap-4">
+      <div>
+        <p class="text-xs text-purple-300 font-semibold mb-2">新增功能</p>
+        <ul class="text-xs text-slate-400 space-y-1.5">
+          <li>• 能力成长可视化（时间感知/打断恢复/自主启动）</li>
+          <li>• 渐进式脚手架撤除（自动降低干预频率）</li>
+          <li>• 宠物智能对话（基于执行数据的个性化建议）</li>
+          <li>• 情绪日记集成（标记每日情绪状态关联生产力）</li>
+          <li>• 自适应番茄时长（根据个人注意力曲线调整）</li>
+          <li>• 深度 AI 教练（多轮对话式反思引导）</li>
+          <li>• 「回顾周」功能（每月一次的深度自我分析）</li>
+        </ul>
+      </div>
+      <div>
+        <p class="text-xs text-purple-300 font-semibold mb-2">核心价值</p>
+        <p class="text-xs text-slate-400 leading-relaxed">从「工具依赖」转向「能力内化」。产品开始有意识地减少自己的存在感——当用户的执行能力增长到一定水平，系统自动退到后台。最终目标：用户不再需要 Trace 的主动干预，但仍然使用它作为数据记录工具。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- V4 -->
+  <div class="reveal glass p-8 md:p-10 mb-8 border-l-4 border-pink-500">
+    <div class="flex items-center gap-3 mb-6">
+      <span class="phase-badge phase-v4">V4</span>
+      <div>
+        <h3 class="text-xl font-bold text-slate-100">社交生态 — 连接与扩展</h3>
+        <p class="text-xs text-slate-500">团队协作 + 同伴系统 + 平台生态</p>
+      </div>
+    </div>
+    <div class="grid md:grid-cols-2 gap-4">
+      <div>
+        <p class="text-xs text-pink-300 font-semibold mb-2">新增功能</p>
+        <ul class="text-xs text-slate-400 space-y-1.5">
+          <li>• 团队仪表盘（组织级生产力概览）</li>
+          <li>• 同伴专注（与朋友同步进入专注模式）</li>
+          <li>• 匿名数据基准（与相似用户对比，不暴露隐私）</li>
+          <li>• 成就与徽章系统</li>
+          <li>• API 开放平台（日历同步/第三方集成）</li>
+          <li>• 企业版（审批流 + 团队管理）</li>
+        </ul>
+      </div>
+      <div>
+        <p class="text-xs text-pink-300 font-semibold mb-2">核心价值</p>
+        <p class="text-xs text-slate-400 leading-relaxed">满足 SDT 中「归属感」的深层需求。独自对抗拖延很难，和同伴一起更容易坚持。同伴系统不是竞争排名，而是互相鼓励的陪伴。企业版将个人工具扩展为团队生产力方案。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== SEC 08: METRICS ==================== -->
+<section id="sec-metrics" class="relative z-10 max-w-5xl mx-auto px-6 py-20">
+  <div class="reveal">
+    <span class="tag tag-orange mb-6">08 · 衡量标准</span>
+    <h2 class="section-title mt-4 mb-4">如何知道<br>方案有效？</h2>
+    <p class="section-subtitle mb-12">产品需要追踪的核心指标，用来验证执行守护系统是否真的在帮助用户。</p>
+  </div>
+
+  <div class="reveal glass p-6 md:p-10 mb-8 overflow-x-auto">
+    <table class="data-table text-xs min-w-[600px]">
+      <thead>
+        <tr><th>指标</th><th>定义</th><th>目标方向</th><th>对应功能</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="font-semibold text-slate-200">任务完成率</td><td>计划任务中标记完成的比例</td><td><span class="text-green-400">↑ 提升</span></td><td>此刻引擎 · 启动助推</td></tr>
+        <tr><td class="font-semibold text-slate-200">预估偏差率</td><td>|预估时间 - 实际时间| / 预估时间</td><td><span class="text-green-400">↓ 降低</span></td><td>时间块 · 统计</td></tr>
+        <tr><td class="font-semibold text-slate-200">平均打断恢复时间</td><td>从脱轨到恢复执行的平均分钟数</td><td><span class="text-green-400">↓ 降低</span></td><td>打断拦截 · 上下文快照</td></tr>
+        <tr><td class="font-semibold text-slate-200">日均打断次数</td><td>每天被打断的总次数</td><td><span class="text-green-400">↓ 降低</span></td><td>干扰屏蔽 · 打断拦截</td></tr>
+        <tr><td class="font-semibold text-slate-200">自主启动率</td><td>不需系统推荐就主动开始任务的比例</td><td><span class="text-green-400">↑ 提升</span></td><td>脚手架撤除指标</td></tr>
+        <tr><td class="font-semibold text-slate-200">漫游时间占比</td><td>无目的切换时间 / 总追踪时间</td><td><span class="text-green-400">↓ 降低</span></td><td>漫游检测</td></tr>
+        <tr><td class="font-semibold text-slate-200">深度工作占比</td><td>连续专注 ≥25min 的时间 / 总追踪时间</td><td><span class="text-green-400">↑ 提升</span></td><td>专注模式 · 打断拦截</td></tr>
+        <tr><td class="font-semibold text-slate-200">日终闭合率</td><td>完成日终复盘流程的天数比例</td><td><span class="text-green-400">↑ 提升</span></td><td>日终闭环</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="reveal">
+    <div id="chart-metrics" style="width:100%;height:350px;"></div>
+  </div>
+</section>
+
+<!-- ==================== FOOTER ==================== -->
+<footer class="relative z-10 max-w-5xl mx-auto px-6 py-20 text-center">
+  <div class="reveal">
+    <div class="glass p-10 md:p-16">
+      <h2 class="text-2xl md:text-3xl font-bold mb-4">
+        从<span class="text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-orange-400">被动响应</span>到<span class="text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-cyan-400">主动执行</span>
+      </h2>
+      <p class="text-sm text-slate-400 max-w-lg mx-auto leading-relaxed mb-6">
+        Trace 不只是记录你的时间去哪了。它温和地引导你把时间放到你真正想放的地方。然后，逐渐地，你不再需要它的引导。
+      </p>
+      <div class="flex flex-wrap justify-center gap-3">
+        <span class="tag tag-orange">执行守护</span>
+        <span class="tag tag-blue">认知训练</span>
+        <span class="tag tag-green">正反馈循环</span>
+        <span class="tag tag-purple">渐进式脚手架</span>
+        <span class="tag tag-cyan">能力内化</span>
+      </div>
+      <p class="text-xs text-slate-600 mt-8">Trace 时迹 · 产品蓝图 v2.0 · 2026.04.20</p>
+    </div>
+  </div>
+</footer>
+<script>
+// ===== Reading Progress Bar =====
+window.addEventListener('scroll', () => {
+  const h = document.documentElement;
+  const pct = (h.scrollTop / (h.scrollHeight - h.clientHeight)) * 100;
+  document.getElementById('reading-progress').style.width = pct + '%';
+});
+
+// ===== GSAP ScrollTrigger Reveals =====
+gsap.registerPlugin(ScrollTrigger);
+document.querySelectorAll('.reveal').forEach((el, i) => {
+  gsap.to(el, {
+    scrollTrigger: { trigger: el, start: 'top 88%', toggleActions: 'play none none none' },
+    opacity: 1, y: 0, duration: 0.7, ease: 'power2.out', delay: i % 3 * 0.08
+  });
+});
+
+// ===== Chart: Vicious Cycle =====
+const chartCycle = echarts.init(document.getElementById('chart-cycle'), null, { renderer: 'svg' });
+chartCycle.setOption({
+  backgroundColor: 'transparent',
+  title: { text: '拖延-焦虑恶性循环 vs 执行守护正循环', left: 'center', top: 10, textStyle: { color: '#94a3b8', fontSize: 14, fontFamily: 'Inter, Noto Sans SC', fontWeight: 600 } },
+  tooltip: { trigger: 'item', backgroundColor: 'rgba(15,23,42,0.9)', borderColor: 'rgba(148,163,184,0.2)', textStyle: { color: '#f1f5f9', fontSize: 12, fontFamily: 'Inter, Noto Sans SC' } },
+  legend: { bottom: 10, textStyle: { color: '#64748b', fontSize: 11, fontFamily: 'Inter, Noto Sans SC' }, itemGap: 24 },
+  series: [{
+    name: '恶性循环（干预前）', type: 'pie', radius: ['28%', '48%'], center: ['30%', '52%'],
+    label: { color: '#94a3b8', fontSize: 11, fontFamily: 'Inter, Noto Sans SC' },
+    data: [
+      { value: 30, name: '选择瘫痪', itemStyle: { color: '#ef4444' } },
+      { value: 25, name: '启动失败', itemStyle: { color: '#f97316' } },
+      { value: 20, name: '中途脱轨', itemStyle: { color: '#eab308' } },
+      { value: 15, name: '忘记任务', itemStyle: { color: '#a855f7' } },
+      { value: 10, name: '负反馈累积', itemStyle: { color: '#ec4899' } }
+    ]
+  }, {
+    name: '正循环（干预后）', type: 'pie', radius: ['28%', '48%'], center: ['72%', '52%'],
+    label: { color: '#94a3b8', fontSize: 11, fontFamily: 'Inter, Noto Sans SC' },
+    data: [
+      { value: 30, name: '此刻引擎选择', itemStyle: { color: '#22c55e' } },
+      { value: 25, name: '15min轻启动', itemStyle: { color: '#3b82f6' } },
+      { value: 20, name: '打断拦截', itemStyle: { color: '#06b6d4' } },
+      { value: 15, name: '上下文恢复', itemStyle: { color: '#8b5cf6' } },
+      { value: 10, name: '正反馈闭环', itemStyle: { color: '#f59e0b' } }
+    ]
+  }]
+});
+
+// ===== Chart: Phases Timeline =====
+const chartPhases = echarts.init(document.getElementById('chart-phases'), null, { renderer: 'svg' });
+chartPhases.setOption({
+  backgroundColor: 'transparent',
+  tooltip: {
+    trigger: 'axis', axisPointer: { type: 'shadow' },
+    backgroundColor: 'rgba(15,23,42,0.9)', borderColor: 'rgba(148,163,184,0.2)',
+    textStyle: { color: '#f1f5f9', fontSize: 12, fontFamily: 'Inter, Noto Sans SC' }
+  },
+  legend: { bottom: 0, textStyle: { color: '#64748b', fontSize: 11, fontFamily: 'Inter, Noto Sans SC' } },
+  grid: { left: 50, right: 30, top: 40, bottom: 50 },
+  xAxis: { type: 'category', data: ['V1 核心执行', 'V2 智能守护', 'V3 认知训练', 'V4 社交生态'],
+    axisLabel: { color: '#94a3b8', fontSize: 11, fontFamily: 'Inter, Noto Sans SC' },
+    axisLine: { lineStyle: { color: 'rgba(148,163,184,0.15)' } } },
+  yAxis: { type: 'value', name: '功能数',
+    axisLabel: { color: '#64748b', fontSize: 11 },
+    splitLine: { lineStyle: { color: 'rgba(148,163,184,0.06)' } },
+    axisLine: { show: false } },
+  series: [
+    { name: '已有功能', type: 'bar', stack: 'total', barWidth: 48, itemStyle: { color: 'rgba(34,197,94,0.6)', borderRadius: [0,0,0,0] },
+      data: [8, 8, 8, 8] },
+    { name: '增强功能', type: 'bar', stack: 'total', itemStyle: { color: 'rgba(59,130,246,0.6)' },
+      data: [3, 5, 5, 5] },
+    { name: '全新功能', type: 'bar', stack: 'total', itemStyle: { color: 'rgba(249,115,22,0.7)', borderRadius: [6,6,0,0] },
+      data: [7, 5, 7, 6] },
+    { name: '累计功能总数', type: 'line', smooth: true, symbol: 'circle', symbolSize: 8,
+      lineStyle: { color: '#f97316', width: 2 }, itemStyle: { color: '#f97316', borderColor: '#020617', borderWidth: 2 },
+      data: [18, 36, 56, 81] }
+  ]
+});
+
+// ===== Chart: Metrics Radar =====
+const chartMetrics = echarts.init(document.getElementById('chart-metrics'), null, { renderer: 'svg' });
+chartMetrics.setOption({
+  backgroundColor: 'transparent',
+  title: { text: '核心指标改善目标 — 使用 3 个月后预期变化', left: 'center', top: 5, textStyle: { color: '#94a3b8', fontSize: 13, fontFamily: 'Inter, Noto Sans SC', fontWeight: 600 } },
+  tooltip: { backgroundColor: 'rgba(15,23,42,0.9)', borderColor: 'rgba(148,163,184,0.2)', textStyle: { color: '#f1f5f9', fontSize: 12, fontFamily: 'Inter, Noto Sans SC' } },
+  legend: { bottom: 5, textStyle: { color: '#64748b', fontSize: 11, fontFamily: 'Inter, Noto Sans SC' } },
+  radar: {
+    center: ['50%', '55%'], radius: '60%',
+    indicator: [
+      { name: '任务完成率', max: 100 },
+      { name: '深度工作占比', max: 100 },
+      { name: '自主启动率', max: 100 },
+      { name: '日终闭合率', max: 100 },
+      { name: '预估准确度', max: 100 },
+      { name: '打断恢复速度', max: 100 }
+    ],
+    axisName: { color: '#94a3b8', fontSize: 11, fontFamily: 'Inter, Noto Sans SC' },
+    splitLine: { lineStyle: { color: 'rgba(148,163,184,0.08)' } },
+    splitArea: { areaStyle: { color: ['rgba(148,163,184,0.02)', 'rgba(148,163,184,0.04)'] } },
+    axisLine: { lineStyle: { color: 'rgba(148,163,184,0.1)' } }
+  },
+  series: [{
+    type: 'radar',
+    data: [
+      { value: [35, 25, 15, 20, 40, 30], name: '干预前基线',
+        lineStyle: { color: '#ef4444', width: 2 },
+        areaStyle: { color: 'rgba(239,68,68,0.1)' },
+        itemStyle: { color: '#ef4444' } },
+      { value: [72, 55, 60, 80, 70, 75], name: '3个月后目标',
+        lineStyle: { color: '#22c55e', width: 2 },
+        areaStyle: { color: 'rgba(34,197,94,0.1)' },
+        itemStyle: { color: '#22c55e' } }
+    ]
+  }]
+});
+
+// ===== Resize Handler =====
+window.addEventListener('resize', () => {
+  chartCycle.resize();
+  chartPhases.resize();
+  chartMetrics.resize();
+});
+</script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>

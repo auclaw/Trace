@@ -3,16 +3,12 @@ import { useTranslation } from 'react-i18next'
 import {
   Calendar,
   ClipboardList,
-  Target,
-  CheckCircle2,
   BarChart3,
-  Cat,
   Sprout,
   Shield,
 } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import { colorThemeConfigs, DEFAULT_MODULES } from '../config/themes'
-import type { ColorTheme } from '../config/themes'
 
 type PetType = 'cat' | 'dog' | 'rabbit'
 
@@ -20,15 +16,13 @@ interface OnboardingState {
   petType: PetType
   petName: string
   dailyGoalMinutes: number
-  colorTheme: ColorTheme
   darkMode: boolean
   activeModules: string[]
   privacyLevel: 'basic' | 'standard' | 'detailed'
   privacyConsentGiven: boolean
 }
 
-const TOTAL_STEPS = 8
-const THEME_KEYS = Object.keys(colorThemeConfigs) as ColorTheme[]
+const TOTAL_STEPS = 7
 
 const PET_OPTIONS: { type: PetType; emoji: string; labelKey: string; defaultName: string }[] = [
   { type: 'cat', emoji: '\u{1F431}', labelKey: 'pet.types.cat', defaultName: '小橘' },
@@ -45,11 +39,8 @@ const GOAL_PRESETS = [
 
 const MODULE_INFO: { id: string; icon: React.ReactNode; labelKey: string; descKey: string }[] = [
   { id: 'timeline', icon: <Calendar size={20} />, labelKey: 'nav.timeline', descKey: 'onboarding.moduleTimelineDesc' },
-  { id: 'planner', icon: <ClipboardList size={20} />, labelKey: 'nav.planner', descKey: 'onboarding.modulePlannerDesc' },
-  { id: 'focus', icon: <Target size={20} />, labelKey: 'nav.focus', descKey: 'onboarding.moduleFocusDesc' },
-  { id: 'habits', icon: <CheckCircle2 size={20} />, labelKey: 'nav.habits', descKey: 'onboarding.moduleHabitsDesc' },
-  { id: 'statistics', icon: <BarChart3 size={20} />, labelKey: 'nav.statistics', descKey: 'onboarding.moduleStatsDesc' },
-  { id: 'pet', icon: <Cat size={20} />, labelKey: 'nav.pet', descKey: 'onboarding.modulePetDesc' },
+  { id: 'task', icon: <ClipboardList size={20} />, labelKey: 'nav.task', descKey: 'onboarding.moduleTaskDesc' },
+  { id: 'analytics', icon: <BarChart3 size={20} />, labelKey: 'nav.analytics', descKey: 'onboarding.moduleAnalyticsDesc' },
 ]
 
 const PRIVACY_LEVELS: { key: 'basic' | 'standard' | 'detailed'; labelKey: string; descKey: string }[] = [
@@ -67,7 +58,6 @@ export default function Onboarding() {
     petType: 'cat',
     petName: '小橘',
     dailyGoalMinutes: 480,
-    colorTheme: 'blue',
     darkMode: false,
     activeModules: DEFAULT_MODULES.filter((m) => !['dashboard', 'settings'].includes(m)),
     privacyLevel: 'standard',
@@ -97,7 +87,6 @@ export default function Onboarding() {
   }
 
   const handleComplete = () => {
-    store.setColorTheme(state.colorTheme)
     store.setTheme(state.darkMode ? 'dark' : 'light')
     store.setActiveModules(['dashboard', ...state.activeModules, 'settings'])
     store.setDailyGoalMinutes(state.dailyGoalMinutes)
@@ -109,13 +98,13 @@ export default function Onboarding() {
 
   // Live preview theme changes
   useEffect(() => {
-    const config = colorThemeConfigs[state.colorTheme]
+    const config = colorThemeConfigs['blue']
     document.documentElement.style.setProperty('--color-accent', config.accent)
     document.documentElement.style.setProperty('--color-accent-soft', config.accentSoft)
     document.documentElement.classList.toggle('dark', state.darkMode)
-  }, [state.colorTheme, state.darkMode])
+  }, [state.darkMode])
 
-  const accent = colorThemeConfigs[state.colorTheme].accent
+  const accent = colorThemeConfigs['blue'].accent
 
   const slideClass = animating
     ? direction === 'next'
@@ -129,10 +118,9 @@ export default function Onboarding() {
       case 1: return <StepPrivacyConsent state={state} setState={setState} accent={accent} />
       case 2: return <StepPet state={state} setState={setState} />
       case 3: return <StepGoal state={state} setState={setState} accent={accent} />
-      case 4: return <StepTheme state={state} setState={setState} />
-      case 5: return <StepModules state={state} setState={setState} accent={accent} />
-      case 6: return <StepPrivacyLevel state={state} setState={setState} accent={accent} />
-      case 7: return <StepDone state={state} onComplete={handleComplete} accent={accent} />
+      case 4: return <StepModules state={state} setState={setState} accent={accent} />
+      case 5: return <StepPrivacyLevel state={state} setState={setState} accent={accent} />
+      case 6: return <StepDone state={state} onComplete={handleComplete} accent={accent} />
       default: return null
     }
   }
@@ -523,110 +511,7 @@ function StepGoal({
   )
 }
 
-/* ── Step 4: Theme ── */
-function StepTheme({
-  state,
-  setState,
-}: {
-  state: OnboardingState
-  setState: React.Dispatch<React.SetStateAction<OnboardingState>>
-}) {
-  const { t } = useTranslation()
-  return (
-    <div className="flex-1 flex flex-col gap-5">
-      <div className="text-center">
-        <h2 className="text-xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
-          {t('onboarding.chooseThemeTitle')} 🎨
-        </h2>
-        <p className="mt-1.5 text-sm" style={{ color: 'var(--color-text-muted)' }}>
-          {t('onboarding.chooseThemeSubtitle')}
-        </p>
-      </div>
-
-      {/* Color swatches */}
-      <div className="grid grid-cols-5 gap-3 mt-2">
-        {THEME_KEYS.map((key) => {
-          const config = colorThemeConfigs[key]
-          const isSel = state.colorTheme === key
-          return (
-            <button
-              key={key}
-              onClick={() => setState((s) => ({ ...s, colorTheme: key }))}
-              className="flex flex-col items-center gap-2.5 py-4 px-2 rounded-2xl transition-all duration-200 cursor-pointer"
-              style={{
-                background: isSel ? config.accentSoft : 'transparent',
-                border: isSel ? `2px solid ${config.accent}` : '2px solid transparent',
-                transform: isSel ? 'scale(1.05)' : 'scale(1)',
-              }}
-            >
-              <div className="relative">
-                <div
-                  className="w-12 h-12 rounded-full transition-shadow duration-200"
-                  style={{
-                    background: `linear-gradient(135deg, ${config.accent}, color-mix(in srgb, ${config.accent} 70%, #fff))`,
-                    boxShadow: isSel ? `0 4px 14px ${config.accent}44` : 'var(--shadow-sm)',
-                  }}
-                />
-                {isSel && (
-                  <span className="absolute inset-0 flex items-center justify-center">
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M5 10l4 4 6-7" />
-                    </svg>
-                  </span>
-                )}
-              </div>
-              <span
-                className="text-xs font-medium text-center leading-tight"
-                style={{ color: isSel ? config.accent : 'var(--color-text-secondary)' }}
-              >
-                {config.name}
-              </span>
-            </button>
-          )
-        })}
-      </div>
-
-      {/* Light/Dark toggle */}
-      <div className="mt-4 flex items-center justify-center gap-4">
-        <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>☀️ {t('onboarding.lightMode')}</span>
-        <button
-          onClick={() => setState((s) => ({ ...s, darkMode: !s.darkMode }))}
-          className="relative w-14 h-7 rounded-full transition-colors duration-300 cursor-pointer"
-          style={{ background: state.darkMode ? colorThemeConfigs[state.colorTheme].accent : 'var(--color-border-default)' }}
-        >
-          <div
-            className="absolute top-0.5 w-6 h-6 rounded-full bg-white shadow-md transition-all duration-300"
-            style={{ left: state.darkMode ? '30px' : '2px' }}
-          />
-        </button>
-        <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>🌙 {t('onboarding.darkMode')}</span>
-      </div>
-
-      {/* Live preview card */}
-      <div
-        className="mt-3 p-4 rounded-xl transition-all duration-300"
-        style={{
-          background: state.darkMode ? '#1a1614' : '#fffefb',
-          border: '1px solid var(--color-border-subtle)',
-        }}
-      >
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg" style={{ background: colorThemeConfigs[state.colorTheme].accent }} />
-          <div>
-            <div className="text-sm font-semibold" style={{ color: state.darkMode ? '#f5f5f5' : '#1a1a1a' }}>
-              {colorThemeConfigs[state.colorTheme].name}
-            </div>
-            <div className="text-xs" style={{ color: state.darkMode ? '#888' : '#999' }}>
-              {colorThemeConfigs[state.colorTheme].description}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-/* ── Step 5: Modules ── */
+/* ── Step 4: Modules ── */
 function StepModules({
   state,
   setState,

@@ -3,8 +3,12 @@
 @tailwind utilities;
 
 /* ============================================================
-   Trace Design System v3 — "Macaron Editorial"
-   Figma reference: Coral Pink + Pastel Macaron palette
+   Trace Design System v3 — "Dual Layer Macaron"
+   双层马卡龙灵活设计系统 · 两种边框风格 · 按需使用
+
+   Style A — 硬朗印刷风: 2px border + offset shadow
+   Style B — 马卡龙奶油风: 1px soft border + glow shadow
+
    Typography: Quicksand (headings), Plus Jakarta Sans (body),
    JetBrains Mono (code/labels)
    ============================================================ */
@@ -22,9 +26,10 @@
   --color-text-muted: #9E9899;
   --color-text-inverse: #FDFBF7;
 
-  /* Borders — warm stone (no dark borders on cards) */
-  --color-border-subtle: #E8E4DE;
-  --color-border-strong: #D6D3CD;
+  /* Borders — 双层马卡龙边框系统 (绝对没有黑色边框!) */
+  --color-border-subtle: #F5F0EA;   /* 最淡的边框，奶油色 (Style B) */
+  --color-border-light: #EDE8E2;    /* 淡边框 */
+  --color-border-strong: #D6D3CD;   /* 中灰色，印刷风边框 (Style A 默认) */
 
   /* Accent — Macaron Blue default (blue-forward, gender-neutral) */
   --color-accent: #79BEEB;
@@ -32,39 +37,102 @@
   --color-accent-soft: rgba(121, 190, 235, 0.12);
   --color-accent-gradient: linear-gradient(135deg, #79BEEB 0%, #5AACDF 100%);
 
-  /* Macaron palette — secondary accents */
-  --color-macaron-mint: #A8E6CF;
-  --color-macaron-lilac: #D4C4FB;
-  --color-macaron-lemon: #FFD3B6;
-  --color-macaron-blue: #79BEEB;
+  /* ── 完整马卡龙六色系统 Complete Macaron Palette ── */
+  /* 每色包含: main, light, soft (背景), hover */
 
-  /* Semantic */
-  --color-success: #A8E6CF;
-  --color-success-strong: #4CAF50;
-  --color-success-soft: rgba(168, 230, 207, 0.20);
-  --color-danger: #FF8C82;
-  --color-danger-strong: #FB5F51;
-  --color-danger-soft: rgba(255, 140, 130, 0.15);
-  --color-warning: #FFD3B6;
-  --color-warning-strong: #F59E0B;
-  --color-warning-soft: rgba(255, 211, 182, 0.20);
-  --color-info: #79BEEB;
-  --color-info-strong: #3B82F6;
-  --color-info-soft: rgba(121, 190, 235, 0.15);
+  /* Blue — 马卡龙蓝 (主色/推荐/信息) */
+  --color-blue: #79BEEB;
+  --color-blue-light: #9DD4F0;
+  --color-blue-soft: rgba(121, 190, 235, 0.12);
+  --color-blue-hover: #5AACDF;
+  --color-blue-gradient: linear-gradient(135deg, #79BEEB 0%, #5AACDF 100%);
+
+  /* Purple — 马卡龙紫 (AI/创意/优雅) */
+  --color-purple: #D4C4FB;
+  --color-purple-light: #E5D9FC;
+  --color-purple-soft: rgba(212, 196, 251, 0.12);
+  --color-purple-hover: #B8A3F5;
+  --color-purple-gradient: linear-gradient(135deg, #D4C4FB 0%, #B8A3F5 100%);
+
+  /* Green — 马卡龙绿 (成功/完成/轻松) */
+  --color-green: #A8E6CF;
+  --color-green-light: #C1EEDB;
+  --color-green-soft: rgba(168, 230, 207, 0.12);
+  --color-green-hover: #7DD4B0;
+  --color-green-gradient: linear-gradient(135deg, #A8E6CF 0%, #7DD4B0 100%);
+
+  /* Lemon — 马卡龙柠檬 (警告/待办/温暖) */
+  --color-lemon: #FFD3B6;
+  --color-lemon-light: #FFE0CC;
+  --color-lemon-soft: rgba(255, 211, 182, 0.12);
+  --color-lemon-hover: #FFBB8E;
+  --color-lemon-gradient: linear-gradient(135deg, #FFD3B6 0%, #FFBB8E 100%);
+
+  /* Coral — 马卡龙珊瑚 (危险/紧急/删除) */
+  --color-coral: #FF8C82;
+  --color-coral-light: #FFA89F;
+  --color-coral-soft: rgba(255, 140, 130, 0.12);
+  --color-coral-hover: #FB5F51;
+  --color-coral-gradient: linear-gradient(135deg, #FF8C82 0%, #FB5F51 100%);
+
+  /* Pink — 马卡龙粉 (治愈/奖励/庆祝) */
+  --color-pink: #FFB5D4;
+  --color-pink-light: #FFC9E0;
+  --color-pink-soft: rgba(255, 181, 212, 0.12);
+  --color-pink-hover: #FF8FC0;
+  --color-pink-gradient: linear-gradient(135deg, #FFB5D4 0%, #FF8FC0 100%);
+
+  /* Semantic aliases — 语义化颜色 */
+  --color-success: var(--color-green);
+  --color-success-strong: var(--color-green-hover);
+  --color-success-soft: var(--color-green-soft);
+  --color-danger: var(--color-coral);
+  --color-danger-strong: var(--color-coral-hover);
+  --color-danger-soft: var(--color-coral-soft);
+  --color-warning: var(--color-lemon);
+  --color-warning-strong: var(--color-lemon-hover);
+  --color-warning-soft: var(--color-lemon-soft);
+  --color-info: var(--color-blue);
+  --color-info-strong: var(--color-blue-hover);
+  --color-info-soft: var(--color-blue-soft);
+  --color-ai: var(--color-purple);         /* AI Guardian */
+  --color-ai-soft: var(--color-purple-soft);
+  --color-celebration: var(--color-pink);  /* 完成/庆祝 */
+  --color-celebration-soft: var(--color-pink-soft);
 
   /* Gamification gold */
   --color-gold: #FFD54F;
   --color-gold-gradient: linear-gradient(135deg, #FFD54F 0%, #FFB74D 50%, #FFD54F 100%);
 
-  /* Shadows — editorial offset style (Figma: 4px 4px 0px) */
-  --shadow-xs: 0 1px 2px rgba(58, 54, 56, 0.04);
-  --shadow-sm: 0 2px 6px rgba(58, 54, 56, 0.05);
-  --shadow-md: 0 4px 12px rgba(58, 54, 56, 0.07);
-  --shadow-lg: 0 8px 24px rgba(58, 54, 56, 0.09);
-  --shadow-xl: 0 16px 40px rgba(58, 54, 56, 0.12);
-  --shadow-card: 4px 4px 0px #D6D3CD;
-  --shadow-card-hover: 6px 6px 0px #D6D3CD;
-  --shadow-accent: 4px 4px 0px rgba(255, 140, 130, 0.35);
+  /* ── 阴影系统 Dual Shadow System ── */
+
+  /* Style A — Offset Shadow 印刷风硬偏移阴影 */
+  --shadow-offset: 4px 4px 0px var(--color-border-strong);
+  --shadow-offset-hover: 6px 6px 0px var(--color-border-strong);
+
+  /* Style A — 语义色 Offset 阴影 (彩色边框 + 同色阴影) */
+  --shadow-offset-blue: 4px 4px 0px rgba(121, 190, 235, 0.4);
+  --shadow-offset-purple: 4px 4px 0px rgba(212, 196, 251, 0.4);
+  --shadow-offset-green: 4px 4px 0px rgba(168, 230, 207, 0.4);
+  --shadow-offset-lemon: 4px 4px 0px rgba(255, 211, 182, 0.4);
+  --shadow-offset-coral: 4px 4px 0px rgba(255, 140, 130, 0.4);
+  --shadow-offset-pink: 4px 4px 0px rgba(255, 181, 212, 0.4);
+
+  /* Style B — Glow Shadow 马卡龙柔和光晕阴影 */
+  --shadow-glow-xs: 0 1px 3px rgba(121, 190, 235, 0.05);
+  --shadow-glow-sm: 0 2px 8px rgba(121, 190, 235, 0.08);
+  --shadow-glow-md: 0 4px 16px rgba(121, 190, 235, 0.10);
+  --shadow-glow-lg: 0 8px 30px rgba(121, 190, 235, 0.12);
+  --shadow-glow-xl: 0 16px 50px rgba(121, 190, 235, 0.15);
+
+  /* 卡片阴影预设 */
+  --shadow-card: var(--shadow-offset);           /* 默认: Style A2 印刷风 */
+  --shadow-card-hover: var(--shadow-offset-hover);
+  --shadow-card-soft: var(--shadow-glow-lg), 0 2px 8px rgba(0, 0, 0, 0.02);  /* Style B1 奶油风 */
+  --shadow-accent: 0 8px 30px rgba(121, 190, 235, 0.15);
+
+  /* No Shadow — 无阴影 */
+  --shadow-none: none;
 
   /* Transitions */
   --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
@@ -97,21 +165,39 @@
   --color-text-muted: #A89DA0;
   --color-text-inverse: #1A1718;
   --color-border-subtle: #3A3436;
+  --color-border-light: #453F41;
   --color-border-strong: #504A4C;
-  /* card borders use --color-border-strong */
+  /* Dark mode — Style A Offset 阴影 */
+  --shadow-offset: 4px 4px 0px var(--color-border-strong);
+  --shadow-offset-hover: 6px 6px 0px var(--color-border-strong);
+  --shadow-offset-blue: 4px 4px 0px rgba(121, 190, 235, 0.3);
+  --shadow-offset-purple: 4px 4px 0px rgba(212, 196, 251, 0.3);
+  --shadow-offset-green: 4px 4px 0px rgba(168, 230, 207, 0.3);
+  --shadow-offset-lemon: 4px 4px 0px rgba(255, 211, 182, 0.3);
+  --shadow-offset-coral: 4px 4px 0px rgba(255, 140, 130, 0.3);
+  --shadow-offset-pink: 4px 4px 0px rgba(255, 181, 212, 0.3);
+
+  /* Dark mode — Style B Glow 阴影 */
+  --shadow-glow-xs: 0 1px 3px rgba(0, 0, 0, 0.25);
+  --shadow-glow-sm: 0 2px 8px rgba(0, 0, 0, 0.30);
+  --shadow-glow-md: 0 4px 16px rgba(0, 0, 0, 0.35);
+  --shadow-glow-lg: 0 8px 30px rgba(0, 0, 0, 0.40);
+  --shadow-glow-xl: 0 16px 50px rgba(0, 0, 0, 0.45);
+
+  /* Dark mode — 卡片阴影预设 */
+  --shadow-card: var(--shadow-offset);
+  --shadow-card-hover: var(--shadow-offset-hover);
+  --shadow-card-soft: var(--shadow-glow-lg), 0 2px 8px rgba(0, 0, 0, 0.10);
+  --shadow-accent: 0 8px 30px rgba(121, 190, 235, 0.20);
+
+  /* Soft background variants */
   --color-accent-soft: rgba(121, 190, 235, 0.18);
   --color-success-soft: rgba(168, 230, 207, 0.18);
   --color-danger-soft: rgba(255, 140, 130, 0.18);
   --color-warning-soft: rgba(255, 211, 182, 0.18);
   --color-info-soft: rgba(121, 190, 235, 0.18);
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.35);
-  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.40);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.50);
-  --shadow-xl: 0 16px 40px rgba(0, 0, 0, 0.55);
-  --shadow-card: 4px 4px 0px rgba(0, 0, 0, 0.30);
-  --shadow-card-hover: 6px 6px 0px rgba(0, 0, 0, 0.35);
-  --shadow-accent: 4px 4px 0px rgba(255, 140, 130, 0.25);
+  --color-ai-soft: rgba(212, 196, 251, 0.18);
+  --color-celebration-soft: rgba(255, 181, 212, 0.18);
 }
 
 /* ============================================================
@@ -283,17 +369,20 @@ h1, h2, h3, h4, h5, h6 {
    ============================================================ */
 
 @layer components {
+  /* ── Card System 卡片系统 ── */
+
+  /* Style A2 (Default) — 柔和印刷风 · 2px 中灰边框 + offset 阴影 */
   .trace-card {
     background: var(--color-bg-surface-1);
-    border: 2px solid var(--color-border-strong);
+    border: 2px solid var(--color-border-strong);  /* #D6D3CD — 中灰色印刷风 */
     border-radius: var(--radius-2xl);
-    box-shadow: var(--shadow-card);
+    box-shadow: var(--shadow-card);  /* 4px 4px 0px offset */
     transition: box-shadow var(--duration-normal) var(--ease-default),
                 transform var(--duration-normal) var(--ease-default);
   }
 
   .trace-card-hover:hover {
-    box-shadow: var(--shadow-card-hover);
+    box-shadow: var(--shadow-card-hover);  /* 6px 6px 0px offset */
     transform: translate(-2px, -2px);
   }
 
@@ -301,12 +390,54 @@ h1, h2, h3, h4, h5, h6 {
     border-left: 3px solid var(--color-accent);
   }
 
-  /* Soft variant — no solid border, for secondary cards */
+  /* Style A1 — 语义色强调印刷风 · 彩色边框 + 彩色 offset 阴影 */
+  .trace-card-blue {
+    border-color: var(--color-blue);
+    box-shadow: var(--shadow-offset-blue);
+  }
+  .trace-card-purple {
+    border-color: var(--color-purple);
+    box-shadow: var(--shadow-offset-purple);
+  }
+  .trace-card-green {
+    border-color: var(--color-green);
+    box-shadow: var(--shadow-offset-green);
+  }
+  .trace-card-lemon {
+    border-color: var(--color-lemon);
+    box-shadow: var(--shadow-offset-lemon);
+  }
+  .trace-card-coral {
+    border-color: var(--color-coral);
+    box-shadow: var(--shadow-offset-coral);
+  }
+  .trace-card-pink {
+    border-color: var(--color-pink);
+    box-shadow: var(--shadow-offset-pink);
+  }
+
+  /* Style B1 — 马卡龙奶油风 · 1px 淡奶油边框 + 柔和光晕阴影 */
   .trace-card-soft {
     background: var(--color-bg-surface-1);
-    border: 1px solid var(--color-border-subtle);
+    border: 1px solid var(--color-border-subtle);  /* #F5F0EA — 奶油色 */
     border-radius: var(--radius-2xl);
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow-card-soft);
+  }
+
+  /* Style B2 — 纯净无边框风 · 无边框无阴影 */
+  .trace-card-flat {
+    background: var(--color-bg-surface-1);
+    border: none;
+    border-radius: var(--radius-2xl);
+    box-shadow: var(--shadow-none);
+  }
+
+  /* Style Minimal — 极简风 · 透明边框 + 极淡阴影 */
+  .trace-card-minimal {
+    background: var(--color-bg-surface-2);
+    border: 1px solid transparent;
+    border-radius: var(--radius-lg);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
   }
 }
 
