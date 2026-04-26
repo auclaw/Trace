@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { ChevronLeft, ChevronRight, ChevronDown, Trash2, Plus, Play, CheckCircle2, Scissors, Merge, CalendarOff, Edit } from 'lucide-react'
 import dataService from '../services/dataService'
 import type { TimeBlock, Task } from '../services/dataService'
-import { useToast } from '../components/ui/Toast'
+import { useToastFeedback } from '../hooks/useToastFeedback'
 import ConfirmDialog from '../components/ConfirmDialog'
 import DetailPanel from '../components/DetailPanel'
 import ContextCard from '../components/ContextCard'
@@ -97,7 +97,7 @@ export default function Timeline() {
   const [showTaskDeleteConfirm, setShowTaskDeleteConfirm] = useState(false)
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null)
   const [hoveredBlockId, setHoveredBlockId] = useState<string | null>(null)
-  const { toast } = useToast()
+  const { success, error, info } = useToastFeedback()
 
   const [isResizing, setIsResizing] = useState(false)
   const [resizeType, setResizeType] = useState<'top' | 'bottom' | null>(null)
@@ -447,7 +447,7 @@ export default function Timeline() {
 
     setSelectedBlockIds(new Set())
     setShowBatchConfirm(false)
-    toast(`已确认 ${count} 个时间块`, 'success')
+    success(`已确认 ${count} 个时间块`)
   }
 
   const handleInlineEditSave = async (block: TimeBlock) => {
@@ -510,9 +510,10 @@ export default function Timeline() {
       })
 
       setIsAdding(false)
-      toast(`"${blockData.title.trim()}" 已添加到您的时间线`, 'success')
+      success('已创建时间块')
     } catch (err) {
       console.error('Failed to create time block:', err)
+      error('创建失败，请重试')
     }
   }
 
@@ -530,9 +531,10 @@ export default function Timeline() {
       })
 
       closePanel()
-      toast(`"${updated.title}" 已成功更新`, 'success')
+      success('已保存')
     } catch (err) {
       console.error('Failed to update time block:', err)
+      error('保存失败，请重试')
     }
   }
 
@@ -571,10 +573,11 @@ export default function Timeline() {
         return next
       })
 
-      toast('时间块已拆分', 'success')
+      success('已拆分时间块')
       setShowContextMenu(false)
     } catch (err) {
       console.error('Failed to split block:', err)
+      error('拆分失败，请重试')
     }
   }
 
@@ -599,7 +602,7 @@ export default function Timeline() {
       })
 
       if (adjacentBlocks.length === 0) {
-        toast('没有找到可合并的相邻时间块', 'info')
+        info('没有找到可合并的相邻时间块')
         setShowContextMenu(false)
         return
       }
@@ -628,10 +631,11 @@ export default function Timeline() {
         return next
       })
 
-      toast(`已合并 ${allToMerge.length} 个时间块`, 'success')
+      success(`已合并 ${allToMerge.length} 个时间块`)
       setShowContextMenu(false)
     } catch (err) {
       console.error('Failed to merge blocks:', err)
+      error('合并失败，请重试')
     }
   }
 
@@ -709,7 +713,7 @@ export default function Timeline() {
       setSelectedBlock(null)
       setEditingBlock(null)
       setShowDeleteConfirm(false)
-      toast(`已删除 ${deletedTitles.length} 个事件`, 'success')
+      success(`已删除 ${deletedTitles.length} 个时间块`)
       return
     }
 
@@ -729,9 +733,10 @@ export default function Timeline() {
       setEditingBlock(null)
       setSelectedBlock(null)
       setShowDeleteConfirm(false)
-      toast(`"${block.title}" 已从时间线中移除`, 'info')
+      success('已删除时间块')
     } catch (err) {
       console.error('Failed to delete time block:', err)
+      error('删除失败')
     }
   }
 
@@ -1431,7 +1436,7 @@ export default function Timeline() {
                     return next
                   })
 
-                  toast(`「${task.title}」已安排到 ${padZero(Math.floor(startHour))}:${padZero(Math.round((startHour % 1) * 60))}`, 'success')
+                  success('已开始专注此任务')
                 }}
               >
                 {/* Day Separator Header */}
@@ -1878,7 +1883,7 @@ export default function Timeline() {
                                 e.stopPropagation()
                                 await dataService.updateTimeBlock(block.id, { source: 'confirmed' })
                                 await loadDayBlocks(new Date(block.startTime), true)
-                                toast('已确认', 'success')
+                                success('已确认')
                               }}
                             >
                               ✓
@@ -2258,13 +2263,13 @@ export default function Timeline() {
                   dataService.updateTask(editingTask.id, updated)
                   setForceRefresh(prev => prev + 1)
                   setEditingTask(null)
-                  toast('任务已更新', 'success')
+                  success('任务已更新')
                 }}
                 onDelete={() => {
                   dataService.deleteTask(editingTask.id)
                   setForceRefresh(prev => prev + 1)
                   setEditingTask(null)
-                  toast('任务已删除', 'success')
+                  success('任务已删除')
                 }}
               />
             </div>
@@ -2320,7 +2325,7 @@ export default function Timeline() {
           if (taskToDelete) {
             dataService.deleteTask(taskToDelete.id)
             setForceRefresh(prev => prev + 1)
-            toast('任务已删除', 'success')
+            success('任务已删除')
             setShowTaskDeleteConfirm(false)
             setTaskToDelete(null)
           }
@@ -2356,7 +2361,7 @@ export default function Timeline() {
                   return next
                 })
                 setShowContextMenu(false)
-                toast('已确认', 'success')
+                success('已确认')
               }}
               className="w-full px-4 py-2.5 text-left text-sm transition-all hover:bg-gray-50 flex items-center gap-2"
               style={{ color: '#3A3638' }}
@@ -2440,9 +2445,10 @@ export default function Timeline() {
                   scheduledDate: undefined,
                 })
                 setShowPlannedTaskContextMenu(false)
-                toast('已取消安排，任务保留在任务列表中', 'success')
+                success('已取消安排')
               } catch (err) {
                 console.error('Failed to unschedule task:', err)
+                error('取消安排失败')
               }
             }}
             className="w-full px-4 py-2.5 text-left text-sm transition-all hover:bg-gray-50 flex items-center gap-2"

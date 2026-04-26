@@ -15,6 +15,7 @@ import {
   Check,
 } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
+import { useToastFeedback } from '../hooks/useToastFeedback'
 
 // Setting sections with grouped navigation (Beta version - simplified)
 const SETTING_SECTIONS = [
@@ -72,7 +73,7 @@ export default function Settings() {
   const [activeSection, setActiveSection] = useState<string>('theme')
   const [showClearDataConfirm, setShowClearDataConfirm] = useState(false)
   const clearAllData = useAppStore((s) => s.clearAllData)
-  const addToast = useAppStore((s) => s.addToast)
+  const { success, error } = useToastFeedback()
   const [autoAcceptThreshold, setAutoAcceptThreshold] = useState(95)
   const [minEntryMinutes, setMinEntryMinutes] = useState(15)
 
@@ -176,9 +177,13 @@ export default function Settings() {
                   <div className="flex items-center gap-3">
                     <button
                       onClick={async () => {
-                        await clearAllData()
-                        setShowClearDataConfirm(false)
-                        addToast('success', '所有数据已清除')
+                        try {
+                          await clearAllData()
+                          setShowClearDataConfirm(false)
+                          success('所有数据已清除')
+                        } catch {
+                          error('清除数据失败')
+                        }
                       }}
                       className="flex-1 flex items-center justify-center gap-2 p-3 rounded-xl text-sm font-medium transition-all hover:opacity-90"
                       style={{ background: '#FF8C82', color: '#FFFFFF' }}

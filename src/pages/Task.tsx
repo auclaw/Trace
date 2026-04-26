@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Plus, X } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
-import { useToast } from '../components/ui/Toast'
+import { useToastFeedback } from '../hooks/useToastFeedback'
 import ConfirmDialog from '../components/ConfirmDialog'
 import EmptyState from '../components/ui/EmptyState'
 import TaskCard from '../components/Task/TaskCard'
@@ -20,7 +20,7 @@ export default function TaskPage() {
   const updateTask = useAppStore((s) => s.updateTask)
   const addTask = useAppStore((s) => s.addTask)
   const deleteTask = useAppStore((s) => s.deleteTask)
-  const { toast } = useToast()
+  const { success, error, warning } = useToastFeedback()
 
   const [loading, setLoading] = useState(true)
   const [showAddForm, setShowAddForm] = useState(false)
@@ -116,12 +116,12 @@ export default function TaskPage() {
 
   const handleAddTask = async () => {
     if (!newTaskTitle.trim()) {
-      toast('请输入任务标题', 'warning')
+      warning('请输入任务标题')
       return
     }
     // Validate due date validation
     if (newTaskDueDate && !isValidDate(newTaskDueDate)) {
-      toast('请输入有效的截止日期', 'warning')
+      warning('请输入有效的截止日期')
       return
     }
     try {
@@ -140,7 +140,6 @@ export default function TaskPage() {
         emotionalTag: newTaskEmotion || undefined,
         timeLoggedMinutes: 0,
       })
-      const taskTitle = newTaskTitle
       setNewTaskTitle('')
       setNewTaskPriority(3)
       setNewTaskDueDate('')
@@ -148,10 +147,10 @@ export default function TaskPage() {
       setNewTaskFirstStep('')
       setNewTaskEmotion('')
       setShowAddForm(false)
-      toast(`"${taskTitle}" 已成功添加到您的任务列表`, 'success')
-    } catch (error) {
-      toast('添加任务失败，请重试', 'error')
-      console.error('Add task error:', error)
+      success('已添加任务')
+    } catch (err) {
+      error('添加任务失败，请重试')
+      console.error('Add task error:', err)
     }
   }
 
@@ -171,17 +170,17 @@ export default function TaskPage() {
   const handleConfirmDelete = async () => {
     if (taskToDelete) {
       try {
-        const task = await deleteTaskWithTimeBlocks(taskToDelete)
+        await deleteTaskWithTimeBlocks(taskToDelete)
         setTaskToDelete(null)
         setSelectedTasks((prev) => {
           const next = new Set(prev)
           next.delete(taskToDelete)
           return next
         })
-        toast(task ? `"${task.title}" 已移除` : '任务已成功删除', 'info')
-      } catch (error) {
-        toast('删除失败，请重试', 'error')
-        console.error('Delete task error:', error)
+        success('已删除任务')
+      } catch (err) {
+        error('删除失败，请重试')
+        console.error('Delete task error:', err)
       }
     }
   }
@@ -218,13 +217,10 @@ export default function TaskPage() {
   const handleStatusChange = async (taskId: string, status: TaskStatus) => {
     try {
       await updateTask(taskId, { status })
-      const task = tasks.find((t) => t.id === taskId)
-      if (task) {
-        toast(`"${task.title}" 已${status === 'completed' ? '完成' : '更新状态'}`, 'success')
-      }
-    } catch (error) {
-      toast('状态更新失败，请重试', 'error')
-      console.error('Status change error:', error)
+      success(status === 'completed' ? '已完成任务' : '已更新状态')
+    } catch (err) {
+      error('状态更新失败，请重试')
+      console.error('Status change error:', err)
     }
   }
 
@@ -232,10 +228,10 @@ export default function TaskPage() {
     const newStatus: TaskStatus = task.status === 'in_progress' ? 'paused' : 'in_progress'
     try {
       await updateTask(task.id, { status: newStatus })
-      toast(`"${task.title}" ${newStatus === 'in_progress' ? '开始计时' : '已暂停'}`, 'success')
-    } catch (error) {
-      toast('操作失败，请重试', 'error')
-      console.error('Start timer error:', error)
+      success(newStatus === 'in_progress' ? '已开始专注' : '已暂停')
+    } catch (err) {
+      error('操作失败，请重试')
+      console.error('Start timer error:', err)
     }
   }
 
@@ -248,11 +244,11 @@ export default function TaskPage() {
         updateTask(id, { status: 'completed' })
       )
       await Promise.all(promises)
-      toast(`已完成 ${taskCount} 个任务`, 'success')
+      success(`已完成 ${taskCount} 个任务`)
       setSelectedTasks(new Set())
-    } catch (error) {
-      toast('批量操作失败，请重试', 'error')
-      console.error('Batch complete error:', error)
+    } catch (err) {
+      error('批量操作失败，请重试')
+      console.error('Batch complete error:', err)
     } finally {
       setBatchLoading(false)
     }
@@ -267,11 +263,11 @@ export default function TaskPage() {
         updateTask(id, { status: 'archived' })
       )
       await Promise.all(promises)
-      toast(`已归档 ${taskCount} 个任务`, 'success')
+      success(`已归档 ${taskCount} 个任务`)
       setSelectedTasks(new Set())
-    } catch (error) {
-      toast('批量归档失败，请重试', 'error')
-      console.error('Batch archive error:', error)
+    } catch (err) {
+      error('批量归档失败，请重试')
+      console.error('Batch archive error:', err)
     } finally {
       setBatchLoading(false)
     }
@@ -288,12 +284,12 @@ export default function TaskPage() {
     try {
       const promises = Array.from(selectedTasks).map((id) => deleteTaskWithTimeBlocks(id))
       await Promise.all(promises)
-      toast(`已删除 ${taskCount} 个任务`, 'info')
+      success(`已删除 ${taskCount} 个任务`)
       setSelectedTasks(new Set())
       setShowBatchDeleteConfirm(false)
-    } catch (error) {
-      toast('批量删除失败，请重试', 'error')
-      console.error('Batch delete error:', error)
+    } catch (err) {
+      error('批量删除失败，请重试')
+      console.error('Batch delete error:', err)
     } finally {
       setBatchLoading(false)
     }
@@ -304,10 +300,10 @@ export default function TaskPage() {
       await updateTask(updatedTask.id, updatedTask)
       setShowDetailPanel(false)
       setDetailTask(null)
-      toast('任务已更新', 'success')
-    } catch (error) {
-      toast('保存失败，请重试', 'error')
-      console.error('Save task error:', error)
+      success('任务已更新')
+    } catch (err) {
+      error('保存失败，请重试')
+      console.error('Save task error:', err)
     }
   }
 
@@ -317,10 +313,10 @@ export default function TaskPage() {
         await deleteTaskWithTimeBlocks(detailTask.id)
         setShowDetailPanel(false)
         setDetailTask(null)
-        toast('任务已删除', 'info')
-      } catch (error) {
-        toast('删除失败，请重试', 'error')
-        console.error('Delete task error:', error)
+        success('任务已删除')
+      } catch (err) {
+        error('删除失败，请重试')
+        console.error('Delete task error:', err)
       }
     }
   }

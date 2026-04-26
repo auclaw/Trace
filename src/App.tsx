@@ -71,6 +71,8 @@ function PageLoader() {
 
 /* ── Focus session popup orchestrator ── */
 import type { AppState, Activity } from './store/useAppStore';
+type ModalType = 'started' | 'completed' | 'goalAchieved';
+
 function FocusPopupManager() {
   const focusState = useAppStore((s: AppState) => s.focusState);
   const focusSessions = useAppStore((s: AppState) => s.focusSessions);
@@ -79,9 +81,8 @@ function FocusPopupManager() {
   const dailyGoalMinutes = useAppStore((s: AppState) => s.dailyGoalMinutes);
   const { openFocusModal } = useFocusModal();
 
-  const [showStarted, setShowStarted] = useState(false);
-  const [showCompleted, setShowCompleted] = useState(false);
-  const [showGoalAchieved, setShowGoalAchieved] = useState(false);
+  // 🎯 Modal queue system - ensure only one modal shows at a time
+  const [modalQueue, setModalQueue] = useState<ModalType[]>([]);
   const [completedStats, setCompletedStats] = useState({
     minutes: 0,
     sessions: 0,
@@ -92,10 +93,26 @@ function FocusPopupManager() {
   const prevFocusState = useRef(focusState);
   const goalAchievedShown = useRef(false);
 
+  // Calculate current active modal (first in queue)
+  const activeModal = modalQueue[0] || null;
+
+  // Add modal to queue - called by various triggers
+  const addModalToQueue = useCallback((type: ModalType) => {
+    setModalQueue(prev => {
+      if (prev.includes(type)) return prev; // Avoid duplicates
+      return [...prev, type];
+    });
+  }, []);
+
+  // Close current modal and show next in queue
+  const closeCurrentModal = useCallback(() => {
+    setModalQueue(prev => prev.slice(1));
+  }, []);
+
   // Show "started" modal when transitioning from idle → working
   useEffect(() => {
     if (prevFocusState.current === 'idle' && focusState === 'working') {
-      setShowStarted(true);
+      addModalToQueue('started');
     }
     // Show "completed" modal when a work session ends (working → break/longBreak)
     if (
@@ -109,10 +126,10 @@ function FocusPopupManager() {
         xp: mins,
         coins: Math.floor(mins / 5),
       });
-      setShowCompleted(true);
+      addModalToQueue('completed');
     }
     prevFocusState.current = focusState;
-  }, [focusState, focusSessions, focusSettings.workMinutes]);
+  }, [focusState, focusSessions, focusSettings.workMinutes, addModalToQueue]);
 
   // Check daily goal achievement
   useEffect(() => {
@@ -123,29 +140,32 @@ function FocusPopupManager() {
     );
     if (todayMinutes >= dailyGoalMinutes && dailyGoalMinutes > 0) {
       goalAchievedShown.current = true;
-      // Delay slightly to not overlap with focus completed modal
-      setTimeout(() => setShowGoalAchieved(true), 1500);
+      // Wait for other modals to complete first
+      setTimeout(() => addModalToQueue('goalAchieved'), 2000);
     }
-  }, [activities, dailyGoalMinutes]);
+  }, [activities, dailyGoalMinutes, addModalToQueue]);
 
   return (
     <>
       <FocusStartedModal
-        isOpen={showStarted}
-        onClose={() => setShowStarted(false)}
-        onViewSession={() => openFocusModal()}
+        isOpen={activeModal === 'started'}
+        onClose={closeCurrentModal}
+        onViewSession={() => {
+          closeCurrentModal();
+          openFocusModal();
+        }}
       />
       <FocusCompletedModal
-        isOpen={showCompleted}
-        onClose={() => setShowCompleted(false)}
+        isOpen={activeModal === 'completed'}
+        onClose={closeCurrentModal}
         sessionMinutes={completedStats.minutes}
         totalSessions={completedStats.sessions}
         xpGained={completedStats.xp}
         coinsGained={completedStats.coins}
       />
       <DailyGoalAchievedModal
-        isOpen={showGoalAchieved}
-        onClose={() => setShowGoalAchieved(false)}
+        isOpen={activeModal === 'goalAchieved'}
+        onClose={closeCurrentModal}
         totalMinutes={activities.reduce((sum, a) => sum + (a.duration || 0), 0)}
         goalMinutes={dailyGoalMinutes}
       />
@@ -240,6 +260,7 @@ function AppContent() {
                 {/* Compatibility redirects for legacy URLs */}
                 <Route path="/planner" element={<Navigate to="/task" replace />} />
                 <Route path="/statistics" element={<Navigate to="/analytics" replace />} />
+                <Route path="/tasks" element={<Navigate to="/task" replace />} />
                 {/* Beta: Disabled legacy routes - will be removed in future cleanup */}
                 <Route path="/focus" element={<Navigate to="/" replace />} />
                 {/* <Route path="/habits" element={<Habits />} /> */}

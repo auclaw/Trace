@@ -10,10 +10,8 @@ function getInitialLanguage(): string {
     const saved = localStorage.getItem(LS_LANG_KEY)
     if (saved && ['zh-CN', 'en-US'].includes(saved)) return saved
   } catch { /* noop */ }
-  // Auto-detect browser language
-  const browserLang = navigator.language
-  if (browserLang.startsWith('zh')) return 'zh-CN'
-  return 'en-US'
+  // Default to Chinese for better UX in China
+  return 'zh-CN'
 }
 
 i18n.use(initReactI18next).init({
