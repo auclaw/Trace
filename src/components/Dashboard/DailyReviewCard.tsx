@@ -11,10 +11,10 @@ export default function DailyReviewCard({ totalMinutes, efficiencyScore, complet
   const navigate = useNavigate()
 
   const getFeedback = () => {
-    if (efficiencyScore >= 80) return { text: 'Excellent focus today!', emoji: '🌟', color: '#A8E6CF' }
-    if (efficiencyScore >= 60) return { text: 'Good progress, keep going!', emoji: '💪', color: '#79BEEB' }
-    if (efficiencyScore >= 40) return { text: 'Getting better each day', emoji: '🌱', color: '#FFD3B6' }
-    return { text: 'Tomorrow is a fresh start', emoji: '🌅', color: '#FF8C82' }
+    if (efficiencyScore >= 80) return { text: 'Excellent focus today!', emoji: '🌟', color: 'var(--color-green)' }
+    if (efficiencyScore >= 60) return { text: 'Good progress, keep going!', emoji: '💪', color: 'var(--color-blue)' }
+    if (efficiencyScore >= 40) return { text: 'Getting better each day', emoji: '🌱', color: 'var(--color-lemon)' }
+    return { text: 'Tomorrow is a fresh start', emoji: '🌅', color: 'var(--color-coral)' }
   }
 
   const feedback = getFeedback()
@@ -24,23 +24,23 @@ export default function DailyReviewCard({ totalMinutes, efficiencyScore, complet
       className="p-6 rounded-2xl cursor-pointer transition-all duration-200 hover:translate-x-[-2px] hover:translate-y-[-2px]"
       onClick={() => navigate('/analytics')}
       style={{
-        background: '#FFFFFF',
-        border: '2px solid #D6D3CD',
-        boxShadow: '4px 4px 0px #D6D3CD',
+        background: 'var(--color-bg-surface-1)',
+        border: '2px solid var(--color-border-strong)',
+        boxShadow: '4px 4px 0px var(--color-border-strong)',
       }}
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2">
-          <Sparkles size={18} style={{ color: '#D4C4FB' }} />
+          <Sparkles size={18} style={{ color: 'var(--color-purple)' }} />
           <h3
             className="text-base font-semibold"
-            style={{ color: '#3A3638', fontFamily: 'Quicksand, sans-serif' }}
+            style={{ color: 'var(--color-text-primary)', fontFamily: 'Quicksand, sans-serif' }}
           >
             Daily Review
           </h3>
         </div>
-        <ChevronRight size={16} style={{ color: '#9E9899' }} />
+        <ChevronRight size={16} style={{ color: 'var(--color-text-muted)' }} />
       </div>
 
       {/* Feedback Message */}
@@ -59,33 +59,33 @@ export default function DailyReviewCard({ totalMinutes, efficiencyScore, complet
         <div className="text-center">
           <p
             className="text-2xl font-bold"
-            style={{ color: '#79BEEB', fontFamily: 'Quicksand, sans-serif' }}
+            style={{ color: 'var(--color-blue)', fontFamily: 'Quicksand, sans-serif' }}
           >
             {Math.floor(totalMinutes / 60)}h
           </p>
-          <p className="text-xs" style={{ color: '#9E9899' }}>
+          <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
             Focus Time
           </p>
         </div>
         <div className="text-center">
           <p
             className="text-2xl font-bold"
-            style={{ color: '#A8E6CF', fontFamily: 'Quicksand, sans-serif' }}
+            style={{ color: 'var(--color-green)', fontFamily: 'Quicksand, sans-serif' }}
           >
             {efficiencyScore}%
           </p>
-          <p className="text-xs" style={{ color: '#9E9899' }}>
+          <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
             Efficiency
           </p>
         </div>
         <div className="text-center">
           <p
             className="text-2xl font-bold"
-            style={{ color: '#D4C4FB', fontFamily: 'Quicksand, sans-serif' }}
+            style={{ color: 'var(--color-purple)', fontFamily: 'Quicksand, sans-serif' }}
           >
             {completedTasks}
           </p>
-          <p className="text-xs" style={{ color: '#9E9899' }}>
+          <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
             Tasks Done
           </p>
         </div>

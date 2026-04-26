@@ -362,11 +362,11 @@ export default function Timeline() {
     return result
   }
 
-  // Get day index offset + hour position within that day
-  const getGlobalBlockStyle = (block: TimeBlock, dayIndex: number) => {
+  // 计算时间块在 day 容器内的位置（相对定位）
+  const getBlockStyle = (block: TimeBlock) => {
     const startHour = timeToHour(block.startTime)
     const endHour = timeToHour(block.endTime)
-    const top = dayIndex * DAY_HEIGHT + hourToPx(startHour)
+    const top = hourToPx(startHour)
     const height = hourToPx(endHour) - hourToPx(startHour)
     return { top: Math.max(0, top), height: Math.max(30, height) }
   }
@@ -1164,16 +1164,16 @@ export default function Timeline() {
         <div
           className="p-5 mx-6 mt-6 rounded-2xl flex items-center justify-between flex-shrink-0 z-20"
           style={{
-            background: '#FFFFFF',
-            border: '2px solid #D6D3CD',
-            boxShadow: '4px 4px 0px #D6D3CD',
+            background: 'var(--color-bg-surface-1)',
+            border: '2px solid var(--color-border-strong)',
+            boxShadow: '4px 4px 0px var(--color-border-strong)',
           }}
         >
           {/* 点击左边日期弹出日历 */}
           <div className="relative" ref={calendarRef}>
             <h1
               className="text-xl font-bold cursor-pointer hover:opacity-70 transition-all"
-              style={{ color: '#3A3638', fontFamily: 'Quicksand, sans-serif' }}
+              style={{ color: 'var(--color-text-primary)', fontFamily: 'Quicksand, sans-serif' }}
               onClick={() => setShowCalendar(!showCalendar)}
             >
               {formatDateHeader()}
@@ -1184,9 +1184,9 @@ export default function Timeline() {
                 <div
                   className="absolute top-full left-0 mt-2 p-4 rounded-xl z-[100] w-64"
                   style={{
-                    background: '#FFFFFF',
-                    border: '2px solid #D6D3CD',
-                    boxShadow: '4px 4px 0px #D6D3CD',
+                    background: 'var(--color-bg-surface-1)',
+                    border: '2px solid var(--color-border-strong)',
+                    boxShadow: '4px 4px 0px var(--color-border-strong)',
                   }}
                 >
                   <div className="flex items-center justify-between mb-3">
@@ -1200,7 +1200,7 @@ export default function Timeline() {
                     >
                       <ChevronLeft size={14} />
                     </button>
-                    <span className="text-sm font-medium" style={{ color: '#3A3638' }}>
+                    <span className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
                       {generateCalendarDays().monthName}
                     </span>
                     <button
@@ -1217,7 +1217,7 @@ export default function Timeline() {
 
                   <div className="grid grid-cols-7 gap-1 text-center mb-2">
                     {['日', '一', '二', '三', '四', '五', '六'].map(day => (
-                      <span key={day} className="text-xs py-1" style={{ color: '#9E9899' }}>{day}</span>
+                      <span key={day} className="text-xs py-1" style={{ color: 'var(--color-text-muted)' }}>{day}</span>
                     ))}
                   </div>
 
@@ -1244,14 +1244,14 @@ export default function Timeline() {
                         className="w-8 h-8 rounded-lg text-xs transition-all hover:bg-gray-100 flex items-center justify-center"
                         style={{
                           background: day && formatDateYMD(day) === formatDateYMD(selectedDate)
-                            ? '#79BEEB'
+                            ? 'var(--color-blue)'
                             : day && formatDateYMD(day) === formatDateYMD(new Date())
-                              ? '#79BEEB30'
+                              ? 'var(--color-blue)30'
                               : 'transparent',
                           color: day && formatDateYMD(day) === formatDateYMD(selectedDate)
-                            ? '#FFFFFF'
+                            ? 'var(--color-bg-surface-1)'
                             : day
-                              ? '#3A3638'
+                              ? 'var(--color-text-primary)'
                               : 'transparent',
                           fontWeight: day && formatDateYMD(day) === formatDateYMD(new Date()) ? 'bold' : 'normal',
                         }}
@@ -1304,7 +1304,7 @@ export default function Timeline() {
                         }
                       }}
                       className="w-full py-2 rounded-lg text-sm font-medium transition-all hover:bg-gray-100 flex items-center justify-center gap-1"
-                      style={{ color: '#79BEEB' }}
+                      style={{ color: 'var(--color-blue)' }}
                     >
                       回到今天
                     </button>
@@ -1319,13 +1319,13 @@ export default function Timeline() {
               onClick={() => navigateDate(-1)}
               className="w-8 h-8 rounded-lg flex items-center justify-center transition-all hover:bg-gray-100"
             >
-              <ChevronLeft size={16} style={{ color: '#5C5658' }} />
+              <ChevronLeft size={16} style={{ color: 'var(--color-text-secondary)' }} />
             </button>
             <button
               onClick={() => navigateDate(1)}
               className="w-8 h-8 rounded-lg flex items-center justify-center transition-all hover:bg-gray-100"
             >
-              <ChevronRight size={16} style={{ color: '#5C5658' }} />
+              <ChevronRight size={16} style={{ color: 'var(--color-text-secondary)' }} />
             </button>
           </div>
         </div>
@@ -1335,9 +1335,9 @@ export default function Timeline() {
           ref={containerRef}
           className="flex-1 overflow-y-auto mx-6 my-4 rounded-2xl"
           style={{
-            background: '#FFFFFF',
-            border: '2px solid #D6D3CD',
-            boxShadow: '4px 4px 0px #D6D3CD',
+            background: 'var(--color-bg-surface-1)',
+            border: '2px solid var(--color-border-strong)',
+            boxShadow: '4px 4px 0px var(--color-border-strong)',
           }}
           onScroll={handleScroll}
         >
@@ -1351,6 +1351,7 @@ export default function Timeline() {
             return (
               <div
                 key={dateStr}
+                data-testid="timeline-day"
                 className="relative"
                 style={{ height: DAY_HEIGHT }}
                 onDoubleClick={(e) => {
@@ -1367,7 +1368,7 @@ export default function Timeline() {
 
                   const rect = e.currentTarget.getBoundingClientRect()
                   const dropY = e.clientY - rect.top
-                  const dropHour = (dropY / DAY_HEIGHT) * 24
+                  const dropHour = pxToHour(dropY) // 🎯 与 onDrop 使用相同的计算方式
                   const snappedHour = snapToGrid(dropHour)
 
                   setDragPreviewPosition({
@@ -1385,58 +1386,84 @@ export default function Timeline() {
                 }}
                 onDrop={async (e) => {
                   e.preventDefault()
-                  // 清理拖拽状态 - Optimization #1
-                  setIsDraggingTask(false)
-                  setDragPreviewPosition({ top: 0, height: 0, visible: false })
-                  setDragDayIndex(null)
+                  e.stopPropagation()
 
                   const taskId = e.dataTransfer.getData('taskId')
-                  if (!taskId) return
+                  if (!taskId) {
+                    console.warn('Drop event: no taskId found in dataTransfer')
+                    return
+                  }
 
                   const task = tasks.find(t => t.id === taskId)
-                  if (!task) return
+                  if (!task) {
+                    console.warn('Drop event: task not found', taskId)
+                    return
+                  }
 
-                  const rect = e.currentTarget.getBoundingClientRect()
-                  const dropY = e.clientY - rect.top
-                  const dropHour = (dropY / DAY_HEIGHT) * 24
-                  const startHour = snapToGrid(dropHour) // 使用吸附 - Optimization #2
-                  const durationHours = (task.estimatedMinutes || 60) / 60
-                  const endHour = startHour + durationHours
+                  try {
+                    const rect = e.currentTarget.getBoundingClientRect()
+                    const dropY = e.clientY - rect.top
+                    const startHour = snapToGrid(pxToHour(dropY)) // 与 onDragOver 使用相同的计算方式
+                    const durationHours = (task.estimatedMinutes || 60) / 60
+                    const endHour = startHour + durationHours
 
-                  // 创建时间块（Bug 6 修复）
-                  const dateStr = formatDateYMD(day)
-                  const startTime = `${dateStr}T${padZero(Math.floor(startHour))}:${padZero(Math.round((startHour % 1) * 60))}:00`
-                  const endTime = `${dateStr}T${padZero(Math.floor(endHour))}:${padZero(Math.round((endHour % 1) * 60))}:00`
+                    const dateStr = formatDateYMD(day)
+                    const startTime = `${dateStr}T${padZero(Math.floor(startHour))}:${padZero(Math.round((startHour % 1) * 60))}:00`
+                    const endTime = `${dateStr}T${padZero(Math.floor(endHour))}:${padZero(Math.round((endHour % 1) * 60))}:00`
 
-                  // 创建时间块 - 关联任务ID
-                  const newBlock = await dataService.addTimeBlock({
-                    title: task.title,
-                    category: '工作', // 默认分类
-                    startTime,
-                    endTime,
-                    durationMinutes: Math.round(durationHours * 60),
-                    date: dateStr,
-                    completed: false,
-                    source: 'confirmed',
-                    taskId: taskId, // 关联任务ID
-                    isTaskTimer: true, // 标记为任务计时器创建的时间块
-                  })
+                    console.log('Scheduling task:', { taskId, title: task.title, startTime, endTime })
 
-                  // 标记任务为已安排 - 使用store更新确保前端状态同步
-                  await updateTask(taskId, {
-                    scheduledStartTime: startTime,
-                    scheduledDate: dateStr,
-                  })
+                    // 创建时间块 - 关联任务ID
+                    const newBlock = await dataService.addTimeBlock({
+                      title: task.title,
+                      category: '工作',
+                      startTime,
+                      endTime,
+                      durationMinutes: Math.round(durationHours * 60),
+                      date: dateStr,
+                      completed: false,
+                      source: 'confirmed',
+                      taskId: taskId,
+                      isTaskTimer: true,
+                    })
 
-                  // 更新时间块列表
-                  setLoadedBlocks(prev => {
-                    const next = new Map(prev)
-                    const existing = next.get(dateStr) || []
-                    next.set(dateStr, [...existing, newBlock])
-                    return next
-                  })
+                    console.log('Time block created:', newBlock)
+                    console.log('New block startTime:', newBlock.startTime)
+                    console.log('New block endTime:', newBlock.endTime)
+                    console.log('startHour calculation:', startHour)
+                    console.log('hourToPx(startHour):', hourToPx(startHour))
+                    console.log('LoadedBlocks keys before:', Array.from(loadedBlocks.keys()))
+                    console.log('DateStr:', dateStr)
 
-                  success('已开始专注此任务')
+                    // 设置 scheduledStartTime 让任务从待安排列表消失
+                    await updateTask(taskId, {
+                      scheduledDate: dateStr,
+                      scheduledStartTime: startTime,
+                    })
+
+                    console.log('Task updated with scheduled time')
+
+                    // 更新时间块列表 - 强制刷新
+                    setLoadedBlocks(prev => {
+                      const next = new Map(prev)
+                      const existing = next.get(dateStr) || []
+                      const updated = [...existing, newBlock]
+                      next.set(dateStr, updated)
+                      console.log('LoadedBlocks after update - blocks for date:', updated.length)
+                      console.log('Last block:', updated[updated.length - 1])
+                      return next
+                    })
+
+                    success(`已安排任务「${task.title}」`)
+                  } catch (err) {
+                    console.error('Error scheduling task:', err)
+                    error('安排任务失败，请重试')
+                  } finally {
+                    // 清理拖拽状态
+                    setIsDraggingTask(false)
+                    setDragPreviewPosition({ top: 0, height: 0, visible: false })
+                    setDragDayIndex(null)
+                  }
                 }}
               >
                 {/* Day Separator Header */}
@@ -1449,13 +1476,13 @@ export default function Timeline() {
                       : isSelected
                         ? 'linear-gradient(180deg, rgba(212, 196, 251, 0.1) 0%, transparent 100%)'
                         : 'linear-gradient(180deg, rgba(245, 241, 234, 0.5) 0%, transparent 100%)',
-                    borderBottom: isToday ? '2px solid #79BEEB' : '1px solid #E8E6E1',
+                    borderBottom: isToday ? '2px solid var(--color-blue)' : '1px solid var(--color-border-light)',
                   }}
                 >
                   <span
                     className="text-xs font-bold px-2 py-1 rounded-lg"
                     style={{
-                      color: isToday ? '#79BEEB' : isSelected ? '#D4C4FB' : '#5C5658',
+                      color: isToday ? 'var(--color-blue)' : isSelected ? 'var(--color-purple)' : 'var(--color-text-secondary)',
                       background: isToday ? 'rgba(121, 190, 235, 0.2)' : 'transparent',
                     }}
                   >
@@ -1473,7 +1500,7 @@ export default function Timeline() {
                   >
                     <span
                       className="absolute left-3 text-xs"
-                      style={{ color: hour === 0 ? '#9E9899' : hour < 6 ? '#D6D3CD' : '#9E9899', top: -8 }}
+                      style={{ color: hour === 0 ? 'var(--color-text-muted)' : hour < 6 ? 'var(--color-border-strong)' : 'var(--color-text-muted)', top: -8 }}
                     >
                       {String(hour).padStart(2, '0')}:00
                     </span>
@@ -1504,7 +1531,7 @@ export default function Timeline() {
                     }}
                   >
                     <div className="px-4 py-3 h-full flex items-center">
-                      <p className="text-sm font-medium" style={{ color: '#3A3638' }}>
+                      <p className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
                         + 新活动
                       </p>
                     </div>
@@ -1519,13 +1546,13 @@ export default function Timeline() {
                       top: dragPreviewPosition.top,
                       height: dragPreviewPosition.height,
                       background: 'linear-gradient(135deg, rgba(121, 190, 235, 0.7) 0%, rgba(121, 190, 235, 0.5) 100%)',
-                      border: '2px solid #79BEEB',
+                      border: '2px solid var(--color-blue)',
                       boxShadow: '4px 4px 0px rgba(121, 190, 235, 0.3)',
                     }}
                   >
                     <div className="px-4 py-3 h-full flex items-center">
                       <div className="w-2 h-2 rounded-full bg-white/80 mr-2" />
-                      <p className="text-sm font-semibold" style={{ color: '#FFFFFF', textShadow: '0 1px 2px rgba(0,0,0,0.15)' }}>
+                      <p className="text-sm font-semibold" style={{ color: 'var(--color-bg-surface-1)', textShadow: '0 1px 2px rgba(0,0,0,0.15)' }}>
                         安排到这里
                       </p>
                     </div>
@@ -1535,9 +1562,13 @@ export default function Timeline() {
                 {/* Planned Tasks (from Tasks that have scheduled time) */}
                 {(() => {
                   // 筛选: 有计划时间的任务，并且时间在这一天
+                  // 🎯 关键修复：排除已经有对应时间块的任务（避免重复渲染）
+                  const taskIdsWithBlocks = new Set(blocks.map(b => b.taskId).filter(Boolean))
+
                   const plannedTasksForDay = tasks.filter(task => {
                     if (task.status === 'completed') return false
                     if (!task.scheduledStartTime) return false
+                    if (taskIdsWithBlocks.has(task.id)) return false // 已经有时间块了，不重复渲染
                     const taskDate = task.scheduledStartTime.slice(0, 10)
                     return taskDate === dateStr
                   })
@@ -1546,12 +1577,12 @@ export default function Timeline() {
                     const startHour = timeToHour(task.scheduledStartTime!)
                     const durationHours = (task.estimatedMinutes || 60) / 60
                     const endHour = Math.min(startHour + durationHours, END_HOUR)
-                    const top = dayIndex * DAY_HEIGHT + hourToPx(startHour)
+                    const top = hourToPx(startHour) // 🎯 在 day 容器内部，不需要 dayIndex
                     const height = hourToPx(endHour) - hourToPx(startHour)
 
                     // 任务的优先级颜色
                     const priorityColor = task.priority >= 4 ? '#F87171' :
-                                          task.priority >= 3 ? '#D4C4FB' : '#79BEEB'
+                                          task.priority >= 3 ? 'var(--color-purple)' : 'var(--color-blue)'
 
                     return (
                       <div
@@ -1586,11 +1617,11 @@ export default function Timeline() {
                         }}
                       >
                         <div className="px-4 py-2 h-full overflow-hidden flex flex-col justify-center">
-                          <p className="text-sm font-semibold truncate drop-shadow-sm" style={{ color: '#3A3638' }}>
+                          <p className="text-sm font-semibold truncate drop-shadow-sm" style={{ color: 'var(--color-text-primary)' }}>
                             {task.title}
                           </p>
                           <div className="flex items-center gap-1 flex-wrap">
-                            <p className="text-xs" style={{ color: '#5C5658' }}>
+                            <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
                               {task.project || '未分类'}
                             </p>
                             <span
@@ -1631,16 +1662,16 @@ export default function Timeline() {
                       }
                     }
 
-                    let style = getGlobalBlockStyle(block, dayIndex)
+                    let style = getBlockStyle(block)
 
                     if (isResizingThis && resizeType) {
-                      const previewTop = dayIndex * DAY_HEIGHT + hourToPx(resizePreviewStart)
+                      const previewTop = hourToPx(resizePreviewStart) // 🎯 在 day 容器内部
                       const previewHeight = hourToPx(resizePreviewEnd) - hourToPx(resizePreviewStart)
                       style = { top: previewTop, height: previewHeight }
                     } else if (isMovingThis) {
                       const duration = moveOriginalEnd - moveOriginalStart
                       // 在正确的日期内计算预览位置
-                      const previewTop = dayIndex * DAY_HEIGHT + hourToPx(movePreviewStart)
+                      const previewTop = hourToPx(movePreviewStart) // 🎯 在 day 容器内部
                       const previewHeight = hourToPx(movePreviewStart + duration) - hourToPx(movePreviewStart)
                       style = { top: previewTop, height: previewHeight }
                     }
@@ -1687,28 +1718,32 @@ export default function Timeline() {
                           } ${isResizingThis || isMovingThis ? 'shadow-lg scale-[1.01] transition-all' : 'transition-all duration-200 ease-in-out hover:scale-[1.01] hover:shadow-xl'}`}
                           style={{
                             // ======================
-                            // 🎨 三种状态视觉系统 - 差异最大化
+                            // 🎨 严格按照 2026-04-24 视觉设计规范实现
                             // ======================
-                            background: isFuture
-                              // 1. 🗓️ 未来计划: 纯实色
-                              ? color
+                            ...(isFuture
+                              // 1. 🗓️ 未来计划事件: 分类纯色背景 + 2px 实线边框
+                              ? {
+                                  background: color,
+                                  border: `2px solid ${color}`,
+                                }
                               : showAutoStyle
-                                // 2. 🔍 待确认/进行中: 更深的彩色斜线纹理（增强对比度）
-                                ? `repeating-linear-gradient(
-                                    45deg,
-                                    ${color}70,
-                                    ${color}70 4px,
-                                    ${color}30 4px,
-                                    ${color}30 8px
-                                  )`
-                                // 3. ✓ 已确认(过去): 浅灰色底色
-                                : 'rgba(120, 120, 120, 0.25)',
-                            // 边框区分 - 按你要求重新设计
-                            border: isFuture
-                              ? `2px solid ${color}`  // 未来: 实色实线边框
-                              : showAutoStyle
-                                ? `2px dashed ${color}`  // 待确认: 虚线实色边框
-                                : `4px solid ${color}`,  // 已确认(过去): 彩色加粗实线边框
+                                // 2. 🔍 未确认 AUTO: 斜线纹理背景 + 2px 虚线边框
+                                ? {
+                                    background: `repeating-linear-gradient(
+                                      45deg,
+                                      ${color}70,
+                                      ${color}70 4px,
+                                      ${color}30 4px,
+                                      ${color}30 8px
+                                    )`,
+                                    border: `2px dashed ${color}`,
+                                  }
+                                // 3. ✓ 已确认 confirmed: 浅灰色背景 + 4px 加粗彩色实线边框
+                                : {
+                                    background: 'rgba(120, 120, 120, 0.25)',
+                                    border: `4px solid ${color}`,
+                                  }
+                            ),
                             opacity: 1,
                             boxShadow: isBlockSelected
                               ? `0 0 0 2px ${color}, 4px 4px 12px rgba(0,0,0,0.15)`
@@ -1755,7 +1790,7 @@ export default function Timeline() {
                             style={{
                               top: '6px',
                               right: '8px',
-                              color: '#3A3638',
+                              color: 'var(--color-text-primary)',
                               fontSize: '11px',
                               opacity: 0.95,
                             }}
@@ -1811,7 +1846,7 @@ export default function Timeline() {
                                 onMouseDown={(e) => e.stopPropagation()}
                                 className="w-full bg-white/80 rounded px-2 py-1 outline-none border-2 border-blue-400"
                                 style={{
-                                  color: '#3A3638',
+                                  color: 'var(--color-text-primary)',
                                   fontSize: '14px',
                                   lineHeight: '18px',
                                   marginBottom: '6px',
@@ -1826,7 +1861,7 @@ export default function Timeline() {
                                   setInlineTitle(block.title)
                                 }}
                                 style={{
-                                  color: '#3A3638',
+                                  color: 'var(--color-text-primary)',
                                   fontSize: '14px',
                                   lineHeight: '18px',
                                   marginBottom: '6px',
@@ -1841,7 +1876,7 @@ export default function Timeline() {
                               className="inline-flex px-2 py-0.5 rounded-full w-fit"
                               style={{
                                 background: `${color}40`,
-                                color: '#3A3638',
+                                color: 'var(--color-text-primary)',
                                 fontSize: '10px',
                                 lineHeight: '14px',
                               }}
@@ -1856,7 +1891,7 @@ export default function Timeline() {
                                   className="px-2 py-0.5 rounded-full font-medium"
                                   style={{
                                     background: `${color}40`,
-                                    color: '#5C5658',
+                                    color: 'var(--color-text-secondary)',
                                     fontSize: '9px',
                                   }}
                                 >
@@ -1912,7 +1947,7 @@ export default function Timeline() {
           {loadingDays.size > 0 && (
             <div className="py-8 text-center">
               <div className="inline-block w-5 h-5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
-              <p className="text-xs mt-2" style={{ color: '#9E9899' }}>加载中...</p>
+              <p className="text-xs mt-2" style={{ color: 'var(--color-text-muted)' }}>加载中...</p>
             </div>
           )}
         </div>
@@ -1924,12 +1959,12 @@ export default function Timeline() {
           <div
             className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-2xl flex items-center gap-4"
             style={{
-              background: '#FFFFFF',
-              border: '2px solid #D6D3CD',
+              background: 'var(--color-bg-surface-1)',
+              border: '2px solid var(--color-border-strong)',
               boxShadow: '8px 8px 0px rgba(0,0,0,0.1)',
             }}
           >
-            <span className="text-sm font-medium" style={{ color: '#5C5658' }}>
+            <span className="text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
               已选中 {selectedBlockIds.size} 个事件
             </span>
             <button
@@ -1970,7 +2005,7 @@ export default function Timeline() {
                 setSelectedBlockIds(new Set(allIds))
               }}
               className="px-3 py-1.5 rounded-lg text-sm font-medium transition-all hover:bg-gray-100"
-              style={{ color: '#3A3638' }}
+              style={{ color: 'var(--color-text-primary)' }}
             >
               全选全部
             </button>
@@ -1993,7 +2028,7 @@ export default function Timeline() {
             <button
               onClick={() => setSelectedBlockIds(new Set())}
               className="px-3 py-1.5 rounded-lg text-sm font-medium transition-all hover:bg-gray-100"
-              style={{ color: '#9E9899' }}
+              style={{ color: 'var(--color-text-muted)' }}
             >
               取消
             </button>
@@ -2005,7 +2040,7 @@ export default function Timeline() {
       <div
         className="w-1 cursor-ew-resize hover:bg-blue-400 transition-colors flex-shrink-0 h-screen relative group"
         style={{
-          background: isResizingSidebar ? '#79BEEB' : 'transparent',
+          background: isResizingSidebar ? 'var(--color-blue)' : 'transparent',
           marginLeft: '-4px',
         }}
         onMouseDown={handleSidebarResizeStart}
@@ -2013,7 +2048,7 @@ export default function Timeline() {
         <div
           className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-16 rounded-full transition-colors"
           style={{
-            background: isResizingSidebar ? '#79BEEB' : '#D6D3CD',
+            background: isResizingSidebar ? 'var(--color-blue)' : 'var(--color-border-strong)',
           }}
         />
       </div>
@@ -2038,14 +2073,14 @@ export default function Timeline() {
         <div
           className="rounded-2xl p-5 mb-4"
           style={{
-            background: '#FFFFFF',
-            border: '2px solid #D6D3CD',
-            boxShadow: '4px 4px 0px #D6D3CD',
+            background: 'var(--color-bg-surface-1)',
+            border: '2px solid var(--color-border-strong)',
+            boxShadow: '4px 4px 0px var(--color-border-strong)',
           }}
         >
           <div className="flex items-center gap-2 mb-4">
             <span className="text-xl">🏆</span>
-            <h3 className="font-semibold" style={{ color: '#3A3638' }}>今日成就</h3>
+            <h3 className="font-semibold" style={{ color: 'var(--color-text-primary)' }}>今日成就</h3>
           </div>
 
           {(() => {
@@ -2054,10 +2089,10 @@ export default function Timeline() {
             if (blocks.length === 0) {
               return (
                 <div className="text-center py-6">
-                  <p className="text-sm" style={{ color: '#9E9899' }}>
+                  <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
                     今天还没有记录任何时间 🕐
                   </p>
-                  <p className="text-xs mt-2" style={{ color: '#D6D3CD' }}>
+                  <p className="text-xs mt-2" style={{ color: 'var(--color-border-strong)' }}>
                     开始专注或添加时间块来追踪你的时间
                   </p>
                 </div>
@@ -2078,7 +2113,7 @@ export default function Timeline() {
                       className="rounded-xl transition-all cursor-pointer hover:shadow-md overflow-hidden"
                       style={{
                         background: '#FAF8F5',
-                        border: '1px solid #E8E6E1',
+                        border: '1px solid var(--color-border-light)',
                       }}
                       onClick={() => setExpandedCategory(isExpanded ? null : item.category)}
                     >
@@ -2086,10 +2121,10 @@ export default function Timeline() {
                       <div className="flex items-center gap-2 p-3">
                         <span className="text-lg">{icon}</span>
                         <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-sm" style={{ color: '#3A3638' }}>
+                          <p className="font-semibold text-sm" style={{ color: 'var(--color-text-primary)' }}>
                             {item.category}
                           </p>
-                          <p className="text-xs" style={{ color: '#9E9899' }}>
+                          <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
                             {item.count} 个时间块 · 总共 {formatDuration(item.totalMinutes)}
                           </p>
                         </div>
@@ -2097,7 +2132,7 @@ export default function Timeline() {
                         <ChevronDown
                           size={18}
                           style={{
-                            color: '#9E9899',
+                            color: 'var(--color-text-muted)',
                             transition: 'transform 0.2s ease',
                             transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)'
                           }}
@@ -2110,17 +2145,22 @@ export default function Timeline() {
                           className="px-3 pb-3"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <div className="pt-3 border-t" style={{ borderColor: '#E8E6E1' }}>
-                            {item.blocks.map((block) => (
-                              <div key={block.id} className="flex items-center justify-between py-1.5">
-                                <span className="text-xs" style={{ color: '#9E9899' }}>
-                                  {formatTimeOnly(block.startTime)} - {formatTimeOnly(block.endTime)}
-                                </span>
-                                <span className="text-xs truncate ml-3" style={{ color: '#3A3638' }}>
-                                  {block.title}
-                                </span>
-                              </div>
-                            ))}
+                          <div className="pt-3 border-t" style={{ borderColor: 'var(--color-border-light)' }}>
+                            {item.blocks.map((block) => {
+                              const minutes = block.durationMinutes || Math.round((timeToHour(block.endTime) - timeToHour(block.startTime)) * 60)
+                              return (
+                                <div key={block.id} className="flex items-center justify-between py-1.5">
+                                  {/* 左边：任务描述 */}
+                                  <span className="text-xs truncate flex-1" style={{ color: 'var(--color-text-primary)' }}>
+                                    {block.title}
+                                  </span>
+                                  {/* 右边：分钟数 */}
+                                  <span className="text-xs font-medium ml-3 flex-shrink-0" style={{ color: 'var(--color-blue)' }}>
+                                    {minutes} 分钟
+                                  </span>
+                                </div>
+                              )
+                            })}
                           </div>
 
                           {/* TODO: AI 智能鼓励文案 - 接入 LLM 后根据具体活动动态生成
@@ -2146,9 +2186,9 @@ export default function Timeline() {
             <div
               className="rounded-2xl p-5 mb-4"
               style={{
-                background: '#FFFFFF',
-                border: '2px solid #D6D3CD',
-                boxShadow: '4px 4px 0px #D6D3CD',
+                background: 'var(--color-bg-surface-1)',
+                border: '2px solid var(--color-border-strong)',
+                boxShadow: '4px 4px 0px var(--color-border-strong)',
               }}
             >
               {/* ============================================
@@ -2162,8 +2202,8 @@ export default function Timeline() {
                       你刚才分心了 {pendingEvent.durationMinutes} 分钟
                     </h3>
                   </div>
-                  <p className="text-sm mb-4" style={{ color: '#5C5658' }}>
-                    你在使用「<span className="font-medium" style={{ color: '#3A3638' }}>{pendingEvent.appName}</span>」
+                  <p className="text-sm mb-4" style={{ color: 'var(--color-text-secondary)' }}>
+                    你在使用「<span className="font-medium" style={{ color: 'var(--color-text-primary)' }}>{pendingEvent.appName}</span>」
                   </p>
                   <div className="flex gap-2">
                     <button
@@ -2176,7 +2216,7 @@ export default function Timeline() {
                     <button
                       onClick={() => useFocusStore.getState().handleUserChoice('break', pendingEvent.id)}
                       className="flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-all hover:opacity-80"
-                      style={{ background: '#79BEEB20', color: '#79BEEB' }}
+                      style={{ background: 'var(--color-blue)20', color: 'var(--color-blue)' }}
                     >
                       我在休息
                     </button>
@@ -2203,15 +2243,15 @@ export default function Timeline() {
                     </h3>
                   </div>
                   <div className="text-center py-4">
-                    <p className="text-3xl font-bold mb-2" style={{ color: '#3A3638' }}>
+                    <p className="text-3xl font-bold mb-2" style={{ color: 'var(--color-text-primary)' }}>
                       {continuousFocusMinutes}
                     </p>
-                    <p className="text-sm" style={{ color: '#9E9899' }}>分钟</p>
+                    <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>分钟</p>
                   </div>
                   <button
                     onClick={() => useFocusStore.getState().startBreak(5)}
                     className="w-full px-3 py-2 rounded-lg text-xs font-medium transition-all hover:opacity-80"
-                    style={{ background: '#A8E6CF40', color: '#2E7D32' }}
+                    style={{ background: 'var(--color-green)40', color: '#2E7D32' }}
                   >
                     ☕ 休息 5 分钟
                   </button>
@@ -2344,8 +2384,8 @@ export default function Timeline() {
           style={{
             left: contextMenuPos.x,
             top: contextMenuPos.y,
-            background: '#FFFFFF',
-            border: '2px solid #D6D3CD',
+            background: 'var(--color-bg-surface-1)',
+            border: '2px solid var(--color-border-strong)',
             boxShadow: '8px 8px 0px rgba(0,0,0,0.1)',
             minWidth: 180,
           }}
@@ -2364,7 +2404,7 @@ export default function Timeline() {
                 success('已确认')
               }}
               className="w-full px-4 py-2.5 text-left text-sm transition-all hover:bg-gray-50 flex items-center gap-2"
-              style={{ color: '#3A3638' }}
+              style={{ color: 'var(--color-text-primary)' }}
             >
               <CheckCircle2 size={14} style={{ color: '#34D399' }} />
               确认此条记录
@@ -2373,7 +2413,7 @@ export default function Timeline() {
           <button
             onClick={() => splitBlock(contextMenuBlock)}
             className="w-full px-4 py-2.5 text-left text-sm transition-all hover:bg-gray-50 flex items-center gap-2"
-            style={{ color: '#3A3638' }}
+            style={{ color: 'var(--color-text-primary)' }}
           >
             <Scissors size={14} style={{ color: '#FB923C' }} />
             拆分时间块
@@ -2381,19 +2421,19 @@ export default function Timeline() {
           <button
             onClick={() => mergeAdjacentBlocks(contextMenuBlock)}
             className="w-full px-4 py-2.5 text-left text-sm transition-all hover:bg-gray-50 flex items-center gap-2"
-            style={{ color: '#3A3638' }}
+            style={{ color: 'var(--color-text-primary)' }}
           >
-            <Merge size={14} style={{ color: '#D4C4FB' }} />
+            <Merge size={14} style={{ color: 'var(--color-purple)' }} />
             合并相邻同类块
           </button>
-          <div className="my-1 mx-2" style={{ borderTop: '1px solid #E8E6E1' }} />
+          <div className="my-1 mx-2" style={{ borderTop: '1px solid var(--color-border-light)' }} />
           <button
             onClick={() => {
               setShowContextMenu(false)
               setEditingBlock(contextMenuBlock)
             }}
             className="w-full px-4 py-2.5 text-left text-sm transition-all hover:bg-gray-50 flex items-center gap-2"
-            style={{ color: '#3A3638' }}
+            style={{ color: 'var(--color-text-primary)' }}
           >
             <Edit size={14} style={{ color: '#60A5FA' }} />
             编辑详情
@@ -2420,8 +2460,8 @@ export default function Timeline() {
           style={{
             left: contextMenuPos.x,
             top: contextMenuPos.y,
-            background: '#FFFFFF',
-            border: '2px solid #D6D3CD',
+            background: 'var(--color-bg-surface-1)',
+            border: '2px solid var(--color-border-strong)',
             boxShadow: '8px 8px 0px rgba(0,0,0,0.1)',
             minWidth: 180,
           }}
@@ -2432,7 +2472,7 @@ export default function Timeline() {
               setShowPlannedTaskContextMenu(false)
             }}
             className="w-full px-4 py-2.5 text-left text-sm transition-all hover:bg-gray-50 flex items-center gap-2"
-            style={{ color: '#3A3638' }}
+            style={{ color: 'var(--color-text-primary)' }}
           >
             <Play size={14} style={{ color: '#34D399' }} />
             开始专注
@@ -2452,9 +2492,9 @@ export default function Timeline() {
               }
             }}
             className="w-full px-4 py-2.5 text-left text-sm transition-all hover:bg-gray-50 flex items-center gap-2"
-            style={{ color: '#3A3638' }}
+            style={{ color: 'var(--color-text-primary)' }}
           >
-            <CalendarOff size={14} style={{ color: '#79BEEB' }} />
+            <CalendarOff size={14} style={{ color: 'var(--color-blue)' }} />
             取消安排
           </button>
         </div>
@@ -2467,7 +2507,7 @@ export default function Timeline() {
           setIsAdding(true)
         }}
         className="fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-xl flex items-center justify-center transition-all hover:scale-110 hover:shadow-2xl z-50"
-        style={{ background: '#79BEEB' }}
+        style={{ background: 'var(--color-blue)' }}
       >
         <Plus size={24} color="white" />
       </button>

@@ -56,7 +56,7 @@ function fmtHours(mins: number): string {
 
 /* ─── Styles ─── */
 const tooltipStyle: React.CSSProperties = {
-  background: 'linear-gradient(135deg, #ffffff 0%, #fef8f0 100%)',
+  background: 'linear-gradient(135deg, var(--color-bg-surface-1) 0%, #fef8f0 100%)',
   border: '1px solid var(--color-border-subtle)',
   borderRadius: 'var(--radius-md)',
   padding: '10px 14px',
@@ -64,7 +64,7 @@ const tooltipStyle: React.CSSProperties = {
 }
 
 const warmCardStyle: React.CSSProperties = {
-  background: 'linear-gradient(135deg, #ffffff 0%, #fef8f0 100%)',
+  background: 'linear-gradient(135deg, var(--color-bg-surface-1) 0%, #fef8f0 100%)',
   borderRadius: 'var(--radius-lg)',
 }
 

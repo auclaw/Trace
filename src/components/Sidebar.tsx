@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import {
   LayoutDashboard,
   Clock,
@@ -21,41 +22,46 @@ interface NavItem {
   end?: boolean
 }
 
-const ALL_NAV_ITEMS: NavItem[] = [
-  { key: 'dashboard', label: 'Dashboard', path: '/', end: true,
-    icon: <LayoutDashboard size={18} strokeWidth={1.5} /> },
-  { key: 'timeline', label: 'Timeline', path: '/timeline',
-    icon: <Clock size={18} strokeWidth={1.5} /> },
-  { key: 'task', label: 'Tasks', path: '/task',
-    icon: <ListTodo size={18} strokeWidth={1.5} /> },
-  { key: 'analytics', label: 'Analytics', path: '/analytics',
-    icon: <BarChart3 size={18} strokeWidth={1.5} /> },
-  { key: 'settings', label: 'Settings', path: '/settings',
-    icon: <Settings size={18} strokeWidth={1.5} /> },
-]
+function ALL_NAV_ITEMS(t: (key: string) => string): NavItem[] {
+  return [
+    { key: 'dashboard', label: t('nav.dashboard'), path: '/', end: true,
+      icon: <LayoutDashboard size={18} strokeWidth={1.5} /> },
+    { key: 'timeline', label: t('nav.timeline'), path: '/timeline',
+      icon: <Clock size={18} strokeWidth={1.5} /> },
+    { key: 'task', label: t('nav.tasks'), path: '/task',
+      icon: <ListTodo size={18} strokeWidth={1.5} /> },
+    { key: 'analytics', label: t('nav.analytics'), path: '/analytics',
+      icon: <BarChart3 size={18} strokeWidth={1.5} /> },
+    { key: 'settings', label: t('nav.settings'), path: '/settings',
+      icon: <Settings size={18} strokeWidth={1.5} /> },
+  ]
+}
 
 /* ── Sidebar ── */
 export default function Sidebar() {
+  const { t } = useTranslation()
   const activeModules = useAppStore((s: AppState) => s.activeModules)
   const location = useLocation()
   const { openFocusModal } = useFocusModal()
 
+  const navItems = useMemo(() => ALL_NAV_ITEMS(t), [t])
+
   const visibleItems = useMemo(
-    () => ALL_NAV_ITEMS.filter((item) => activeModules.includes(item.key)),
-    [activeModules],
+    () => navItems.filter((item) => activeModules.includes(item.key)),
+    [navItems, activeModules],
   )
 
   return (
     <aside
-        className="relative flex flex-col h-screen bg-white border-r border-[#D6D3CD]"
+        className="relative flex flex-col h-screen bg-white border-r border-[var(--color-border-strong)]"
         style={{ width: '248px' }}
       >
       {/* ── Brand Logo ── */}
       <div className="flex items-center gap-2 px-6 py-8 shrink-0">
-        <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #79BEEB 0%, #5AACDF 100%)' }}>
+        <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, var(--color-blue) 0%, var(--color-blue-hover) 100%)' }}>
           <span className="text-white text-xs font-bold">Ξ</span>
         </div>
-        <span className="text-lg font-semibold" style={{ color: '#3A3638' }}>Trace AI</span>
+        <span className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>Trace AI</span>
       </div>
 
       {/* ── Navigation ── */}
@@ -74,12 +80,12 @@ export default function Sidebar() {
                   className="flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200"
                   style={{
                     background: isActive ? 'rgba(121, 190, 235, 0.2)' : 'transparent',
-                    color: isActive ? '#79BEEB' : '#9E9899',
+                    color: isActive ? 'var(--color-blue)' : 'var(--color-text-muted)',
                     fontWeight: isActive ? 600 : 500,
                   }}
                   onMouseEnter={(e) => {
                     if (!isActive) {
-                      e.currentTarget.style.background = '#F5F1EA'
+                      e.currentTarget.style.background = 'var(--color-bg-surface-3)'
                     }
                   }}
                   onMouseLeave={(e) => {
@@ -107,9 +113,9 @@ export default function Sidebar() {
           className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl cursor-pointer transition-all hover:scale-[1.02]"
           style={{
             background: trackingService.isTracking()
-              ? '#D4C4FB'
+              ? 'var(--color-purple)'
               : 'rgba(212, 196, 251, 0.12)',
-            border: `2px solid ${trackingService.isTracking() ? '#B8A0E8' : '#D4C4FB'}`,
+            border: `2px solid ${trackingService.isTracking() ? '#B8A0E8' : 'var(--color-purple)'}`,
           }}
           onClick={() => openFocusModal()}
         >
@@ -140,20 +146,20 @@ export default function Sidebar() {
           className="flex items-center gap-3 px-4 py-3 rounded-2xl"
           style={{
             background: 'rgba(121, 190, 235, 0.12)',
-            border: '1px solid #79BEEB',
+            border: '1px solid var(--color-blue)',
           }}
         >
           <div
             className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-            style={{ background: '#79BEEB' }}
+            style={{ background: 'var(--color-blue)' }}
           >
             <User size={16} color="white" />
           </div>
           <div className="flex flex-col min-w-0">
-            <span className="text-sm font-semibold truncate" style={{ color: '#3A3638' }}>
+            <span className="text-sm font-semibold truncate" style={{ color: 'var(--color-text-primary)' }}>
               Alex Trace
             </span>
-            <span className="text-[10px] font-semibold tracking-wider uppercase" style={{ color: '#9E9899' }}>
+            <span className="text-[10px] font-semibold tracking-wider uppercase" style={{ color: 'var(--color-text-muted)' }}>
               Pro Account
             </span>
           </div>

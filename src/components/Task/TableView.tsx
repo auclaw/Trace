@@ -71,9 +71,9 @@ export default function TableView({
       return null
     }
     return sortDirection === 'asc' ? (
-      <ChevronUp size={14} style={{ color: '#79BEEB' }} />
+      <ChevronUp size={14} style={{ color: 'var(--color-blue)' }} />
     ) : (
-      <ChevronDown size={14} style={{ color: '#79BEEB' }} />
+      <ChevronDown size={14} style={{ color: 'var(--color-blue)' }} />
     )
   }
 
@@ -81,9 +81,9 @@ export default function TableView({
     return (
       <div
         className="p-12 text-center rounded-xl"
-        style={{ background: '#FFFFFF', border: '2px dashed #E8E6E1' }}
+        style={{ background: 'var(--color-bg-surface-1)', border: '2px dashed var(--color-border-light)' }}
       >
-        <p className="text-sm" style={{ color: '#9E9899' }}>
+        <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
           暂无任务
         </p>
       </div>
@@ -91,7 +91,7 @@ export default function TableView({
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl" style={{ background: '#FFFFFF' }}>
+    <div className="overflow-x-auto rounded-xl" style={{ background: 'var(--color-bg-surface-1)' }}>
       <table className="w-full" style={{ borderCollapse: 'collapse' }}>
         <thead>
           <tr>
@@ -99,8 +99,8 @@ export default function TableView({
               className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider"
               style={{
                 background: '#FAF8F5',
-                color: '#5C5658',
-                borderBottom: '2px solid #E8E6E1',
+                color: 'var(--color-text-secondary)',
+                borderBottom: '2px solid var(--color-border-light)',
                 minWidth: '40px',
               }}
             >
@@ -110,8 +110,8 @@ export default function TableView({
               className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
               style={{
                 background: '#FAF8F5',
-                color: '#5C5658',
-                borderBottom: '2px solid #E8E6E1',
+                color: 'var(--color-text-secondary)',
+                borderBottom: '2px solid var(--color-border-light)',
                 minWidth: '300px',
               }}
               onClick={() => handleSort('title')}
@@ -125,8 +125,8 @@ export default function TableView({
               className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
               style={{
                 background: '#FAF8F5',
-                color: '#5C5658',
-                borderBottom: '2px solid #E8E6E1',
+                color: 'var(--color-text-secondary)',
+                borderBottom: '2px solid var(--color-border-light)',
                 minWidth: '100px',
               }}
               onClick={() => handleSort('status')}
@@ -140,8 +140,8 @@ export default function TableView({
               className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
               style={{
                 background: '#FAF8F5',
-                color: '#5C5658',
-                borderBottom: '2px solid #E8E6E1',
+                color: 'var(--color-text-secondary)',
+                borderBottom: '2px solid var(--color-border-light)',
                 minWidth: '80px',
               }}
               onClick={() => handleSort('priority')}
@@ -155,8 +155,8 @@ export default function TableView({
               className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
               style={{
                 background: '#FAF8F5',
-                color: '#5C5658',
-                borderBottom: '2px solid #E8E6E1',
+                color: 'var(--color-text-secondary)',
+                borderBottom: '2px solid var(--color-border-light)',
                 minWidth: '120px',
               }}
               onClick={() => handleSort('dueDate')}
@@ -170,8 +170,8 @@ export default function TableView({
               className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
               style={{
                 background: '#FAF8F5',
-                color: '#5C5658',
-                borderBottom: '2px solid #E8E6E1',
+                color: 'var(--color-text-secondary)',
+                borderBottom: '2px solid var(--color-border-light)',
                 minWidth: '100px',
               }}
               onClick={() => handleSort('estimatedMinutes')}
@@ -185,8 +185,8 @@ export default function TableView({
               className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider"
               style={{
                 background: '#FAF8F5',
-                color: '#5C5658',
-                borderBottom: '2px solid #E8E6E1',
+                color: 'var(--color-text-secondary)',
+                borderBottom: '2px solid var(--color-border-light)',
                 minWidth: '120px',
               }}
             >
@@ -200,14 +200,14 @@ export default function TableView({
               key={task.id}
               className="hover:bg-gray-50 transition-colors cursor-pointer"
               style={{
-                background: selectedTasks.has(task.id) ? '#79BEEB10' : 'transparent',
-                borderBottom: '1px solid #E8E6E1',
+                background: selectedTasks.has(task.id) ? 'var(--color-blue)10' : 'transparent',
+                borderBottom: '1px solid var(--color-border-light)',
               }}
               onClick={() => onTaskClick(task)}
             >
               <td
                 className="px-3 py-2 text-xs"
-                style={{ color: '#9E9899' }}
+                style={{ color: 'var(--color-text-muted)' }}
                 onClick={(e) => e.stopPropagation()}
               >
                 <input
@@ -215,7 +215,7 @@ export default function TableView({
                   checked={selectedTasks.has(task.id)}
                   onChange={() => onTaskSelect(task.id)}
                   className="cursor-pointer"
-                  style={{ accentColor: '#79BEEB' }}
+                  style={{ accentColor: 'var(--color-blue)' }}
                 />
               </td>
               <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
@@ -253,8 +253,8 @@ export default function TableView({
               </td>
               <td className="px-3 py-2">
                 <div className="flex items-center gap-1">
-                  <Clock size={14} style={{ color: '#9E9899' }} />
-                  <span className="text-sm" style={{ color: '#5C5658' }}>
+                  <Clock size={14} style={{ color: 'var(--color-text-muted)' }} />
+                  <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
                     {task.estimatedMinutes} 分钟
                   </span>
                 </div>
@@ -268,10 +268,10 @@ export default function TableView({
                         onStartTimer(task)
                       }}
                       className="p-1.5 rounded-lg transition-all hover:scale-105"
-                      style={{ background: '#79BEEB20' }}
+                      style={{ background: 'var(--color-blue)20' }}
                       title="开始计时"
                     >
-                      <Play size={14} style={{ color: '#79BEEB' }} />
+                      <Play size={14} style={{ color: 'var(--color-blue)' }} />
                     </button>
                   )}
                   <button

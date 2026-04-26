@@ -75,12 +75,12 @@ export default function InlineEdit({
               {STATUS_CONFIG[value as TaskStatus]?.label || value}
             </span>
           ) : (
-            <span className="text-sm" style={{ color: '#3A3638' }}>
+            <span className="text-sm" style={{ color: 'var(--color-text-primary)' }}>
               {value}
             </span>
           )
         ) : (
-          <span className="text-sm" style={{ color: '#9E9899' }}>
+          <span className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
             {placeholder || '点击编辑'}
           </span>
         )}
@@ -100,24 +100,24 @@ export default function InlineEdit({
           className="flex-1 px-2 py-1.5 rounded-lg text-sm outline-none"
           style={{
             background: '#FAF8F5',
-            border: '2px solid #79BEEB',
-            color: '#3A3638',
+            border: '2px solid var(--color-blue)',
+            color: 'var(--color-text-primary)',
           }}
           placeholder={placeholder}
         />
         <button
           onClick={handleSave}
           className="p-1.5 rounded-lg"
-          style={{ background: '#79BEEB20' }}
+          style={{ background: 'var(--color-blue)20' }}
         >
-          <Check size={14} style={{ color: '#79BEEB' }} />
+          <Check size={14} style={{ color: 'var(--color-blue)' }} />
         </button>
         <button
           onClick={handleCancel}
           className="p-1.5 rounded-lg"
           style={{ background: '#F3F4F6' }}
         >
-          <X size={14} style={{ color: '#9E9899' }} />
+          <X size={14} style={{ color: 'var(--color-text-muted)' }} />
         </button>
       </div>
     )
@@ -135,23 +135,23 @@ export default function InlineEdit({
           className="flex-1 px-2 py-1.5 rounded-lg text-sm outline-none"
           style={{
             background: '#FAF8F5',
-            border: '2px solid #79BEEB',
-            color: '#3A3638',
+            border: '2px solid var(--color-blue)',
+            color: 'var(--color-text-primary)',
           }}
         />
         <button
           onClick={handleSave}
           className="p-1.5 rounded-lg"
-          style={{ background: '#79BEEB20' }}
+          style={{ background: 'var(--color-blue)20' }}
         >
-          <Check size={14} style={{ color: '#79BEEB' }} />
+          <Check size={14} style={{ color: 'var(--color-blue)' }} />
         </button>
         <button
           onClick={handleCancel}
           className="p-1.5 rounded-lg"
           style={{ background: '#F3F4F6' }}
         >
-          <X size={14} style={{ color: '#9E9899' }} />
+          <X size={14} style={{ color: 'var(--color-text-muted)' }} />
         </button>
       </div>
     )
@@ -171,8 +171,8 @@ export default function InlineEdit({
           className="flex-1 px-2 py-1.5 rounded-lg text-sm outline-none cursor-pointer"
           style={{
             background: '#FAF8F5',
-            border: '2px solid #79BEEB',
-            color: '#3A3638',
+            border: '2px solid var(--color-blue)',
+            color: 'var(--color-text-primary)',
           }}
         >
           {[1, 2, 3, 4, 5].map((p) => (
@@ -199,8 +199,8 @@ export default function InlineEdit({
           className="flex-1 px-2 py-1.5 rounded-lg text-sm outline-none cursor-pointer"
           style={{
             background: '#FAF8F5',
-            border: '2px solid #79BEEB',
-            color: '#3A3638',
+            border: '2px solid var(--color-blue)',
+            color: 'var(--color-text-primary)',
           }}
         >
           {(['todo', 'in_progress', 'paused', 'completed', 'archived'] as const).map(

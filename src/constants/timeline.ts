@@ -37,15 +37,15 @@ import type { ActivityCategory } from '../services/dataService'
 
 /** 分类颜色映射 - 全项目统一使用 */
 export const CATEGORY_COLORS: Record<ActivityCategory, string> = {
-  '开发': '#79BEEB',
-  '工作': '#79BEEB',
-  '会议': '#D4C4FB',
-  '休息': '#A8E6CF',
-  '学习': '#FFD3B6',
+  '开发': 'var(--color-blue)',
+  '工作': 'var(--color-blue)',
+  '会议': 'var(--color-purple)',
+  '休息': 'var(--color-green)',
+  '学习': 'var(--color-lemon)',
   '娱乐': '#FFB3C6',
   '运动': '#FFE5B4',
   '阅读': '#B4D4FF',
-  '其他': '#9E9899',
+  '其他': 'var(--color-text-muted)',
 }
 
 /** 分类图标映射 */
@@ -64,6 +64,6 @@ export const CATEGORY_ICONS: Record<string, string> = {
 // ====================== 视觉设计常量 ======================
 
 /** 卡片阴影 - 统一风格 */
-export const CARD_SHADOW = '4px 4px 0px #D6D3CD'
-export const CARD_BORDER_COLOR = '#D6D3CD'
-export const CARD_BG = '#FFFFFF'
+export const CARD_SHADOW = '4px 4px 0px var(--color-border-strong)'
+export const CARD_BORDER_COLOR = 'var(--color-border-strong)'
+export const CARD_BG = 'var(--color-bg-surface-1)'

@@ -62,7 +62,7 @@ function CategoryBar({ value, max, color }: { value: number; max: number; color:
 
 /* ─── Styles ─── */
 const aiCardStyle: React.CSSProperties = {
-  background: 'linear-gradient(135deg, #ffffff 0%, #fef8f0 100%)',
+  background: 'linear-gradient(135deg, var(--color-bg-surface-1) 0%, #fef8f0 100%)',
   border: '1px solid var(--color-border-subtle)',
   borderRadius: 'var(--radius-lg)',
   boxShadow: 'var(--shadow-card)',

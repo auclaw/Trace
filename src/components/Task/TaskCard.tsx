@@ -51,16 +51,17 @@ export default function TaskCard({
 
   return (
     <div
+      data-testid="task-item"
       className={`p-4 cursor-pointer ${selected ? 'ring-2 ring-offset-2' : ''}`}
       style={{
         borderRadius: RADII.lg,
-        background: '#FFFFFF',
-        border: `2px solid ${selected ? '#79BEEB' : isHovered ? '#C8C5C0' : '#E8E6E1'}`,
+        background: 'var(--color-bg-surface-1)',
+        border: `2px solid ${selected ? 'var(--color-blue)' : isHovered ? '#C8C5C0' : 'var(--color-border-light)'}`,
         boxShadow: isHovered ? SHADOWS.card : SHADOWS.cardSmall,
         opacity: task.status === 'archived' ? 0.6 : 1,
         transform: isHovered ? 'translateX(2px)' : 'translateX(0)',
         transition: `all ${ANIMATIONS.normal}`,
-        '--tw-ring-color': '#79BEEB',
+        '--tw-ring-color': 'var(--color-blue)',
         '--tw-ring-offset-color': '#FAF8F5',
       } as React.CSSProperties}
       onMouseEnter={() => setIsHovered(true)}
@@ -70,27 +71,30 @@ export default function TaskCard({
       <div className="flex items-start gap-3">
         {/* Checkbox for multi-select */}
         <button
+          data-testid="task-checkbox"
           onClick={handleCheckboxClick}
-          className="mt-0.5 transition-all duration-200 hover:scale-110"
+          className="mt-0.5 p-2 -ml-2 transition-all duration-200 hover:scale-110 rounded-lg hover:bg-gray-100 focus-ring"
+          aria-label={selected ? "取消选择任务" : "选择任务"}
         >
           {selected ? (
-            <CheckSquare size={20} style={{ color: '#79BEEB' }} />
+            <CheckSquare size={20} style={{ color: 'var(--color-blue)' }} />
           ) : (
-            <Square size={20} style={{ color: '#D6D3CD' }} />
+            <Square size={20} style={{ color: 'var(--color-border-strong)' }} />
           )}
         </button>
 
         {/* Status indicator & completion checkbox */}
         <button
           onClick={handleToggleComplete}
-          className="mt-0.5 w-6 h-6 rounded-lg flex items-center justify-center transition-all duration-300 hover:scale-110"
+          className="mt-0.5 w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 hover:scale-110 focus-ring"
           style={{
             background: task.status === 'completed' ? statusConfig.bg : '#FAF8F5',
-            border: `2px solid ${task.status === 'completed' ? statusConfig.border : '#E8E6E1'}`,
+            border: `2px solid ${task.status === 'completed' ? statusConfig.border : 'var(--color-border-light)'}`,
           }}
+          aria-label={task.status === 'completed' ? "标记为未完成" : "标记为已完成"}
         >
           {task.status === 'completed' && (
-            <span style={{ color: statusConfig.text }}>✓</span>
+            <span style={{ color: statusConfig.text }} className="text-sm">✓</span>
           )}
         </button>
 
@@ -98,9 +102,10 @@ export default function TaskCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <h3
+              data-testid="task-title"
               className="text-sm font-semibold line-clamp-2"
               style={{
-                color: '#3A3638',
+                color: 'var(--color-text-primary)',
                 textDecoration: task.status === 'completed' ? 'line-through' : 'none',
               }}
             >
@@ -122,7 +127,7 @@ export default function TaskCard({
 
           {/* First step hint */}
           {task.firstStep && task.status !== 'completed' && (
-            <p className="text-xs mt-1.5 truncate" style={{ color: '#79BEEB' }}>
+            <p className="text-xs mt-1.5 truncate" style={{ color: 'var(--color-blue)' }}>
               第一步: {task.firstStep}
             </p>
           )}
@@ -150,7 +155,7 @@ export default function TaskCard({
 
             {/* Due date */}
             {task.dueDate && (
-              <span className="text-xs flex items-center gap-1" style={{ color: '#9E9899' }}>
+              <span className="text-xs flex items-center gap-1" style={{ color: 'var(--color-text-muted)' }}>
                 <Clock size={10} />
                 {task.dueDate}
               </span>
@@ -161,10 +166,10 @@ export default function TaskCard({
           {task.status !== 'completed' && (task.timeLoggedMinutes || task.actualMinutes) > 0 && (
             <div className="mt-2">
               <div className="flex items-center justify-between mb-1">
-                <span className="text-xs" style={{ color: '#9E9899' }}>
+                <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
                   已记录: {task.timeLoggedMinutes || task.actualMinutes} 分钟
                 </span>
-                <span className="text-xs font-medium" style={{ color: '#79BEEB' }}>
+                <span className="text-xs font-medium" style={{ color: 'var(--color-blue)' }}>
                   {progress}%
                 </span>
               </div>
@@ -176,7 +181,7 @@ export default function TaskCard({
                   className="h-full rounded-full transition-all duration-500"
                   style={{
                     width: `${Math.min(100, progress)}%`,
-                    background: progress >= 100 ? '#34D399' : '#79BEEB',
+                    background: progress >= 100 ? '#34D399' : 'var(--color-blue)',
                   }}
                 />
               </div>
@@ -186,8 +191,8 @@ export default function TaskCard({
           {/* Estimated time */}
           {task.estimatedMinutes > 0 && task.status !== 'completed' && !(task.timeLoggedMinutes || task.actualMinutes) && (
             <div className="mt-2 flex items-center gap-1">
-              <Clock size={12} style={{ color: '#9E9899' }} />
-              <span className="text-xs" style={{ color: '#9E9899' }}>
+              <Clock size={12} style={{ color: 'var(--color-text-muted)' }} />
+              <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
                 预计: {task.estimatedMinutes} 分钟
               </span>
             </div>
@@ -203,14 +208,15 @@ export default function TaskCard({
           {task.status !== 'completed' && (
             <button
               onClick={handleStartTimer}
-              className="p-2 rounded-lg transition-all hover:scale-105"
-              style={{ background: '#79BEEB20' }}
+              className="w-10 h-10 rounded-xl flex items-center justify-center transition-all hover:scale-105 focus-ring"
+              style={{ background: 'var(--color-blue)20' }}
               title="开始计时"
+              aria-label={task.status === 'in_progress' ? "暂停计时" : "开始计时"}
             >
               {task.status === 'in_progress' ? (
-                <Pause size={16} style={{ color: '#1D4ED8' }} />
+                <Pause size={18} style={{ color: '#1D4ED8' }} />
               ) : (
-                <Play size={16} style={{ color: '#0369A1' }} />
+                <Play size={18} style={{ color: '#0369A1' }} />
               )}
             </button>
           )}

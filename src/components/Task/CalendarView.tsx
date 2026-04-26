@@ -69,21 +69,21 @@ export default function CalendarView({ tasks, onAddTask, onTaskClick }: Calendar
   return (
     <div
       className="rounded-xl overflow-hidden"
-      style={{ background: '#FFFFFF', border: '2px solid #E8E6E1' }}
+      style={{ background: 'var(--color-bg-surface-1)', border: '2px solid var(--color-border-light)' }}
     >
       {/* Calendar Header */}
       <div
         className="flex items-center justify-between px-4 py-3"
-        style={{ background: '#FAF8F5', borderBottom: '2px solid #E8E6E1' }}
+        style={{ background: '#FAF8F5', borderBottom: '2px solid var(--color-border-light)' }}
       >
         <div className="flex items-center gap-2">
-          <h2 className="text-lg font-bold" style={{ color: '#3A3638' }}>
+          <h2 className="text-lg font-bold" style={{ color: 'var(--color-text-primary)' }}>
             {year}年 {monthNames[month]}
           </h2>
           <button
             onClick={goToToday}
             className="px-3 py-1 rounded-lg text-sm font-medium transition-all hover:bg-white"
-            style={{ background: '#79BEEB', color: 'white' }}
+            style={{ background: 'var(--color-blue)', color: 'white' }}
           >
             今天
           </button>
@@ -93,13 +93,13 @@ export default function CalendarView({ tasks, onAddTask, onTaskClick }: Calendar
             onClick={goToPrevMonth}
             className="p-2 rounded-lg transition-all hover:bg-white"
           >
-            <ChevronLeft size={20} style={{ color: '#5C5658' }} />
+            <ChevronLeft size={20} style={{ color: 'var(--color-text-secondary)' }} />
           </button>
           <button
             onClick={goToNextMonth}
             className="p-2 rounded-lg transition-all hover:bg-white"
           >
-            <ChevronRight size={20} style={{ color: '#5C5658' }} />
+            <ChevronRight size={20} style={{ color: 'var(--color-text-secondary)' }} />
           </button>
         </div>
       </div>
@@ -111,9 +111,9 @@ export default function CalendarView({ tasks, onAddTask, onTaskClick }: Calendar
             key={day}
             className="px-2 py-2 text-center text-xs font-semibold"
             style={{
-              color: index === 0 || index === 6 ? '#EF4444' : '#5C5658',
+              color: index === 0 || index === 6 ? '#EF4444' : 'var(--color-text-secondary)',
               background: '#FAF8F5',
-              borderRight: index < 6 ? '1px solid #E8E6E1' : 'none',
+              borderRight: index < 6 ? '1px solid var(--color-border-light)' : 'none',
             }}
           >
             {day}
@@ -136,12 +136,12 @@ export default function CalendarView({ tasks, onAddTask, onTaskClick }: Calendar
               className="min-h-[100px] p-1 transition-all"
               style={{
                 background: isToday
-                  ? '#79BEEB15'
+                  ? 'var(--color-blue)15'
                   : isWeekend
                   ? '#FAF8F5'
                   : 'transparent',
-                borderRight: index % 7 < 6 ? '1px solid #E8E6E1' : 'none',
-                borderBottom: '1px solid #E8E6E1',
+                borderRight: index % 7 < 6 ? '1px solid var(--color-border-light)' : 'none',
+                borderBottom: '1px solid var(--color-border-light)',
               }}
             >
               {day && (
@@ -154,14 +154,14 @@ export default function CalendarView({ tasks, onAddTask, onTaskClick }: Calendar
                           ? 'white'
                           : isWeekend
                           ? '#EF4444'
-                          : '#3A3638',
-                        background: isToday ? '#79BEEB' : 'transparent',
+                          : 'var(--color-text-primary)',
+                        background: isToday ? 'var(--color-blue)' : 'transparent',
                       }}
                     >
                       {day}
                     </span>
                     {dayTasks.length > 0 && (
-                      <span className="text-xs" style={{ color: '#9E9899' }}>
+                      <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
                         {completedCount}/{dayTasks.length}
                       </span>
                     )}
@@ -178,7 +178,7 @@ export default function CalendarView({ tasks, onAddTask, onTaskClick }: Calendar
                           borderLeft: `3px solid ${
                             getPriorityConfig(task.priority).border
                           }`,
-                          color: '#3A3638',
+                          color: 'var(--color-text-primary)',
                         }}
                         onClick={() => onTaskClick?.(task)}
                         title={task.title}
@@ -189,7 +189,7 @@ export default function CalendarView({ tasks, onAddTask, onTaskClick }: Calendar
                     {dayTasks.length > 3 && (
                       <div
                         className="text-xs text-center py-1 cursor-pointer"
-                        style={{ color: '#79BEEB' }}
+                        style={{ color: 'var(--color-blue)' }}
                       >
                         +{dayTasks.length - 3} 更多
                       </div>
@@ -198,7 +198,7 @@ export default function CalendarView({ tasks, onAddTask, onTaskClick }: Calendar
 
                   <button
                     className="w-full mt-1 py-1 rounded-lg text-xs flex items-center justify-center gap-1 transition-all opacity-0 hover:opacity-100"
-                    style={{ color: '#79BEEB' }}
+                    style={{ color: 'var(--color-blue)' }}
                     onClick={() => onAddTask?.(dateStr)}
                   >
                     <Plus size={12} />
@@ -214,14 +214,14 @@ export default function CalendarView({ tasks, onAddTask, onTaskClick }: Calendar
       {/* Tasks without due date */}
       <div
         className="p-4"
-        style={{ background: '#FAF8F5', borderTop: '2px solid #E8E6E1' }}
+        style={{ background: '#FAF8F5', borderTop: '2px solid var(--color-border-light)' }}
       >
         <div className="flex items-center gap-2 mb-3">
-          <Clock size={16} style={{ color: '#9E9899' }} />
-          <h3 className="text-sm font-semibold" style={{ color: '#5C5658' }}>
+          <Clock size={16} style={{ color: 'var(--color-text-muted)' }} />
+          <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-secondary)' }}>
             无截止日期的任务
           </h3>
-          <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: '#E8E6E1', color: '#5C5658' }}>
+          <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'var(--color-border-light)', color: 'var(--color-text-secondary)' }}>
             {tasks.filter((t) => !t.dueDate).length}
           </span>
         </div>
@@ -237,7 +237,7 @@ export default function CalendarView({ tasks, onAddTask, onTaskClick }: Calendar
                   borderLeft: `3px solid ${
                     getPriorityConfig(task.priority).border
                   }`,
-                  color: '#3A3638',
+                  color: 'var(--color-text-primary)',
                 }}
                 onClick={() => onTaskClick?.(task)}
               >

@@ -8,6 +8,8 @@
   "nav": {
     "dashboard": "仪表盘",
     "timeline": "时间线",
+    "tasks": "任务",
+    "analytics": "统计",
     "planner": "计划",
     "focus": "专注",
     "habits": "习惯",

@@ -401,7 +401,7 @@ export default function Planner() {
       transition,
       opacity: isDragging ? 0.3 : 1,
       cursor: isDragging ? 'grabbing' : 'grab',
-      background: 'linear-gradient(135deg, #ffffff 0%, #fef8f0 100%)',
+      background: 'linear-gradient(135deg, var(--color-bg-surface-1) 0%, #fef8f0 100%)',
       border: '1px solid var(--color-border-subtle)',
       borderLeft: `3px solid ${PRIORITY_COLORS[task.priority]}`,
       boxShadow: 'var(--shadow-card)',
@@ -519,7 +519,7 @@ export default function Planner() {
       {/* ── LIST VIEW ── */}
       {viewMode === 'list' && (
         filtered.length === 0 ? (
-          <div style={{ background: 'linear-gradient(135deg, #ffffff 0%, #fef8f0 100%)', borderRadius: 'var(--radius-xl)', border: '1px solid var(--color-border-subtle)', boxShadow: 'var(--shadow-card)', padding: '48px 24px', textAlign: 'center' as const }}>
+          <div style={{ background: 'linear-gradient(135deg, var(--color-bg-surface-1) 0%, #fef8f0 100%)', borderRadius: 'var(--radius-xl)', border: '1px solid var(--color-border-subtle)', boxShadow: 'var(--shadow-card)', padding: '48px 24px', textAlign: 'center' as const }}>
             <EmptyState icon="📋" title={t('planner.noTasks')} description={t('planner.noTasksHint')}
               action={<button onClick={() => openAdd()} className="cursor-pointer inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white" style={{ background: 'var(--color-accent)', borderRadius: 'var(--radius-md)' }}>{t('planner.addTask')}</button>} />
           </div>
@@ -725,7 +725,7 @@ export default function Planner() {
       {viewMode === 'timeline' && (
         <div>
           {timelineData.tasks.length === 0 ? (
-            <div style={{ background: 'linear-gradient(135deg, #ffffff 0%, #fef8f0 100%)', borderRadius: 'var(--radius-xl)', border: '1px solid var(--color-border-subtle)', boxShadow: 'var(--shadow-card)', padding: '48px 24px', textAlign: 'center' as const }}>
+            <div style={{ background: 'linear-gradient(135deg, var(--color-bg-surface-1) 0%, #fef8f0 100%)', borderRadius: 'var(--radius-xl)', border: '1px solid var(--color-border-subtle)', boxShadow: 'var(--shadow-card)', padding: '48px 24px', textAlign: 'center' as const }}>
               <EmptyState icon="📊" title={t('planner.noTasks')} description={t('planner.noTasksTimeline')} action={<Button onClick={() => openAdd()}>{t('planner.addTask')}</Button>} />
             </div>
           ) : (
@@ -907,7 +907,7 @@ function TaskCard({
         animationDuration: '0.35s',
         animationTimingFunction: 'ease-out',
         animationFillMode: 'both',
-        background: isDone ? 'var(--color-bg-surface-1)' : 'linear-gradient(135deg, #ffffff 0%, #fef8f0 100%)',
+        background: isDone ? 'var(--color-bg-surface-1)' : 'linear-gradient(135deg, var(--color-bg-surface-1) 0%, #fef8f0 100%)',
         border: '1px solid var(--color-border-subtle)',
         borderLeft: `3px solid ${PRIORITY_COLORS[task.priority]}`,
         borderRadius: 'var(--radius-lg)',

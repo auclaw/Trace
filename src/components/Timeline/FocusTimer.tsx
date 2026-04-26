@@ -23,21 +23,21 @@ export default function FocusTimer({ isActive, activeTask, elapsedSeconds }: Foc
     <div
       className="rounded-2xl p-5"
       style={{
-        background: '#FFFFFF',
-        border: '2px solid #D6D3CD',
-        boxShadow: '4px 4px 0px #D6D3CD',
+        background: 'var(--color-bg-surface-1)',
+        border: '2px solid var(--color-border-strong)',
+        boxShadow: '4px 4px 0px var(--color-border-strong)',
       }}
     >
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-bold text-sm" style={{ color: '#3A3638' }}>
+        <h3 className="font-bold text-sm" style={{ color: 'var(--color-text-primary)' }}>
           Today's Focus
         </h3>
-        <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: '#79BEEB20', color: '#79BEEB' }}>
+        <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'var(--color-blue)20', color: 'var(--color-blue)' }}>
           MOD
         </span>
       </div>
 
-      <p className="text-xs mb-4" style={{ color: '#9E9899' }}>
+      <p className="text-xs mb-4" style={{ color: 'var(--color-text-muted)' }}>
         Manage your active tasks and let AI track the rest.
       </p>
 
@@ -45,7 +45,7 @@ export default function FocusTimer({ isActive, activeTask, elapsedSeconds }: Foc
         <div
           className="p-4 rounded-xl mb-4"
           style={{
-            background: 'linear-gradient(135deg, #79BEEB 0%, #5AACDF 100%)',
+            background: 'linear-gradient(135deg, var(--color-blue) 0%, var(--color-blue-hover) 100%)',
           }}
         >
           <div className="flex items-center justify-between mb-2">
@@ -66,10 +66,10 @@ export default function FocusTimer({ isActive, activeTask, elapsedSeconds }: Foc
       ) : (
         <div
           className="p-4 rounded-xl mb-4 text-center"
-          style={{ background: '#F5F1EA', border: '1px dashed #D6D3CD' }}
+          style={{ background: 'var(--color-bg-surface-3)', border: '1px dashed var(--color-border-strong)' }}
         >
-          <Clock size={20} className="mx-auto mb-2" style={{ color: '#9E9899' }} />
-          <p className="text-xs" style={{ color: '#9E9899' }}>
+          <Clock size={20} className="mx-auto mb-2" style={{ color: 'var(--color-text-muted)' }} />
+          <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
             点击任务开始专注计时
           </p>
         </div>
@@ -80,11 +80,11 @@ export default function FocusTimer({ isActive, activeTask, elapsedSeconds }: Foc
           type="text"
           placeholder="What are you working on?"
           className="flex-1 px-3 py-2 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-300"
-          style={{ background: '#F5F1EA', border: '2px solid #D6D3CD', color: '#5C5658' }}
+          style={{ background: 'var(--color-bg-surface-3)', border: '2px solid var(--color-border-strong)', color: 'var(--color-text-secondary)' }}
         />
         <button
           className="w-9 h-9 rounded-lg flex items-center justify-center transition-all hover:opacity-90"
-          style={{ background: '#79BEEB' }}
+          style={{ background: 'var(--color-blue)' }}
         >
           <Play size={14} color="white" />
         </button>

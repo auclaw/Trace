@@ -10,6 +10,7 @@ import FocusStatusIndicator from './components/FocusStatusIndicator';
 import FocusStartedModal from './components/FocusStartedModal';
 import FocusCompletedModal from './components/FocusCompletedModal';
 import DailyGoalAchievedModal from './components/DailyGoalAchievedModal';
+import DailyReview from './components/DailyReview';
 import { FocusModal } from './components/Focus';
 import type { FocusWindowMode } from './components/Focus';
 import { trackingService } from './services/trackingService';
@@ -71,7 +72,12 @@ function PageLoader() {
 
 /* ── Focus session popup orchestrator ── */
 import type { AppState, Activity } from './store/useAppStore';
-type ModalType = 'started' | 'completed' | 'goalAchieved';
+type ModalType = 'started' | 'completed' | 'goalAchieved' | 'dailyReview';
+
+function todayStr(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
 
 function FocusPopupManager() {
   const focusState = useAppStore((s: AppState) => s.focusState);
@@ -79,6 +85,10 @@ function FocusPopupManager() {
   const focusSettings = useAppStore((s: AppState) => s.focusSettings);
   const activities = useAppStore((s: AppState) => s.activities);
   const dailyGoalMinutes = useAppStore((s: AppState) => s.dailyGoalMinutes);
+  const guardianSettings = useAppStore((s: AppState) => s.guardianSettings);
+  const lastDailyReviewDate = useAppStore((s: AppState) => s.lastDailyReviewDate);
+  const lastGoalAchievedDate = useAppStore((s: AppState) => s.lastGoalAchievedDate);
+  const setLastGoalAchievedDate = useAppStore((s: AppState) => s.setLastGoalAchievedDate);
   const { openFocusModal } = useFocusModal();
 
   // 🎯 Modal queue system - ensure only one modal shows at a time
@@ -91,7 +101,6 @@ function FocusPopupManager() {
   });
 
   const prevFocusState = useRef(focusState);
-  const goalAchievedShown = useRef(false);
 
   // Calculate current active modal (first in queue)
   const activeModal = modalQueue[0] || null;
@@ -131,19 +140,40 @@ function FocusPopupManager() {
     prevFocusState.current = focusState;
   }, [focusState, focusSessions, focusSettings.workMinutes, addModalToQueue]);
 
-  // Check daily goal achievement
+  // Check daily goal achievement - only once per day
   useEffect(() => {
-    if (goalAchievedShown.current) return;
+    const today = todayStr();
+    // 只有今天还没显示过，并且真正达成目标时才触发
+    if (lastGoalAchievedDate === today) return;
+
     const todayMinutes = activities.reduce(
       (sum: number, a: Activity) => sum + (a.duration || 0),
       0
     );
     if (todayMinutes >= dailyGoalMinutes && dailyGoalMinutes > 0) {
-      goalAchievedShown.current = true;
+      setLastGoalAchievedDate(today);
       // Wait for other modals to complete first
       setTimeout(() => addModalToQueue('goalAchieved'), 2000);
     }
-  }, [activities, dailyGoalMinutes, addModalToQueue]);
+  }, [activities, dailyGoalMinutes, lastGoalAchievedDate, setLastGoalAchievedDate, addModalToQueue]);
+
+  // Check Daily Review trigger: after 20:00, and not done today
+  const dailyReviewShown = useRef(false);
+  useEffect(() => {
+    if (dailyReviewShown.current) return;
+    const today = todayStr();
+    const currentHour = new Date().getHours();
+
+    if (
+      guardianSettings.dailyReviewEnabled &&
+      currentHour >= 20 &&
+      lastDailyReviewDate !== today
+    ) {
+      dailyReviewShown.current = true;
+      // Wait longer to ensure it shows after achievement modals
+      setTimeout(() => addModalToQueue('dailyReview'), 5000);
+    }
+  }, [guardianSettings, lastDailyReviewDate, addModalToQueue]);
 
   return (
     <>
@@ -168,6 +198,10 @@ function FocusPopupManager() {
         onClose={closeCurrentModal}
         totalMinutes={activities.reduce((sum, a) => sum + (a.duration || 0), 0)}
         goalMinutes={dailyGoalMinutes}
+      />
+      <DailyReview
+        isOpen={activeModal === 'dailyReview'}
+        onComplete={closeCurrentModal}
       />
     </>
   );

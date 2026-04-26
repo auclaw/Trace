@@ -174,52 +174,55 @@ export default function DetailPanel({ data, mode, defaultDate, onClose, onSave, 
 
   return (
     <div
+      data-testid="task-detail-panel"
       className="rounded-2xl p-5 mx-4 w-full max-w-md"
       style={{
-        background: '#FFFFFF',
-        border: '2px solid #D6D3CD',
+        background: 'var(--color-bg-surface-1)',
+        border: '2px solid var(--color-border-strong)',
         boxShadow: '8px 8px 0px rgba(0,0,0,0.15)',
         maxHeight: '90vh',
         overflowY: 'auto',
       }}
     >
       <div className="flex items-center justify-between mb-5">
-        <h3 className="font-bold text-lg" style={{ color: '#3A3638' }}>
+        <h3 className="font-bold text-lg" style={{ color: 'var(--color-text-primary)' }}>
           {panelTitle}
         </h3>
         <button
           onClick={onClose}
-          className="w-8 h-8 rounded-xl flex items-center justify-center hover:bg-gray-100 transition-colors"
+          className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-gray-100 transition-colors focus-ring"
+          aria-label="关闭详情面板"
         >
-          <X size={18} style={{ color: '#9E9899' }} />
+          <X size={18} style={{ color: 'var(--color-text-muted)' }} aria-hidden="true" />
         </button>
       </div>
 
       <div className="space-y-5">
         <div>
-          <label className="block text-sm mb-2 font-medium" style={{ color: '#5C5658' }}>标题</label>
+          <label className="block text-sm mb-2 font-medium" style={{ color: 'var(--color-text-secondary)' }}>标题</label>
           <input
+            data-testid="task-title-input"
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="输入标题..."
+            placeholder="任务标题"
             className="w-full px-4 py-3 rounded-xl text-sm focus:outline-none transition-all"
-            style={{ background: '#FAF8F5', border: '2px solid #E8E6E1', color: '#3A3638' }}
-            onFocus={(e) => e.currentTarget.style.borderColor = '#79BEEB'}
-            onBlur={(e) => e.currentTarget.style.borderColor = '#E8E6E1'}
+            style={{ background: '#FAF8F5', border: '2px solid var(--color-border-light)', color: 'var(--color-text-primary)' }}
+            onFocus={(e) => e.currentTarget.style.borderColor = 'var(--color-blue)'}
+            onBlur={(e) => e.currentTarget.style.borderColor = 'var(--color-border-light)'}
             autoFocus
           />
         </div>
 
         <div>
-          <label className="block text-sm mb-2 font-medium" style={{ color: '#5C5658' }}>分类</label>
+          <label className="block text-sm mb-2 font-medium" style={{ color: 'var(--color-text-secondary)' }}>分类</label>
           <select
             value={categoryId}
             onChange={(e) => setCategoryId(e.target.value)}
             className="w-full px-4 py-3 rounded-xl text-sm focus:outline-none transition-all cursor-pointer"
-            style={{ background: '#FAF8F5', border: '2px solid #E8E6E1', color: '#3A3638' }}
-            onFocus={(e) => e.currentTarget.style.borderColor = '#79BEEB'}
-            onBlur={(e) => e.currentTarget.style.borderColor = '#E8E6E1'}
+            style={{ background: '#FAF8F5', border: '2px solid var(--color-border-light)', color: 'var(--color-text-primary)' }}
+            onFocus={(e) => e.currentTarget.style.borderColor = 'var(--color-blue)'}
+            onBlur={(e) => e.currentTarget.style.borderColor = 'var(--color-border-light)'}
           >
             <option value="">不分类</option>
             {categories.map((cat) => (
@@ -232,7 +235,7 @@ export default function DetailPanel({ data, mode, defaultDate, onClose, onSave, 
           <>
             <div className="flex gap-3">
               <div className="flex-1">
-                <label className="block text-sm mb-2 font-medium" style={{ color: '#5C5658' }}>开始时间</label>
+                <label className="block text-sm mb-2 font-medium" style={{ color: 'var(--color-text-secondary)' }}>开始时间</label>
                 <div className="flex gap-2">
                   <select
                     value={startHour}
@@ -247,15 +250,15 @@ export default function DetailPanel({ data, mode, defaultDate, onClose, onSave, 
                       }
                     }}
                     className="flex-1 px-3 py-3 rounded-xl text-sm focus:outline-none transition-all cursor-pointer"
-                    style={{ background: '#FAF8F5', border: '2px solid #E8E6E1', color: '#3A3638' }}
-                    onFocus={(e) => e.currentTarget.style.borderColor = '#79BEEB'}
-                    onBlur={(e) => e.currentTarget.style.borderColor = '#E8E6E1'}
+                    style={{ background: '#FAF8F5', border: '2px solid var(--color-border-light)', color: 'var(--color-text-primary)' }}
+                    onFocus={(e) => e.currentTarget.style.borderColor = 'var(--color-blue)'}
+                    onBlur={(e) => e.currentTarget.style.borderColor = 'var(--color-border-light)'}
                   >
                     {Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i).map(h => (
                       <option key={h} value={h}>{String(h).padStart(2, '0')}</option>
                     ))}
                   </select>
-                  <span className="flex items-center justify-center text-lg font-medium" style={{ color: '#9E9899' }}>:</span>
+                  <span className="flex items-center justify-center text-lg font-medium" style={{ color: 'var(--color-text-muted)' }}>:</span>
                   <select
                     value={startMinute}
                     onChange={(e) => {
@@ -275,9 +278,9 @@ export default function DetailPanel({ data, mode, defaultDate, onClose, onSave, 
                       }
                     }}
                     className="flex-1 px-3 py-3 rounded-xl text-sm focus:outline-none transition-all cursor-pointer"
-                    style={{ background: '#FAF8F5', border: '2px solid #E8E6E1', color: '#3A3638' }}
-                    onFocus={(e) => e.currentTarget.style.borderColor = '#79BEEB'}
-                    onBlur={(e) => e.currentTarget.style.borderColor = '#E8E6E1'}
+                    style={{ background: '#FAF8F5', border: '2px solid var(--color-border-light)', color: 'var(--color-text-primary)' }}
+                    onFocus={(e) => e.currentTarget.style.borderColor = 'var(--color-blue)'}
+                    onBlur={(e) => e.currentTarget.style.borderColor = 'var(--color-border-light)'}
                   >
                     {[0, 15, 30, 45].map(m => (
                       <option key={m} value={m}>{String(m).padStart(2, '0')}</option>
@@ -286,7 +289,7 @@ export default function DetailPanel({ data, mode, defaultDate, onClose, onSave, 
                 </div>
               </div>
               <div className="flex-1">
-                <label className="block text-sm mb-2 font-medium" style={{ color: '#5C5658' }}>结束时间</label>
+                <label className="block text-sm mb-2 font-medium" style={{ color: 'var(--color-text-secondary)' }}>结束时间</label>
                 <div className="flex gap-2">
                   <select
                     value={endHour}
@@ -301,15 +304,15 @@ export default function DetailPanel({ data, mode, defaultDate, onClose, onSave, 
                       }
                     }}
                     className="flex-1 px-3 py-3 rounded-xl text-sm focus:outline-none transition-all cursor-pointer"
-                    style={{ background: '#FAF8F5', border: '2px solid #E8E6E1', color: '#3A3638' }}
-                    onFocus={(e) => e.currentTarget.style.borderColor = '#79BEEB'}
-                    onBlur={(e) => e.currentTarget.style.borderColor = '#E8E6E1'}
+                    style={{ background: '#FAF8F5', border: '2px solid var(--color-border-light)', color: 'var(--color-text-primary)' }}
+                    onFocus={(e) => e.currentTarget.style.borderColor = 'var(--color-blue)'}
+                    onBlur={(e) => e.currentTarget.style.borderColor = 'var(--color-border-light)'}
                   >
                     {Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i).map(h => (
                       <option key={h} value={h}>{String(h).padStart(2, '0')}</option>
                     ))}
                   </select>
-                  <span className="flex items-center justify-center text-lg font-medium" style={{ color: '#9E9899' }}>:</span>
+                  <span className="flex items-center justify-center text-lg font-medium" style={{ color: 'var(--color-text-muted)' }}>:</span>
                   <select
                     value={endMinute}
                     onChange={(e) => {
@@ -329,9 +332,9 @@ export default function DetailPanel({ data, mode, defaultDate, onClose, onSave, 
                       }
                     }}
                     className="flex-1 px-3 py-3 rounded-xl text-sm focus:outline-none transition-all cursor-pointer"
-                    style={{ background: '#FAF8F5', border: '2px solid #E8E6E1', color: '#3A3638' }}
-                    onFocus={(e) => e.currentTarget.style.borderColor = '#79BEEB'}
-                    onBlur={(e) => e.currentTarget.style.borderColor = '#E8E6E1'}
+                    style={{ background: '#FAF8F5', border: '2px solid var(--color-border-light)', color: 'var(--color-text-primary)' }}
+                    onFocus={(e) => e.currentTarget.style.borderColor = 'var(--color-blue)'}
+                    onBlur={(e) => e.currentTarget.style.borderColor = 'var(--color-border-light)'}
                   >
                     {[0, 15, 30, 45].map(m => (
                       <option key={m} value={m}>{String(m).padStart(2, '0')}</option>
@@ -342,8 +345,8 @@ export default function DetailPanel({ data, mode, defaultDate, onClose, onSave, 
             </div>
 
             <div className="text-center py-3 rounded-xl" style={{ background: '#FAF8F5' }}>
-              <span className="text-sm" style={{ color: '#9E9899' }}>时长：</span>
-              <span className="text-lg font-semibold" style={{ color: '#79BEEB' }}>
+              <span className="text-sm" style={{ color: 'var(--color-text-muted)' }}>时长：</span>
+              <span className="text-lg font-semibold" style={{ color: 'var(--color-blue)' }}>
                 {durationMinutes} 分钟
               </span>
             </div>
@@ -351,20 +354,20 @@ export default function DetailPanel({ data, mode, defaultDate, onClose, onSave, 
         ) : (
           <>
             <div>
-              <label className="block text-sm mb-2 font-medium" style={{ color: '#5C5658' }}>计划时间</label>
+              <label className="block text-sm mb-2 font-medium" style={{ color: 'var(--color-text-secondary)' }}>计划时间</label>
               <input
                 type="time"
                 value={taskStartTime}
                 onChange={(e) => setTaskStartTime(e.target.value)}
                 className="w-full px-4 py-3 rounded-xl text-sm focus:outline-none transition-all"
-                style={{ background: '#FAF8F5', border: '2px solid #E8E6E1', color: '#3A3638' }}
-                onFocus={(e) => e.currentTarget.style.borderColor = '#79BEEB'}
-                onBlur={(e) => e.currentTarget.style.borderColor = '#E8E6E1'}
+                style={{ background: '#FAF8F5', border: '2px solid var(--color-border-light)', color: 'var(--color-text-primary)' }}
+                onFocus={(e) => e.currentTarget.style.borderColor = 'var(--color-blue)'}
+                onBlur={(e) => e.currentTarget.style.borderColor = 'var(--color-border-light)'}
               />
             </div>
 
             <div>
-              <label className="block text-sm mb-2 font-medium" style={{ color: '#5C5658' }}>优先级</label>
+              <label className="block text-sm mb-2 font-medium" style={{ color: 'var(--color-text-secondary)' }}>优先级</label>
               <div className="flex gap-2">
                 {[1, 2, 3, 4, 5].map((p) => {
                   const colors = getPriorityColor(p)
@@ -376,8 +379,8 @@ export default function DetailPanel({ data, mode, defaultDate, onClose, onSave, 
                       className="flex-1 px-2 py-2.5 rounded-xl text-xs font-semibold transition-all"
                       style={{
                         background: isSelected ? colors.bg : '#FAF8F5',
-                        color: isSelected ? colors.text : '#9E9899',
-                        border: isSelected ? `2px solid ${colors.border}` : '2px solid #E8E6E1',
+                        color: isSelected ? colors.text : 'var(--color-text-muted)',
+                        border: isSelected ? `2px solid ${colors.border}` : '2px solid var(--color-border-light)',
                       }}
                     >
                       {PRIORITY_LABELS[p]}
@@ -388,31 +391,31 @@ export default function DetailPanel({ data, mode, defaultDate, onClose, onSave, 
             </div>
 
             <div>
-              <label className="block text-sm mb-2 font-medium" style={{ color: '#5C5658' }}>截止日期</label>
+              <label className="block text-sm mb-2 font-medium" style={{ color: 'var(--color-text-secondary)' }}>截止日期</label>
               <input
                 type="date"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
                 className="w-full px-4 py-3 rounded-xl text-sm focus:outline-none transition-all"
-                style={{ background: '#FAF8F5', border: '2px solid #E8E6E1', color: '#3A3638' }}
-                onFocus={(e) => e.currentTarget.style.borderColor = '#79BEEB'}
-                onBlur={(e) => e.currentTarget.style.borderColor = '#E8E6E1'}
+                style={{ background: '#FAF8F5', border: '2px solid var(--color-border-light)', color: 'var(--color-text-primary)' }}
+                onFocus={(e) => e.currentTarget.style.borderColor = 'var(--color-blue)'}
+                onBlur={(e) => e.currentTarget.style.borderColor = 'var(--color-border-light)'}
               />
             </div>
 
             <div>
-              <label className="block text-sm mb-2 font-medium" style={{ color: '#5C5658' }}>预计时长</label>
+              <label className="block text-sm mb-2 font-medium" style={{ color: 'var(--color-text-secondary)' }}>预计时长</label>
               <div className="flex items-center gap-2 mb-2">
                 <input
                   type="number"
                   value={estimatedMinutes}
                   onChange={(e) => setEstimatedMinutes(Math.max(5, Math.min(480, parseInt(e.target.value) || 0)))}
                   className="flex-1 px-4 py-3 rounded-xl text-sm"
-                  style={{ background: '#FAF8F5', border: '2px solid #E8E6E1', color: '#3A3638' }}
+                  style={{ background: '#FAF8F5', border: '2px solid var(--color-border-light)', color: 'var(--color-text-primary)' }}
                   min={5}
                   max={480}
                 />
-                <span className="text-sm" style={{ color: '#5C5658' }}>分钟</span>
+                <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>分钟</span>
               </div>
               <div className="flex gap-2">
                 {[25, 50, 90].map((m) => (
@@ -421,9 +424,9 @@ export default function DetailPanel({ data, mode, defaultDate, onClose, onSave, 
                     onClick={() => setEstimatedMinutes(m)}
                     className="flex-1 px-2 py-2 rounded-lg text-xs font-semibold transition-all"
                     style={{
-                      background: estimatedMinutes === m ? '#79BEEB' : '#FAF8F5',
-                      color: estimatedMinutes === m ? 'white' : '#5C5658',
-                      border: estimatedMinutes === m ? '2px solid #5AACDF' : '2px solid transparent',
+                      background: estimatedMinutes === m ? 'var(--color-blue)' : '#FAF8F5',
+                      color: estimatedMinutes === m ? 'white' : 'var(--color-text-secondary)',
+                      border: estimatedMinutes === m ? '2px solid var(--color-blue-hover)' : '2px solid transparent',
                     }}
                   >
                     {m}m
@@ -433,29 +436,29 @@ export default function DetailPanel({ data, mode, defaultDate, onClose, onSave, 
             </div>
 
             <div>
-              <label className="block text-sm mb-2 font-medium" style={{ color: '#5C5658' }}>第一步</label>
+              <label className="block text-sm mb-2 font-medium" style={{ color: 'var(--color-text-secondary)' }}>第一步</label>
               <input
                 type="text"
                 value={firstStep}
                 onChange={(e) => setFirstStep(e.target.value)}
-                placeholder="例如：打开项目文件夹..."
+                placeholder="例如: 撰写需求文档 (选填)"
                 className="w-full px-4 py-3 rounded-xl text-sm focus:outline-none transition-all"
-                style={{ background: '#FAF8F5', border: '2px solid #E8E6E1', color: '#3A3638' }}
-                onFocus={(e) => e.currentTarget.style.borderColor = '#79BEEB'}
-                onBlur={(e) => e.currentTarget.style.borderColor = '#E8E6E1'}
+                style={{ background: '#FAF8F5', border: '2px solid var(--color-border-light)', color: 'var(--color-text-primary)' }}
+                onFocus={(e) => e.currentTarget.style.borderColor = 'var(--color-blue)'}
+                onBlur={(e) => e.currentTarget.style.borderColor = 'var(--color-border-light)'}
               />
             </div>
 
             <div>
-              <label className="block text-sm mb-2 font-medium" style={{ color: '#5C5658' }}>做这件事的感觉</label>
+              <label className="block text-sm mb-2 font-medium" style={{ color: 'var(--color-text-secondary)' }}>做这件事的感觉</label>
               <div className="flex gap-2">
                 <button
                   onClick={() => setEmotionalTag(emotionalTag === 'easy' ? '' : 'easy')}
                   className="flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-all"
                   style={{
-                    background: emotionalTag === 'easy' ? '#A8E6CF30' : '#FAF8F5',
-                    color: emotionalTag === 'easy' ? '#2D5A4A' : '#5C5658',
-                    border: emotionalTag === 'easy' ? '2px solid #A8E6CF' : '2px solid #E8E6E1',
+                    background: emotionalTag === 'easy' ? 'var(--color-green)30' : '#FAF8F5',
+                    color: emotionalTag === 'easy' ? '#2D5A4A' : 'var(--color-text-secondary)',
+                    border: emotionalTag === 'easy' ? '2px solid var(--color-green)' : '2px solid var(--color-border-light)',
                   }}
                 >
                   😊 轻松
@@ -464,9 +467,9 @@ export default function DetailPanel({ data, mode, defaultDate, onClose, onSave, 
                   onClick={() => setEmotionalTag(emotionalTag === 'neutral' ? '' : 'neutral')}
                   className="flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-all"
                   style={{
-                    background: emotionalTag === 'neutral' ? '#FFD3B630' : '#FAF8F5',
-                    color: emotionalTag === 'neutral' ? '#B8860B' : '#5C5658',
-                    border: emotionalTag === 'neutral' ? '2px solid #FFD3B6' : '2px solid #E8E6E1',
+                    background: emotionalTag === 'neutral' ? 'var(--color-lemon)30' : '#FAF8F5',
+                    color: emotionalTag === 'neutral' ? '#B8860B' : 'var(--color-text-secondary)',
+                    border: emotionalTag === 'neutral' ? '2px solid var(--color-lemon)' : '2px solid var(--color-border-light)',
                   }}
                 >
                   😐 一般
@@ -475,9 +478,9 @@ export default function DetailPanel({ data, mode, defaultDate, onClose, onSave, 
                   onClick={() => setEmotionalTag(emotionalTag === 'resist' ? '' : 'resist')}
                   className="flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-all"
                   style={{
-                    background: emotionalTag === 'resist' ? '#FF8C8230' : '#FAF8F5',
-                    color: emotionalTag === 'resist' ? '#8B0000' : '#5C5658',
-                    border: emotionalTag === 'resist' ? '2px solid #FF8C82' : '2px solid #E8E6E1',
+                    background: emotionalTag === 'resist' ? 'var(--color-coral)30' : '#FAF8F5',
+                    color: emotionalTag === 'resist' ? '#8B0000' : 'var(--color-text-secondary)',
+                    border: emotionalTag === 'resist' ? '2px solid var(--color-coral)' : '2px solid var(--color-border-light)',
                   }}
                 >
                   😰 困难
@@ -486,14 +489,14 @@ export default function DetailPanel({ data, mode, defaultDate, onClose, onSave, 
             </div>
 
             <div>
-              <label className="block text-sm mb-2 font-medium" style={{ color: '#5C5658' }}>状态</label>
+              <label className="block text-sm mb-2 font-medium" style={{ color: 'var(--color-text-secondary)' }}>状态</label>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
                 className="w-full px-4 py-3 rounded-xl text-sm focus:outline-none transition-all cursor-pointer"
-                style={{ background: '#FAF8F5', border: '2px solid #E8E6E1', color: '#3A3638' }}
-                onFocus={(e) => e.currentTarget.style.borderColor = '#79BEEB'}
-                onBlur={(e) => e.currentTarget.style.borderColor = '#E8E6E1'}
+                style={{ background: '#FAF8F5', border: '2px solid var(--color-border-light)', color: 'var(--color-text-primary)' }}
+                onFocus={(e) => e.currentTarget.style.borderColor = 'var(--color-blue)'}
+                onBlur={(e) => e.currentTarget.style.borderColor = 'var(--color-border-light)'}
               >
                 {STATUSES.map((s) => (
                   <option key={s} value={s}>{STATUS_LABELS[s]}</option>
@@ -504,29 +507,29 @@ export default function DetailPanel({ data, mode, defaultDate, onClose, onSave, 
         )}
 
         <div>
-          <label className="block text-sm mb-2 font-medium" style={{ color: '#5C5658' }}>备注</label>
+          <label className="block text-sm mb-2 font-medium" style={{ color: 'var(--color-text-secondary)' }}>备注</label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="添加备注..."
             rows={4}
             className="w-full px-4 py-3 rounded-xl text-sm focus:outline-none transition-all resize-none"
-            style={{ background: '#FAF8F5', border: '2px solid #E8E6E1', color: '#3A3638' }}
-            onFocus={(e) => e.currentTarget.style.borderColor = '#79BEEB'}
-            onBlur={(e) => e.currentTarget.style.borderColor = '#E8E6E1'}
+            style={{ background: '#FAF8F5', border: '2px solid var(--color-border-light)', color: 'var(--color-text-primary)' }}
+            onFocus={(e) => e.currentTarget.style.borderColor = 'var(--color-blue)'}
+            onBlur={(e) => e.currentTarget.style.borderColor = 'var(--color-border-light)'}
           />
         </div>
 
         {isBlockMode && (
           <div>
-            <label className="block text-sm mb-2 font-medium" style={{ color: '#5C5658' }}>关联任务</label>
+            <label className="block text-sm mb-2 font-medium" style={{ color: 'var(--color-text-secondary)' }}>关联任务</label>
             <select
               value={taskId}
               onChange={(e) => setTaskId(e.target.value)}
               className="w-full px-4 py-3 rounded-xl text-sm focus:outline-none transition-all cursor-pointer"
-              style={{ background: '#FAF8F5', border: '2px solid #E8E6E1', color: '#3A3638' }}
-              onFocus={(e) => e.currentTarget.style.borderColor = '#79BEEB'}
-              onBlur={(e) => e.currentTarget.style.borderColor = '#E8E6E1'}
+              style={{ background: '#FAF8F5', border: '2px solid var(--color-border-light)', color: 'var(--color-text-primary)' }}
+              onFocus={(e) => e.currentTarget.style.borderColor = 'var(--color-blue)'}
+              onBlur={(e) => e.currentTarget.style.borderColor = 'var(--color-border-light)'}
             >
               <option value="">不关联任务</option>
               {tasks.filter(t => t.status !== 'completed').map((t) => (
@@ -541,13 +544,14 @@ export default function DetailPanel({ data, mode, defaultDate, onClose, onSave, 
             onClick={handleSave}
             disabled={!title.trim()}
             className="flex-1 px-4 py-3.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ background: '#79BEEB' }}
+            style={{ background: 'var(--color-blue)' }}
           >
             {mode === 'add' ? <Plus size={16} /> : <Save size={16} />}
             {mode === 'add' ? '添加' : '保存'}
           </button>
           {mode === 'edit' && onDelete && (
             <button
+              data-testid="task-delete"
               onClick={onDelete}
               className="px-6 py-3.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 flex items-center justify-center gap-1.5"
               style={{ background: '#DC2626' }}
@@ -560,7 +564,7 @@ export default function DetailPanel({ data, mode, defaultDate, onClose, onSave, 
             <button
               onClick={onClose}
               className="px-6 py-3.5 rounded-xl text-sm font-semibold transition-all hover:opacity-80"
-              style={{ background: '#FAF8F5', color: '#5C5658', border: '2px solid #E8E6E1' }}
+              style={{ background: '#FAF8F5', color: 'var(--color-text-secondary)', border: '2px solid var(--color-border-light)' }}
             >
               取消
             </button>

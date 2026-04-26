@@ -3,7 +3,7 @@ import dataService, { isDesktop } from '../services/dataService'
 import type { Activity, Task, Habit, Pet, FocusSession, HabitCategory, EmotionalTag } from '../services/dataService'
 import type { ColorTheme, BackgroundSkin } from '../config/themes'
 import { colorThemeConfigs, DEFAULT_MODULES } from '../config/themes'
-import type { RecommendationWeights, RecommendationMode } from '../services/taskRecommendation'
+import type { RecommendationWeights, RecommendationMode, ScoredTask } from '../services/taskRecommendation'
 import { DEFAULT_WEIGHTS, getTopRecommendations } from '../services/taskRecommendation'
 import { useFocusStore } from '../services/focusDetection'
 
@@ -39,6 +39,7 @@ const LS = {
   // Guardian Beta localStorage keys
   GUARDIAN_LAST_MORNING: 'trace-guardian-last-morning',
   GUARDIAN_LAST_REVIEW: 'trace-guardian-last-review',
+  GUARDIAN_LAST_GOAL_ACHIEVED: 'trace-guardian-last-goal-achieved',
   GUARDIAN_TOMORROW_TOP: 'trace-guardian-tomorrow-top',
   GUARDIAN_SETTINGS: 'trace-guardian-settings',
   // Task Recommendation
@@ -85,11 +86,11 @@ export interface Category {
 }
 
 const DEFAULT_CATEGORIES: Category[] = [
-  { id: 'work', name: '工作', color: '#79BEEB', enabled: true, isDefault: true },
-  { id: 'meeting', name: '会议', color: '#D4C4FB', enabled: true, isDefault: true },
-  { id: 'break', name: '休息', color: '#A8E6CF', enabled: true, isDefault: true },
-  { id: 'study', name: '学习', color: '#FFD3B6', enabled: true, isDefault: true },
-  { id: 'other', name: '其他', color: '#9E9899', enabled: true, isDefault: true },
+  { id: 'work', name: '工作', color: 'var(--color-blue)', enabled: true, isDefault: true },
+  { id: 'meeting', name: '会议', color: 'var(--color-purple)', enabled: true, isDefault: true },
+  { id: 'break', name: '休息', color: 'var(--color-green)', enabled: true, isDefault: true },
+  { id: 'study', name: '学习', color: 'var(--color-lemon)', enabled: true, isDefault: true },
+  { id: 'other', name: '其他', color: 'var(--color-text-muted)', enabled: true, isDefault: true },
 ]
 
 function todayStr(): string {
@@ -192,6 +193,7 @@ export interface AppState {
   currentRecommendedTaskId: string | null
   lastMorningRitualDate: string | null
   lastDailyReviewDate: string | null
+  lastGoalAchievedDate: string | null
   tomorrowTopTaskId: string | null
   guardianSettings: {
     morningRitualEnabled: boolean
@@ -205,6 +207,7 @@ export interface AppState {
   setCurrentRecommendedTaskId: (id: string | null) => void
   setLastMorningRitualDate: (date: string) => void
   setLastDailyReviewDate: (date: string) => void
+  setLastGoalAchievedDate: (date: string) => void
   setTomorrowTopTaskId: (id: string | null) => void
   updateGuardianSettings: (settings: Partial<AppState['guardianSettings']>) => void
   getRecommendedTask: () => Task | null
@@ -215,6 +218,7 @@ export interface AppState {
   setRecommendationMode: (mode: RecommendationMode) => void
   setRecommendationWeights: (weights: Partial<RecommendationWeights>) => void
   resetRecommendationWeights: () => void
+  getTopScoredRecommendation: () => ScoredTask | null
   getRecommendedTasks: (count?: number) => Task[]
 
   // Data Management
@@ -662,6 +666,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
   currentRecommendedTaskId: null,
   lastMorningRitualDate: localStorage.getItem(LS.GUARDIAN_LAST_MORNING),
   lastDailyReviewDate: localStorage.getItem(LS.GUARDIAN_LAST_REVIEW),
+  lastGoalAchievedDate: localStorage.getItem(LS.GUARDIAN_LAST_GOAL_ACHIEVED),
   tomorrowTopTaskId: localStorage.getItem(LS.GUARDIAN_TOMORROW_TOP),
   guardianSettings: loadJSON(LS.GUARDIAN_SETTINGS, {
     morningRitualEnabled: true,
@@ -679,6 +684,10 @@ export const useAppStore = create<AppState>()((set, get) => ({
   setLastDailyReviewDate: (date) => {
     localStorage.setItem(LS.GUARDIAN_LAST_REVIEW, date)
     set({ lastDailyReviewDate: date })
+  },
+  setLastGoalAchievedDate: (date) => {
+    localStorage.setItem(LS.GUARDIAN_LAST_GOAL_ACHIEVED, date)
+    set({ lastGoalAchievedDate: date })
   },
   setTomorrowTopTaskId: (id) => {
     if (id) {
@@ -744,6 +753,22 @@ export const useAppStore = create<AppState>()((set, get) => ({
 
     const recommended = getTopRecommendations(active, 1, weights)
     return recommended[0]?.task || null
+  },
+
+  // Get top scored recommendation (with reason and breakdown)
+  getTopScoredRecommendation: () => {
+    const { tasks, recommendationWeights, recommendationMode } = get()
+    const active = tasks.filter((t) =>
+      t.status === 'todo' || t.status === 'in_progress' || t.status === 'paused'
+    )
+    if (active.length === 0) return null
+
+    const weights = recommendationMode === 'priority_only'
+      ? { ...DEFAULT_WEIGHTS, priority: 0.8, urgency: 0.15, durationFit: 0.05, habit: 0, progress: 0, contextMatch: 0, emotionalTag: 0 }
+      : recommendationWeights
+
+    const recommended = getTopRecommendations(active, 1, weights)
+    return recommended[0] || null
   },
 
   // Get multiple recommended tasks

@@ -75,54 +75,54 @@ export default function EditPanel({
     <div
       className="rounded-2xl p-5"
       style={{
-        background: '#FFFFFF',
-        border: '2px solid #D6D3CD',
-        boxShadow: '4px 4px 0px #D6D3CD',
+        background: 'var(--color-bg-surface-1)',
+        border: '2px solid var(--color-border-strong)',
+        boxShadow: '4px 4px 0px var(--color-border-strong)',
       }}
     >
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold" style={{ color: '#3A3638' }}>
+        <h3 className="font-semibold" style={{ color: 'var(--color-text-primary)' }}>
           {isAdding ? '添加事件' : '事件详情'}
         </h3>
         <button
           onClick={onClose}
           className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-gray-100 transition-colors"
         >
-          <X size={16} style={{ color: '#9E9899' }} />
+          <X size={16} style={{ color: 'var(--color-text-muted)' }} />
         </button>
       </div>
 
       {isAdding ? (
         <div className="space-y-4">
           <div>
-            <label className="block text-xs mb-1" style={{ color: '#9E9899' }}>日期</label>
+            <label className="block text-xs mb-1" style={{ color: 'var(--color-text-muted)' }}>日期</label>
             <input
               type="date"
               value={formatDateYMD(newDate)}
               onChange={(e) => onDateChange(new Date(e.target.value))}
               className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-              style={{ background: '#F5F1EA', border: '2px solid #D6D3CD', color: '#3A3638' }}
+              style={{ background: 'var(--color-bg-surface-3)', border: '2px solid var(--color-border-strong)', color: 'var(--color-text-primary)' }}
             />
           </div>
           <div>
-            <label className="block text-xs mb-1" style={{ color: '#9E9899' }}>标题</label>
+            <label className="block text-xs mb-1" style={{ color: 'var(--color-text-muted)' }}>标题</label>
             <input
               type="text"
               value={newTitle}
               onChange={(e) => onTitleChange(e.target.value)}
               placeholder="输入活动标题..."
               className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-              style={{ background: '#F5F1EA', border: '2px solid #D6D3CD', color: '#3A3638' }}
+              style={{ background: 'var(--color-bg-surface-3)', border: '2px solid var(--color-border-strong)', color: 'var(--color-text-primary)' }}
               autoFocus
             />
           </div>
           <div>
-            <label className="block text-xs mb-1" style={{ color: '#9E9899' }}>分类</label>
+            <label className="block text-xs mb-1" style={{ color: 'var(--color-text-muted)' }}>分类</label>
             <select
               value={newCategory}
               onChange={(e) => onCategoryChange(e.target.value as ActivityCategory)}
               className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-              style={{ background: '#F5F1EA', border: '2px solid #D6D3CD', color: '#3A3638' }}
+              style={{ background: 'var(--color-bg-surface-3)', border: '2px solid var(--color-border-strong)', color: 'var(--color-text-primary)' }}
             >
               {CATEGORY_LIST.map(cat => (
                 <option key={cat} value={cat}>{cat}</option>
@@ -131,7 +131,7 @@ export default function EditPanel({
           </div>
           <div className="flex gap-2">
             <div className="flex-1">
-              <label className="block text-xs mb-1" style={{ color: '#9E9899' }}>开始</label>
+              <label className="block text-xs mb-1" style={{ color: 'var(--color-text-muted)' }}>开始</label>
               <input
                 type="range"
                 min={0}
@@ -145,13 +145,13 @@ export default function EditPanel({
                 }}
                 className="w-full"
               />
-              <p className="text-xs text-center" style={{ color: '#9E9899' }}>
+              <p className="text-xs text-center" style={{ color: 'var(--color-text-muted)' }}>
                 {String(Math.floor(newStartHour)).padStart(2, '0')}:
                 {String(Math.round((newStartHour % 1) * 60)).padStart(2, '0')}
               </p>
             </div>
             <div className="flex-1">
-              <label className="block text-xs mb-1" style={{ color: '#9E9899' }}>结束</label>
+              <label className="block text-xs mb-1" style={{ color: 'var(--color-text-muted)' }}>结束</label>
               <input
                 type="range"
                 min={0.5}
@@ -165,7 +165,7 @@ export default function EditPanel({
                 }}
                 className="w-full"
               />
-              <p className="text-xs text-center" style={{ color: '#9E9899' }}>
+              <p className="text-xs text-center" style={{ color: 'var(--color-text-muted)' }}>
                 {String(Math.floor(newEndHour)).padStart(2, '0')}:
                 {String(Math.round((newEndHour % 1) * 60)).padStart(2, '0')}
               </p>
@@ -176,7 +176,7 @@ export default function EditPanel({
               onClick={onSave}
               disabled={!newTitle.trim()}
               className="flex-1 px-3 py-2 rounded-lg text-sm font-medium text-white transition-all hover:opacity-90 flex items-center justify-center gap-1 disabled:opacity-50"
-              style={{ background: '#79BEEB' }}
+              style={{ background: 'var(--color-blue)' }}
             >
               <Plus size={14} />
               添加
@@ -184,7 +184,7 @@ export default function EditPanel({
             <button
               onClick={onClose}
               className="px-3 py-2 rounded-lg text-sm font-medium transition-all hover:opacity-80"
-              style={{ background: '#F5F1EA', color: '#5C5658', border: '2px solid #D6D3CD' }}
+              style={{ background: 'var(--color-bg-surface-3)', color: 'var(--color-text-secondary)', border: '2px solid var(--color-border-strong)' }}
             >
               取消
             </button>
@@ -193,22 +193,22 @@ export default function EditPanel({
       ) : (
         <div className="space-y-4">
           <div>
-            <label className="block text-xs mb-1" style={{ color: '#9E9899' }}>标题</label>
+            <label className="block text-xs mb-1" style={{ color: 'var(--color-text-muted)' }}>标题</label>
             <input
               type="text"
               value={editTitle}
               onChange={(e) => onEditTitleChange(e.target.value)}
               className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-              style={{ background: '#F5F1EA', border: '2px solid #D6D3CD', color: '#3A3638' }}
+              style={{ background: 'var(--color-bg-surface-3)', border: '2px solid var(--color-border-strong)', color: 'var(--color-text-primary)' }}
             />
           </div>
           <div>
-            <label className="block text-xs mb-1" style={{ color: '#9E9899' }}>分类</label>
+            <label className="block text-xs mb-1" style={{ color: 'var(--color-text-muted)' }}>分类</label>
             <select
               value={editCategory}
               onChange={(e) => onEditCategoryChange(e.target.value as ActivityCategory)}
               className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-              style={{ background: '#F5F1EA', border: '2px solid #D6D3CD', color: '#3A3638' }}
+              style={{ background: 'var(--color-bg-surface-3)', border: '2px solid var(--color-border-strong)', color: 'var(--color-text-primary)' }}
             >
               {CATEGORY_LIST.map(cat => (
                 <option key={cat} value={cat}>{cat}</option>
@@ -217,33 +217,33 @@ export default function EditPanel({
           </div>
           <div className="flex gap-2">
             <div className="flex-1">
-              <label className="block text-xs mb-1" style={{ color: '#9E9899' }}>开始</label>
+              <label className="block text-xs mb-1" style={{ color: 'var(--color-text-muted)' }}>开始</label>
               <input
                 type="time"
                 value={editStartTime}
                 onChange={(e) => onEditStartTimeChange(e.target.value)}
                 className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-                style={{ background: '#F5F1EA', border: '2px solid #D6D3CD', color: '#3A3638' }}
+                style={{ background: 'var(--color-bg-surface-3)', border: '2px solid var(--color-border-strong)', color: 'var(--color-text-primary)' }}
               />
             </div>
             <div className="flex-1">
-              <label className="block text-xs mb-1" style={{ color: '#9E9899' }}>结束</label>
+              <label className="block text-xs mb-1" style={{ color: 'var(--color-text-muted)' }}>结束</label>
               <input
                 type="time"
                 value={editEndTime}
                 onChange={(e) => onEditEndTimeChange(e.target.value)}
                 className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-                style={{ background: '#F5F1EA', border: '2px solid #D6D3CD', color: '#3A3638' }}
+                style={{ background: 'var(--color-bg-surface-3)', border: '2px solid var(--color-border-strong)', color: 'var(--color-text-primary)' }}
               />
             </div>
           </div>
           <div>
-            <label className="block text-xs mb-1" style={{ color: '#9E9899' }}>关联任务</label>
+            <label className="block text-xs mb-1" style={{ color: 'var(--color-text-muted)' }}>关联任务</label>
             <select
               value={editTaskId}
               onChange={(e) => onEditTaskIdChange(e.target.value)}
               className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-              style={{ background: '#F5F1EA', border: '2px solid #D6D3CD', color: '#3A3638' }}
+              style={{ background: 'var(--color-bg-surface-3)', border: '2px solid var(--color-border-strong)', color: 'var(--color-text-primary)' }}
             >
               <option value="">不关联任务</option>
               {tasks.filter(t => t.status !== 'completed').map(task => (
@@ -251,14 +251,14 @@ export default function EditPanel({
               ))}
             </select>
           </div>
-          <p className="text-xs" style={{ color: '#9E9899' }}>
+          <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
             💡 拖拽事件的上下边缘调整时长，拖拽中间移动位置
           </p>
           <div className="flex gap-2 pt-2">
             <button
               onClick={onSave}
               className="flex-1 px-3 py-2 rounded-lg text-sm font-medium text-white transition-all hover:opacity-90 flex items-center justify-center gap-1"
-              style={{ background: '#79BEEB' }}
+              style={{ background: 'var(--color-blue)' }}
             >
               <Save size={14} />
               保存

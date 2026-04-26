@@ -18,11 +18,11 @@ export default function ActiveTrackingCard({ currentApp, duration, category }: P
 
   const getCategoryColor = (cat: string) => {
     const colors: Record<string, string> = {
-      work: '#79BEEB',
-      meeting: '#D4C4FB',
-      break: '#A8E6CF',
-      learning: '#FFD3B6',
-      other: '#D6D3CD',
+      work: 'var(--color-blue)',
+      meeting: 'var(--color-purple)',
+      break: 'var(--color-green)',
+      learning: 'var(--color-lemon)',
+      other: 'var(--color-border-strong)',
     }
     return colors[cat] || colors.other
   }
@@ -31,18 +31,18 @@ export default function ActiveTrackingCard({ currentApp, duration, category }: P
     <div
       className="p-6 rounded-2xl transition-all duration-200 hover:translate-x-[-2px] hover:translate-y-[-2px]"
       style={{
-        background: '#FFFFFF',
-        border: '2px solid #D6D3CD',
-        boxShadow: '4px 4px 0px #D6D3CD',
+        background: 'var(--color-bg-surface-1)',
+        border: '2px solid var(--color-border-strong)',
+        boxShadow: '4px 4px 0px var(--color-border-strong)',
       }}
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Activity size={18} style={{ color: '#79BEEB' }} />
+          <Activity size={18} style={{ color: 'var(--color-blue)' }} />
           <h3
             className="text-base font-semibold"
-            style={{ color: '#3A3638', fontFamily: 'Quicksand, sans-serif' }}
+            style={{ color: 'var(--color-text-primary)', fontFamily: 'Quicksand, sans-serif' }}
           >
             Activity Tracking
           </h3>
@@ -50,11 +50,11 @@ export default function ActiveTrackingCard({ currentApp, duration, category }: P
         <div className="flex items-center gap-1.5">
           <div
             className="w-2 h-2 rounded-full animate-pulse"
-            style={{ background: '#A8E6CF' }}
+            style={{ background: 'var(--color-green)' }}
           />
           <span
             className="text-xs font-semibold"
-            style={{ color: '#A8E6CF', fontFamily: 'JetBrains Mono, monospace' }}
+            style={{ color: 'var(--color-green)', fontFamily: 'JetBrains Mono, monospace' }}
           >
             RECORDING
           </span>
@@ -62,17 +62,17 @@ export default function ActiveTrackingCard({ currentApp, duration, category }: P
       </div>
 
       {/* Current App */}
-      <p className="text-sm mb-2" style={{ color: '#5C5658' }}>
+      <p className="text-sm mb-2" style={{ color: 'var(--color-text-secondary)' }}>
         {currentApp}
       </p>
 
       {/* Duration & Category */}
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2">
-          <Clock size={16} style={{ color: '#9E9899' }} />
+          <Clock size={16} style={{ color: 'var(--color-text-muted)' }} />
           <span
             className="text-xl font-bold"
-            style={{ color: '#3A3638', fontFamily: 'Quicksand, sans-serif' }}
+            style={{ color: 'var(--color-text-primary)', fontFamily: 'Quicksand, sans-serif' }}
           >
             {Math.floor(duration / 60)}h {duration % 60}m
           </span>
@@ -89,7 +89,7 @@ export default function ActiveTrackingCard({ currentApp, duration, category }: P
       </div>
 
       {/* Mini Timeline Preview */}
-      <div className="h-10 rounded-xl flex items-center gap-1 px-2" style={{ background: '#FAF7F2' }}>
+      <div className="h-10 rounded-xl flex items-center gap-1 px-2" style={{ background: 'var(--color-bg-surface-2)' }}>
         {activityBlocks.map((block, i) => (
           <div
             key={i}

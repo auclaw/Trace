@@ -1,15 +1,15 @@
 import type { TimeBlock, ActivityCategory } from '../../services/dataService'
 
 const CATEGORY_COLORS: Record<ActivityCategory, string> = {
-  '开发': '#79BEEB',
-  '工作': '#79BEEB',
-  '会议': '#D4C4FB',
-  '休息': '#A8E6CF',
-  '学习': '#FFD3B6',
+  '开发': 'var(--color-blue)',
+  '工作': 'var(--color-blue)',
+  '会议': 'var(--color-purple)',
+  '休息': 'var(--color-green)',
+  '学习': 'var(--color-lemon)',
   '娱乐': '#FFB3C6',
   '运动': '#FFE5B4',
   '阅读': '#B4D4FF',
-  '其他': '#9E9899',
+  '其他': 'var(--color-text-muted)',
 }
 
 interface TimeBlockProps {

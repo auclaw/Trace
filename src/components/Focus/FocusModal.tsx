@@ -181,7 +181,7 @@ export default function FocusModal({
   // 📱 最小化模式 - 右下角小浮窗
   // ──────────────────────────────────────────────────────
   if (windowMode === 'minimized') {
-    const bgColor = isWorking ? '#79BEEB' : isBreak || isLongBreak ? '#A8E6CF' : '#D4C4FB'
+    const bgColor = isWorking ? 'var(--color-blue)' : isBreak || isLongBreak ? 'var(--color-green)' : 'var(--color-purple)'
     const textColor = 'white'
 
     return (
@@ -242,8 +242,8 @@ export default function FocusModal({
           !isFullscreen ? 'shadow-2xl' : ''
         }`}
         style={{
-          background: '#FFFFFF',
-          border: '2px solid #D6D3CD',
+          background: 'var(--color-bg-surface-1)',
+          border: '2px solid var(--color-border-strong)',
           boxShadow: isFullscreen
             ? '8px 8px 0px rgba(0,0,0,0.1)'
             : isDragging
@@ -259,7 +259,7 @@ export default function FocusModal({
       >
         {/* ─── 顶部拖拽提示条 ─── */}
         {windowMode === 'window' && (
-          <div className="absolute top-2 left-1/2 -translate-x-1/2 w-12 h-1 rounded-full opacity-30" style={{ background: '#D6D3CD' }} />
+          <div className="absolute top-2 left-1/2 -translate-x-1/2 w-12 h-1 rounded-full opacity-30" style={{ background: 'var(--color-border-strong)' }} />
         )}
 
         {/* ─── 顶部控制按钮 ─── */}
@@ -267,41 +267,45 @@ export default function FocusModal({
           {/* 最小化按钮 */}
           <button
             onClick={() => setWindowModeWithToast('minimized')}
-            className="p-2 rounded-xl transition-colors hover:bg-gray-100"
+            className="w-10 h-10 rounded-xl flex items-center justify-center transition-colors hover:bg-gray-100 focus-ring"
+            aria-label="最小化"
             title="最小化"
           >
-            <Minus size={18} color="#9E9899" />
+            <Minus size={18} color="var(--color-text-muted)" aria-hidden="true" />
           </button>
           {/* 窗口模式按钮 */}
           <button
             onClick={() => setWindowModeWithToast('window')}
-            className={`p-2 rounded-xl transition-colors ${windowMode === 'window' ? 'bg-gray-100' : 'hover:bg-gray-100'}`}
+            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${windowMode === 'window' ? 'bg-gray-100' : 'hover:bg-gray-100'} focus-ring`}
+            aria-label="窗口模式"
             title="窗口模式"
           >
-            <Square size={16} color="#9E9899" strokeWidth={2} />
+            <Square size={16} color="var(--color-text-muted)" strokeWidth={2} aria-hidden="true" />
           </button>
           {/* 全屏模式按钮 */}
           <button
             onClick={() => setWindowModeWithToast('fullscreen')}
-            className={`p-2 rounded-xl transition-colors ${windowMode === 'fullscreen' ? 'bg-gray-100' : 'hover:bg-gray-100'}`}
+            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${windowMode === 'fullscreen' ? 'bg-gray-100' : 'hover:bg-gray-100'} focus-ring`}
+            aria-label="全屏模式"
             title="全屏模式"
           >
-            <Square size={18} color="#9E9899" />
+            <Square size={18} color="var(--color-text-muted)" aria-hidden="true" />
           </button>
           {/* 关闭按钮 */}
           <button
             onClick={onClose}
-            className="p-2 rounded-xl transition-colors hover:bg-gray-100 ml-1"
+            className="w-10 h-10 rounded-xl flex items-center justify-center transition-colors hover:bg-gray-100 ml-1 focus-ring"
+            aria-label="关闭专注模式"
             title="关闭"
           >
-            <X size={18} color="#9E9899" />
+            <X size={18} color="var(--color-text-muted)" aria-hidden="true" />
           </button>
         </div>
 
         {/* ─── 标题 ─── */}
         <h2
           className="text-2xl font-bold text-center mb-6"
-          style={{ color: '#3A3638', fontFamily: 'Quicksand, sans-serif' }}
+          style={{ color: 'var(--color-text-primary)', fontFamily: 'Quicksand, sans-serif' }}
         >
           🍅 Focus Timer
         </h2>
@@ -310,12 +314,12 @@ export default function FocusModal({
         {currentFocusTask && (
           <div
             className="mb-6 p-4 rounded-xl text-center"
-            style={{ background: 'rgba(121, 190, 235, 0.1)', border: '1px solid #79BEEB30' }}
+            style={{ background: 'rgba(121, 190, 235, 0.1)', border: '1px solid var(--color-blue)30' }}
           >
-            <p className="text-xs font-semibold mb-1" style={{ color: '#79BEEB' }}>
+            <p className="text-xs font-semibold mb-1" style={{ color: 'var(--color-blue)' }}>
               当前任务
             </p>
-            <p className="text-sm font-medium" style={{ color: '#3A3638' }}>
+            <p className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
               {currentFocusTask.title}
             </p>
           </div>
@@ -343,22 +347,22 @@ export default function FocusModal({
           <div className="mt-4 flex items-center justify-center gap-2">
             {isWorking && (
               <>
-                <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#79BEEB' }} />
-                <span className="text-sm font-semibold" style={{ color: '#79BEEB' }}>
+                <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: 'var(--color-blue)' }} />
+                <span className="text-sm font-semibold" style={{ color: 'var(--color-blue)' }}>
                   专注中...
                 </span>
               </>
             )}
             {(isBreak || isLongBreak) && (
               <>
-                <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#A8E6CF' }} />
-                <span className="text-sm font-semibold" style={{ color: '#A8E6CF' }}>
+                <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: 'var(--color-green)' }} />
+                <span className="text-sm font-semibold" style={{ color: 'var(--color-green)' }}>
                   {isLongBreak ? '长休息' : '休息中'}
                 </span>
               </>
             )}
             {isIdle && (
-              <span className="text-sm font-semibold" style={{ color: '#9E9899' }}>
+              <span className="text-sm font-semibold" style={{ color: 'var(--color-text-muted)' }}>
                 准备开始
               </span>
             )}
@@ -372,7 +376,7 @@ export default function FocusModal({
                   className="h-full rounded-full transition-all duration-1000"
                   style={{
                     width: `${progressPercent}%`,
-                    background: isWorking ? '#79BEEB' : '#A8E6CF',
+                    background: isWorking ? 'var(--color-blue)' : 'var(--color-green)',
                   }}
                 />
               </div>
@@ -383,7 +387,7 @@ export default function FocusModal({
         {/* ─── 时长选择器（仅在空闲时显示） ─── */}
         {isIdle && (
           <div className="mb-6">
-            <p className="text-sm font-semibold mb-3 text-center" style={{ color: '#5C5658' }}>
+            <p className="text-sm font-semibold mb-3 text-center" style={{ color: 'var(--color-text-secondary)' }}>
               选择专注时长
             </p>
             <div className="flex justify-center gap-2 flex-wrap">
@@ -393,8 +397,8 @@ export default function FocusModal({
                   onClick={() => setSelectedDuration(mins)}
                   className="px-4 py-2 rounded-xl text-sm font-semibold transition-all hover:scale-105"
                   style={{
-                    background: selectedDuration === mins ? '#D4C4FB' : '#F5F1EA',
-                    color: selectedDuration === mins ? '#5A4A8A' : '#5C5658',
+                    background: selectedDuration === mins ? 'var(--color-purple)' : 'var(--color-bg-surface-3)',
+                    color: selectedDuration === mins ? '#5A4A8A' : 'var(--color-text-secondary)',
                     border: selectedDuration === mins ? '2px solid #B8A0E8' : '2px solid transparent',
                   }}
                 >
@@ -420,7 +424,7 @@ export default function FocusModal({
               <button
                 onClick={handleReset}
                 className="px-6 py-3 rounded-xl font-semibold transition-all hover:scale-105 flex items-center gap-2"
-                style={{ background: '#F5F1EA', color: '#5C5658' }}
+                style={{ background: 'var(--color-bg-surface-3)', color: 'var(--color-text-secondary)' }}
               >
                 <RotateCcw size={18} />
                 放弃
@@ -431,7 +435,7 @@ export default function FocusModal({
               <button
                 onClick={handleSkipBreak}
                 className="px-6 py-3 rounded-xl font-semibold transition-all hover:scale-105 flex items-center gap-2"
-                style={{ background: '#79BEEB', color: 'white' }}
+                style={{ background: 'var(--color-blue)', color: 'white' }}
               >
                 <SkipForward size={18} />
                 跳过休息
@@ -439,7 +443,7 @@ export default function FocusModal({
               <button
                 onClick={handleReset}
                 className="px-6 py-3 rounded-xl font-semibold transition-all hover:scale-105 flex items-center gap-2"
-                style={{ background: '#F5F1EA', color: '#5C5658' }}
+                style={{ background: 'var(--color-bg-surface-3)', color: 'var(--color-text-secondary)' }}
               >
                 <RotateCcw size={18} />
                 结束
@@ -449,7 +453,7 @@ export default function FocusModal({
             <button
               onClick={handleStart}
               className="px-10 py-3 rounded-xl font-semibold transition-all hover:scale-105 flex items-center gap-2"
-              style={{ background: '#D4C4FB', color: '#5A4A8A' }}
+              style={{ background: 'var(--color-purple)', color: '#5A4A8A' }}
             >
               <Play size={18} />
               开始专注
@@ -458,15 +462,15 @@ export default function FocusModal({
         </div>
 
         {/* ─── 今日统计 ─── */}
-        <div className="text-center pt-4 border-t" style={{ borderColor: '#E8E6E1' }}>
-          <p className="text-sm" style={{ color: '#9E9899' }}>
+        <div className="text-center pt-4 border-t" style={{ borderColor: 'var(--color-border-light)' }}>
+          <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
             今日已完成{' '}
-            <span className="font-bold" style={{ color: '#79BEEB' }}>
+            <span className="font-bold" style={{ color: 'var(--color-blue)' }}>
               {focusSessions}
             </span>{' '}
             个专注
           </p>
-          <p className="text-xs mt-1" style={{ color: '#9E9899' }}>
+          <p className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>
             累计专注时长: {focusSessions * focusSettings.workMinutes} 分钟
           </p>
         </div>

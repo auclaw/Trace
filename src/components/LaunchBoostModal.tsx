@@ -137,7 +137,7 @@ export default function LaunchBoostModal({
             onClick={() => handleStart(customDuration)}
             className="px-6 py-3 rounded-xl font-semibold transition-all hover:opacity-90"
             style={{
-              background: 'linear-gradient(135deg, #79BEEB 0%, #D4C4FB 100%)',
+              background: 'linear-gradient(135deg, var(--color-blue) 0%, var(--color-purple) 100%)',
               color: 'white',
             }}
           >

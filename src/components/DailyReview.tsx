@@ -199,7 +199,7 @@ export default function DailyReview({
                 boxShadow: '0 8px 30px rgba(121, 190, 235, 0.12), 0 2px 8px rgba(0, 0, 0, 0.04)',
               }}
             >
-              完成复盘
+              完成
             </button>
           </div>
         </div>

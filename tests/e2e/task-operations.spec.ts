@@ -81,7 +81,7 @@ test.describe('任务操作端到端测试', () => {
       await taskCheckboxes.nth(1).click()
 
       // 点击批量归档
-      await page.getByRole('button', { name: '归档' }).click()
+      await page.getByRole('button', { name: '归档', exact: true }).click()
 
       // 验证成功提示
       await expect(page.getByText('已归档 2 个任务')).toBeVisible()

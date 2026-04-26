@@ -23,12 +23,12 @@ export default function DateHeader({
     <div
       className="p-5 rounded-2xl flex items-center justify-between"
       style={{
-        background: '#FFFFFF',
-        border: '2px solid #D6D3CD',
-        boxShadow: '4px 4px 0px #D6D3CD',
+        background: 'var(--color-bg-surface-1)',
+        border: '2px solid var(--color-border-strong)',
+        boxShadow: '4px 4px 0px var(--color-border-strong)',
       }}
     >
-      <h1 className="text-xl font-bold" style={{ color: '#3A3638', fontFamily: 'Quicksand, sans-serif' }}>
+      <h1 className="text-xl font-bold" style={{ color: 'var(--color-text-primary)', fontFamily: 'Quicksand, sans-serif' }}>
         {formatDate()}
       </h1>
 
@@ -39,8 +39,8 @@ export default function DateHeader({
             onClick={() => onViewModeChange(mode)}
             className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
             style={{
-              background: viewMode === mode ? '#3A3638' : 'transparent',
-              color: viewMode === mode ? '#FFFFFF' : '#5C5658',
+              background: viewMode === mode ? 'var(--color-text-primary)' : 'transparent',
+              color: viewMode === mode ? 'var(--color-bg-surface-1)' : 'var(--color-text-secondary)',
             }}
           >
             {mode}
@@ -53,13 +53,13 @@ export default function DateHeader({
           onClick={onPrevDay}
           className="w-8 h-8 rounded-lg flex items-center justify-center transition-all hover:bg-gray-100"
         >
-          <ChevronLeft size={16} style={{ color: '#5C5658' }} />
+          <ChevronLeft size={16} style={{ color: 'var(--color-text-secondary)' }} />
         </button>
         <button
           onClick={onNextDay}
           className="w-8 h-8 rounded-lg flex items-center justify-center transition-all hover:bg-gray-100"
         >
-          <ChevronRight size={16} style={{ color: '#5C5658' }} />
+          <ChevronRight size={16} style={{ color: 'var(--color-text-secondary)' }} />
         </button>
       </div>
     </div>

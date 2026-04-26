@@ -6,8 +6,8 @@ export const COLORS = {
     50: '#F0F9FF',
     100: '#E0F2FE',
     200: '#BAE6FD',
-    300: '#79BEEB',     // 主色
-    400: '#5AACDF',     // 边框/悬停
+    300: 'var(--color-blue)',     // 主色
+    400: 'var(--color-blue-hover)',     // 边框/悬停
     500: '#3B82F6',     // 强调
   },
   success: {
@@ -27,20 +27,20 @@ export const COLORS = {
   },
   neutral: {
     50: '#FAF8F5',
-    100: '#F5F1EA',
-    200: '#E8E6E1',
-    300: '#D6D3CD',
-    400: '#9E9899',
-    500: '#5C5658',
-    600: '#3A3638',
+    100: 'var(--color-bg-surface-3)',
+    200: 'var(--color-border-light)',
+    300: 'var(--color-border-strong)',
+    400: 'var(--color-text-muted)',
+    500: 'var(--color-text-secondary)',
+    600: 'var(--color-text-primary)',
   },
 } as const
 
 // Shadow system - unified for all components
 export const SHADOWS = {
-  card: '4px 4px 0px #D6D3CD',
-  cardHover: '6px 6px 0px #D6D3CD',
-  cardSmall: '2px 2px 0px #D6D3CD',
+  card: '4px 4px 0px var(--color-border-strong)',
+  cardHover: '6px 6px 0px var(--color-border-strong)',
+  cardSmall: '2px 2px 0px var(--color-border-strong)',
   floating: '0 8px 30px rgba(0, 0, 0, 0.12)',
 } as const
 
@@ -62,7 +62,7 @@ export const ANIMATIONS = {
 // Priority configuration - unified colors for all components
 export const PRIORITY_CONFIG: Record<number, { bg: string; text: string; border: string; label: string }> = {
   1: { bg: '#F3F4F6', text: '#6B7280', border: '#9CA3AF', label: '低' },
-  2: { bg: '#E0F2FE', text: '#0369A1', border: '#79BEEB', label: '中' },
+  2: { bg: '#E0F2FE', text: '#0369A1', border: 'var(--color-blue)', label: '中' },
   3: { bg: '#FEF3C7', text: '#D97706', border: '#F59E0B', label: '高' },
   4: { bg: '#FEE2E2', text: '#DC2626', border: '#F87171', label: '紧急' },
   5: { bg: '#FECACA', text: '#B91C1C', border: '#FF5252', label: '非常紧急' },
@@ -82,10 +82,10 @@ export const getPriorityConfig = (priority: number | undefined | null) => {
 // Simplified color mapping for priority badge backgrounds
 // PRIORITY_COLORS - backward compatibility alias
 export const PRIORITY_COLORS: Record<number, string> = {
-  1: '#9E9899',
-  2: '#79BEEB',
-  3: '#FFD3B6',
-  4: '#FF8C82',
+  1: 'var(--color-text-muted)',
+  2: 'var(--color-blue)',
+  3: 'var(--color-lemon)',
+  4: 'var(--color-coral)',
   5: '#FF5252',
 }
 export const PRIORITY_BG_COLORS = PRIORITY_COLORS
@@ -104,7 +104,7 @@ export const STATUS_CONFIG: Record<TaskStatus, { bg: string; text: string; borde
   in_progress: { bg: '#DBEAFE', text: '#1D4ED8', border: '#60A5FA', label: '进行中' },
   paused: { bg: '#FEF3C7', text: '#D97706', border: '#F59E0B', label: '已暂停' },
   completed: { bg: '#D1FAE5', text: '#059669', border: '#34D399', label: '已完成' },
-  archived: { bg: '#F3F4F6', text: '#9E9899', border: '#D1D5DB', label: '已归档' },
+  archived: { bg: '#F3F4F6', text: 'var(--color-text-muted)', border: '#D1D5DB', label: '已归档' },
 }
 
 // Default fallback for unknown status

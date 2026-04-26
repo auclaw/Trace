@@ -47,13 +47,19 @@ const getMetaTags = (task: Task) => {
 export default function NowEngineCard() {
   const getRecommendedTasks = useAppStore((s) => s.getRecommendedTasks)
   const [launchBoostOpen, setLaunchBoostOpen] = useState(false)
-  const [refreshKey, setRefreshKey] = useState(0)
+  const [currentTaskIndex, setCurrentTaskIndex] = useState(0)
 
   // 🎯 使用统一的 Focus Logic Hook
   const { isWorking: isFocusing, currentFocusTask, startFocus, pauseFocus } = useFocusLogic()
 
-  const recommendedTasks = useMemo(() => getRecommendedTasks(3), [getRecommendedTasks, refreshKey])
-  const recommendedTask = recommendedTasks[0] || null
+  const recommendedTasks = useMemo(() => getRecommendedTasks(5), [getRecommendedTasks])
+  const recommendedTask = recommendedTasks[currentTaskIndex] || null
+
+  // 🎲 切换到下一个推荐任务
+  const switchToNextTask = () => {
+    if (recommendedTasks.length <= 1) return
+    setCurrentTaskIndex((prev) => (prev + 1) % recommendedTasks.length)
+  }
 
   const handleStartFocus = (task: Task, durationMinutes: number) => {
     startFocus(task.id, durationMinutes)
@@ -64,35 +70,35 @@ export default function NowEngineCard() {
   if (!recommendedTask && !currentFocusTask) {
     return (
       <div
-        className="p-8 transition-all duration-200 hover:translate-x-[-2px] hover:translate-y-[-2px]"
+        className="p-6 transition-all duration-200 hover:translate-x-[-2px] hover:translate-y-[-2px]"
         style={{
-          background: '#FFFFFF',
-          border: '2px solid #79BEEB',
+          background: 'var(--color-bg-surface-1)',
+          border: '2px solid var(--color-blue)',
           borderRadius: '24px',
           boxShadow: '4px 4px 0px rgba(121,190,235,0.4)',
         }}
       >
         <div className="text-center py-8">
           <div className="flex justify-center mb-4">
-            <Sparkles size={48} style={{ color: '#D4C4FB' }} />
+            <Sparkles size={48} style={{ color: 'var(--color-purple)' }} />
           </div>
           <h3
             className="text-xl font-bold mb-2"
-            style={{ color: '#3A3638', fontFamily: 'Quicksand, sans-serif' }}
+            style={{ color: 'var(--color-text-primary)', fontFamily: 'Quicksand, sans-serif' }}
           >
             还没有任务
           </h3>
           <p
             className="text-sm mb-6"
-            style={{ color: '#9E9899' }}
+            style={{ color: 'var(--color-text-muted)' }}
           >
             创建第一个任务，让 AI 帮你规划一天
           </p>
           <button
             className="px-6 py-3 rounded-xl font-semibold text-white transition-all hover:scale-105"
             style={{
-              background: '#79BEEB',
-              boxShadow: '4px 4px 0px #D6D3CD',
+              background: 'var(--color-blue)',
+              boxShadow: '4px 4px 0px var(--color-border-strong)',
             }}
           >
             <Plus size={16} className="inline mr-2" />
@@ -109,10 +115,10 @@ export default function NowEngineCard() {
   return (
     <>
       <div
-        className="p-8 transition-all duration-200 hover:translate-x-[-2px] hover:translate-y-[-2px]"
+        className="p-6 transition-all duration-200 hover:translate-x-[-2px] hover:translate-y-[-2px]"
         style={{
-          background: '#FFFFFF',
-          border: isFocusing ? '2px solid #A8E6CF' : '2px solid #79BEEB',
+          background: 'var(--color-bg-surface-1)',
+          border: isFocusing ? '2px solid var(--color-green)' : '2px solid var(--color-blue)',
           borderRadius: '24px',
           boxShadow: isFocusing
             ? '4px 4px 0px rgba(168,230,207,0.4)'
@@ -125,7 +131,7 @@ export default function NowEngineCard() {
             className="text-xs font-semibold tracking-wider uppercase"
             style={{
               fontFamily: 'JetBrains Mono, monospace',
-              color: isFocusing ? '#A8E6CF' : '#79BEEB',
+              color: isFocusing ? 'var(--color-green)' : 'var(--color-blue)',
             }}
           >
             {isFocusing ? 'Focusing 🔥' : 'Now →'}
@@ -134,10 +140,10 @@ export default function NowEngineCard() {
 
         {/* Task Name - 🎯 显示当前专注任务或推荐任务 */}
         <h2
-          className="text-2xl font-bold mb-3"
+          className="text-xl font-bold mb-2.5"
           style={{
             fontFamily: 'Quicksand, sans-serif',
-            color: '#3A3638',
+            color: 'var(--color-text-primary)',
           }}
         >
           {displayTask?.title || '暂无任务'}
@@ -145,12 +151,12 @@ export default function NowEngineCard() {
 
         {/* Meta Tags - 显示当前专注任务或推荐任务 */}
         {displayTask && (
-          <div className="flex flex-wrap gap-4 mb-5">
+          <div className="flex flex-wrap gap-4 mb-4">
             {metaTags.map((tag, i) => (
               <div
                 key={i}
                 className="flex items-center gap-1.5 text-xs"
-                style={{ color: '#5C5658' }}
+                style={{ color: 'var(--color-text-secondary)' }}
               >
                 {tag.icon}
                 <span>{tag.label}</span>
@@ -160,19 +166,19 @@ export default function NowEngineCard() {
         )}
 
         {/* First Step Box */}
-        {displayTask && (
+        {displayTask && !isFocusing && (
           <div
-            className="p-4 mb-6 rounded-xl"
+            className="p-3.5 mb-4 rounded-xl"
             style={{
-              background: '#FAF7F2',
-              border: '1px solid #EDE8E2',
+              background: 'var(--color-bg-surface-2)',
+              border: '1px solid var(--color-border-light)',
             }}
           >
             <p
               className="text-sm"
-              style={{ color: '#5C5658' }}
+              style={{ color: 'var(--color-text-secondary)' }}
             >
-              💡 {isFocusing ? '保持专注，你做得很棒！' : generateFirstStep(displayTask.title)}
+              💡 {generateFirstStep(displayTask.title)}
             </p>
           </div>
         )}
@@ -182,11 +188,11 @@ export default function NowEngineCard() {
           {isFocusing ? (
             <button
               onClick={pauseFocus}
-              className="flex-1 px-6 py-3.5 rounded-xl font-semibold transition-all hover:scale-[1.02] flex items-center justify-center gap-2"
+              className="flex-1 px-6 py-3 rounded-xl font-semibold transition-all hover:scale-[1.02] flex items-center justify-center gap-2"
               style={{
-                background: '#A8E6CF',
+                background: 'var(--color-green)',
                 color: '#2D5A4A',
-                boxShadow: '4px 4px 0px #D6D3CD',
+                boxShadow: '4px 4px 0px var(--color-border-strong)',
               }}
             >
               <Pause size={16} />
@@ -195,28 +201,28 @@ export default function NowEngineCard() {
           ) : recommendedTask ? (
             <button
               onClick={() => setLaunchBoostOpen(true)}
-              className="flex-1 px-6 py-3.5 rounded-xl font-semibold transition-all hover:scale-[1.02] flex items-center justify-center gap-2"
+              className="flex-1 px-6 py-3 rounded-xl font-semibold transition-all hover:scale-[1.02] flex items-center justify-center gap-2"
               style={{
-                background: '#D4C4FB',
+                background: 'var(--color-purple)',
                 color: '#4A3A6A',
-                boxShadow: '4px 4px 0px #D6D3CD',
+                boxShadow: '4px 4px 0px var(--color-border-strong)',
               }}
             >
               <Play size={16} />
               开始专注
             </button>
           ) : null}
-          {!isFocusing && recommendedTask && (
+          {!isFocusing && recommendedTask && recommendedTasks.length > 1 && (
             <button
-              onClick={() => setRefreshKey((k) => k + 1)}
-              className="px-4 py-3.5 rounded-xl font-semibold transition-all hover:scale-[1.02] flex items-center justify-center gap-2"
+              onClick={switchToNextTask}
+              className="px-4 py-3 rounded-xl font-semibold transition-all hover:scale-[1.02] flex items-center justify-center gap-2"
               style={{
-                background: '#FFFFFF',
-                border: '2px solid #D6D3CD',
-                boxShadow: '4px 4px 0px #D6D3CD',
-                color: '#3A3638',
+                background: 'var(--color-bg-surface-1)',
+                border: '2px solid var(--color-border-strong)',
+                boxShadow: '4px 4px 0px var(--color-border-strong)',
+                color: 'var(--color-text-primary)',
               }}
-              title="换一个任务推荐"
+              title="换一个任务"
             >
               <RefreshCw size={16} />
               换一个

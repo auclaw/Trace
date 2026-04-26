@@ -1047,7 +1047,7 @@ const FOCUS_STYLES = `
   .fb-page-enter > *:nth-child(5) { animation-delay: 240ms; }
 
   .fb-warm-card {
-    background: linear-gradient(135deg, #ffffff 0%, #fef8f0 100%);
+    background: linear-gradient(135deg, var(--color-bg-surface-1) 0%, #fef8f0 100%);
     border: 1px solid rgba(44, 24, 16, 0.08);
     border-radius: 16px;
     box-shadow: 0 1px 3px rgba(44, 24, 16, 0.06), 0 1px 2px rgba(44, 24, 16, 0.04);

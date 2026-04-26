@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { BarChart3, Calendar, ChevronRight, Sparkles, TrendingUp } from 'lucide-react'
+import { Calendar, Sparkles, TrendingUp } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import NowEngineCard from '../components/NowEngineCard'
 import MorningRitual from '../components/MorningRitual'
-import DailyReview from '../components/DailyReview'
 
 function todayStr(): string {
   const d = new Date()
@@ -44,7 +43,6 @@ export default function Dashboard() {
 
   // Guardian modal states
   const [showMorningRitual, setShowMorningRitual] = useState(false)
-  const [showDailyReview, setShowDailyReview] = useState(false)
 
   const today = todayStr()
   const todayActivities = activities.filter((a) => a.startTime.slice(0, 10) === today)
@@ -61,7 +59,6 @@ export default function Dashboard() {
 
   // Auto-trigger Morning Ritual and Daily Review
   const lastMorningRitualDate = useAppStore((s) => s.lastMorningRitualDate)
-  const lastDailyReviewDate = useAppStore((s) => s.lastDailyReviewDate)
 
   useEffect(() => {
     if (loading) return
@@ -81,16 +78,7 @@ export default function Dashboard() {
       return () => clearTimeout(timer)
     }
 
-    // Check Daily Review: after 20:00, and not done today
-    if (
-      guardianSettings.dailyReviewEnabled &&
-      currentHour >= 20 &&
-      lastDailyReviewDate !== today
-    ) {
-      const timer = setTimeout(() => setShowDailyReview(true), 1000)
-      return () => clearTimeout(timer)
-    }
-  }, [loading, guardianSettings, lastMorningRitualDate, lastDailyReviewDate])
+  }, [loading, guardianSettings, lastMorningRitualDate])
 
   if (loading) {
     return (
@@ -110,10 +98,6 @@ export default function Dashboard() {
         isOpen={showMorningRitual}
         onComplete={() => setShowMorningRitual(false)}
       />
-      <DailyReview
-        isOpen={showDailyReview}
-        onComplete={() => setShowDailyReview(false)}
-      />
 
       <div className="min-h-screen px-8 py-8" style={{ background: 'var(--color-bg-base)' }}>
         {/* 🎯 Page Header - 用日期 + 打招呼，去掉 Dashboard */}
@@ -126,142 +110,199 @@ export default function Dashboard() {
           </p>
         </div>
 
-        {/* 📊 核心数据概览 - 简约横向卡片 */}
+        {/* 📊 核心数据概览 - 更丰富的设计 */}
         <div
           onClick={() => navigate('/analytics')}
-          className="p-5 mb-6 rounded-2xl flex items-center justify-between gap-4 flex-wrap cursor-pointer transition-all duration-200 hover:scale-[1.01] hover:shadow-md active:scale-[0.99]"
-          style={{
-            background: '#FFFFFF',
-            border: '2px solid #D6D3CD',
-            boxShadow: '4px 4px 0px #D6D3CD',
-          }}
+          className="mb-5 cursor-pointer transition-all duration-200 hover:scale-[1.01] active:scale-[0.99]"
         >
-          <div className="flex items-center gap-2">
+          <div className="grid grid-cols-3 gap-3">
+            {/* 今日专注卡片 */}
             <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center"
-              style={{ background: isFocusing ? '#A8E6CF40' : '#79BEEB40' }}
+              className="p-5 rounded-2xl transition-all duration-200 hover:shadow-md"
+              style={{
+                background: 'var(--color-bg-surface-1)',
+                border: '2px solid var(--color-blue)',
+                boxShadow: '4px 4px 0px var(--color-blue-soft)',
+              }}
             >
-              <Sparkles size={18} style={{ color: isFocusing ? '#2D5A4A' : '#2A4A5E' }} />
-            </div>
-            <div>
-              <p className="text-xs" style={{ color: '#9E9899' }}>今日专注</p>
-              <p className="text-lg font-bold" style={{ color: isFocusing ? '#2D5A4A' : '#3A3638' }}>
+              <div className="flex items-center gap-2.5 mb-3">
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center"
+                  style={{ background: isFocusing ? 'var(--color-green-soft)' : 'var(--color-blue-soft)' }}
+                >
+                  <Sparkles size={20} style={{ color: isFocusing ? 'var(--color-green)' : 'var(--color-blue)' }} />
+                </div>
+                <span className="text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                  今日专注
+                </span>
+              </div>
+              <div className="text-2xl font-bold mb-2" style={{ color: 'var(--color-text-primary)', fontFamily: 'Quicksand, sans-serif' }}>
                 {Math.floor(todayMinutes / 60)}h {todayMinutes % 60}m
-              </p>
+              </div>
+              {/* 进度条 */}
+              <div className="w-full h-1.5 rounded-full" style={{ background: 'var(--color-border-light)' }}>
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{
+                    width: `${Math.min(100, goalProgress)}%`,
+                    background: isFocusing
+                      ? 'linear-gradient(90deg, var(--color-green) 0%, var(--color-blue) 100%)'
+                      : 'var(--color-accent-gradient)',
+                  }}
+                />
+              </div>
+              {isFocusing && (
+                <div className="mt-2.5 text-xs font-medium" style={{ color: 'var(--color-green)' }}>
+                  🔥 正在专注中...
+                </div>
+              )}
             </div>
-          </div>
 
-          <div className="w-px h-10" style={{ background: '#E8E6E1' }} />
-
-          <div className="flex items-center gap-2">
+            {/* 目标进度卡片 */}
             <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center"
-              style={{ background: goalProgress >= 100 ? '#A8E6CF40' : '#FFD3B640' }}
+              className="p-5 rounded-2xl transition-all duration-200 hover:shadow-md"
+              style={{
+                background: 'var(--color-bg-surface-1)',
+                border: '2px solid var(--color-lemon)',
+                boxShadow: '4px 4px 0px var(--color-lemon-soft)',
+              }}
             >
-              <TrendingUp size={18} style={{ color: goalProgress >= 100 ? '#2D5A4A' : '#B8860B' }} />
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2.5 mb-3">
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center"
+                      style={{ background: goalProgress >= 100 ? 'var(--color-green-soft)' : 'var(--color-lemon-soft)' }}
+                    >
+                      <TrendingUp size={20} style={{ color: goalProgress >= 100 ? 'var(--color-green)' : 'var(--color-lemon)' }} />
+                    </div>
+                    <span className="text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                      目标进度
+                    </span>
+                  </div>
+                  <div className="text-2xl font-bold mb-1" style={{ color: 'var(--color-text-primary)', fontFamily: 'Quicksand, sans-serif' }}>
+                    {goalProgress}%
+                  </div>
+                  <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                    {goalProgress >= 100 ? '🎉 目标达成' : `还需 ${Math.max(0, dailyGoalMinutes - todayMinutes)} 分钟`}
+                  </div>
+                </div>
+                {/* 小圆环进度指示器 */}
+                <div className="relative w-12 h-12 flex-shrink-0">
+                  <svg className="w-full h-full transform -rotate-90">
+                    <circle
+                      cx="24"
+                      cy="24"
+                      r="20"
+                      strokeWidth="3"
+                      fill="none"
+                      style={{ stroke: 'var(--color-border-light)' }}
+                    />
+                    <circle
+                      cx="24"
+                      cy="24"
+                      r="20"
+                      strokeWidth="3"
+                      fill="none"
+                      strokeDasharray={`${Math.min(100, goalProgress) * 1.26} 126`}
+                      style={{
+                        stroke: goalProgress >= 100
+                          ? 'var(--color-green-gradient)'
+                          : 'var(--color-lemon-gradient)',
+                        strokeLinecap: 'round',
+                      }}
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-xs" style={{ color: 'var(--color-text-primary)' }}>
+                      {goalProgress >= 100 ? '✓' : '💪'}
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div>
-              <p className="text-xs" style={{ color: '#9E9899' }}>目标进度</p>
-              <p className="text-lg font-bold" style={{ color: goalProgress >= 100 ? '#2D5A4A' : '#3A3638' }}>
-                {goalProgress}%
-              </p>
-            </div>
-          </div>
 
-          <div className="w-px h-10" style={{ background: '#E8E6E1' }} />
-
-          <div className="flex items-center gap-2">
+            {/* 任务完成卡片 */}
             <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center"
-              style={{ background: '#D4C4FB40' }}
+              className="p-5 rounded-2xl transition-all duration-200 hover:shadow-md"
+              style={{
+                background: 'var(--color-bg-surface-1)',
+                border: '2px solid var(--color-purple)',
+                boxShadow: '4px 4px 0px var(--color-purple-soft)',
+              }}
             >
-              <Calendar size={18} style={{ color: '#4A3A6A' }} />
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2.5 mb-3">
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center"
+                      style={{ background: 'var(--color-purple-soft)' }}
+                    >
+                      <Calendar size={20} style={{ color: 'var(--color-purple)' }} />
+                    </div>
+                    <span className="text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                      任务完成
+                    </span>
+                  </div>
+                  <div className="text-2xl font-bold mb-1" style={{ color: 'var(--color-text-primary)', fontFamily: 'Quicksand, sans-serif' }}>
+                    {completedTasks} / {tasks.length}
+                  </div>
+                  <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                    {pendingTasks > 0 ? `${pendingTasks} 个待完成` : '✨ 全部完成'}
+                  </div>
+                </div>
+                {/* 已完成任务头像堆叠预览 */}
+                {completedTasks > 0 && (
+                  <div className="flex -space-x-2 flex-shrink-0">
+                    {[...Array(Math.min(2, completedTasks))].map((_, i) => (
+                      <div
+                        key={i}
+                        className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold"
+                        style={{
+                          background: `linear-gradient(135deg, var(--color-purple) 0%, var(--color-blue) 100%)`,
+                          color: 'white',
+                          border: '2px solid var(--color-bg-surface-1)',
+                        }}
+                      >
+                        ✓
+                      </div>
+                    ))}
+                    {completedTasks > 2 && (
+                      <div
+                        className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold"
+                        style={{
+                          background: 'var(--color-bg-surface-2)',
+                          color: 'var(--color-text-secondary)',
+                          border: '2px solid var(--color-bg-surface-1)',
+                        }}
+                      >
+                        +{completedTasks - 2}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
-            <div>
-              <p className="text-xs" style={{ color: '#9E9899' }}>任务完成</p>
-              <p className="text-lg font-bold" style={{ color: '#3A3638' }}>
-                {completedTasks} / {tasks.length}
-              </p>
-            </div>
-          </div>
-
-          {/* 箭头指示可点击 */}
-          <div className="w-px h-10 hidden sm:block" style={{ background: '#E8E6E1' }} />
-          <div className="ml-auto flex items-center justify-center w-8 h-8 rounded-xl" style={{ background: '#F5F1EA' }}>
-            <ChevronRight size={18} style={{ color: '#9E9899' }} />
           </div>
         </div>
 
-        {/* 鼓励语 + 专注状态提示 */}
-        <div className="mb-6 text-center">
-          <p
-            className="text-sm font-medium px-4 py-2 rounded-xl inline-block"
-            style={{
-              background: isFocusing
-                ? 'linear-gradient(135deg, rgba(168,230,207,0.3) 0%, rgba(121,190,235,0.2) 100%)'
-                : 'rgba(245,241,234,0.5)',
-              color: isFocusing ? '#2D5A4A' : '#5C5658',
-            }}
-          >
-            {isFocusing && '🔥 正在专注 · '}{getEncouragement(goalProgress)}
-          </p>
-        </div>
+        {/* 鼓励语只在专注时显示 */}
+        {isFocusing && (
+          <div className="mb-4 text-center">
+            <p
+              className="text-sm font-medium px-4 py-2 rounded-xl inline-block"
+              style={{
+                background: 'linear-gradient(135deg, var(--color-green-soft) 0%, var(--color-blue-soft) 100%)',
+                color: 'var(--color-success-strong)',
+              }}
+            >
+              🔥 正在专注 · {getEncouragement(goalProgress)}
+            </p>
+          </div>
+        )}
 
         {/* 🌟 NowEngine - 页面核心 */}
-        <div className="mb-6">
-          <NowEngineCard />
-        </div>
-
-        {/* 底部快捷入口 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <button
-            onClick={() => navigate('/timeline')}
-            className="p-5 rounded-2xl text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
-            style={{
-              background: '#FFFFFF',
-              border: '2px solid #D6D3CD',
-              boxShadow: '4px 4px 0px #D6D3CD',
-            }}
-          >
-            <div className="flex items-center gap-3">
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center"
-                style={{ background: '#79BEEB40' }}
-              >
-                <BarChart3 size={18} style={{ color: '#2A4A5E' }} />
-              </div>
-              <div>
-                <p className="font-semibold" style={{ color: '#3A3638' }}>时间线</p>
-                <p className="text-xs" style={{ color: '#9E9899' }}>查看完整活动记录</p>
-              </div>
-            </div>
-          </button>
-
-          <button
-            onClick={() => navigate('/tasks')}
-            className="p-5 rounded-2xl text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
-            style={{
-              background: '#FFFFFF',
-              border: '2px solid #D6D3CD',
-              boxShadow: '4px 4px 0px #D6D3CD',
-            }}
-          >
-            <div className="flex items-center gap-3">
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center"
-                style={{ background: '#D4C4FB40' }}
-              >
-                <BarChart3 size={18} style={{ color: '#4A3A6A' }} />
-              </div>
-              <div>
-                <p className="font-semibold" style={{ color: '#3A3638' }}>任务管理</p>
-                <p className="text-xs" style={{ color: '#9E9899' }}>
-                  {pendingTasks} 个待办任务
-                </p>
-              </div>
-            </div>
-          </button>
-        </div>
+        <NowEngineCard />
       </div>
     </>
   )

@@ -22,38 +22,40 @@ const SETTING_SECTIONS = [
   {
     group: '🎨 外观',
     items: [
-      { key: 'theme', label: '主题', icon: Palette, color: '#A8E6CF' },
+      { key: 'theme', label: '主题', icon: Palette, color: 'var(--color-green)' },
     ],
   },
   {
     group: '🎯 专注与目标',
     items: [
-      { key: 'dailyGoal', label: '每日目标', icon: Target, color: '#D4C4FB' },
-      { key: 'focus', label: '专注设置', icon: Timer, color: '#FFD3B6' },
-      { key: 'activity', label: '活动追踪', icon: Activity, color: '#FF8C82' },
+      { key: 'dailyGoal', label: '每日目标', icon: Target, color: 'var(--color-purple)' },
+      { key: 'focus', label: '专注设置', icon: Timer, color: 'var(--color-lemon)' },
+      { key: 'activity', label: '活动追踪', icon: Activity, color: 'var(--color-coral)' },
     ],
   },
   {
     group: '🛡️ Guardian',
     items: [
-      { key: 'guardian', label: 'Guardian', icon: Shield, color: '#D4C4FB' },
+      { key: 'guardian', label: 'Guardian', icon: Shield, color: 'var(--color-purple)' },
     ],
   },
   {
     group: '⚙️ 高级',
     items: [
-      { key: 'categories', label: '分类管理', icon: Tag, color: '#9E9899' },
-      { key: 'clearData', label: '清除所有数据', icon: Trash2, color: '#FF8C82' },
+      { key: 'categories', label: '分类管理', icon: Tag, color: 'var(--color-text-muted)' },
+      { key: 'clearData', label: '清除所有数据', icon: Trash2, color: 'var(--color-coral)' },
     ],
   },
 ]
 
-// Color palette for category selection
+// Color palette for category selection - 用户可选的分类颜色配置
+/* eslint-disable no-restricted-syntax */
 const CATEGORY_COLORS = [
-  '#79BEEB', '#D4C4FB', '#A8E6CF', '#FFD3B6', '#FF8C82',
-  '#9E9899', '#F7DC6F', '#BB8FCE', '#85C1E9', '#82E0AA',
+  'var(--color-blue)', 'var(--color-purple)', 'var(--color-green)', 'var(--color-lemon)', 'var(--color-coral)',
+  'var(--color-text-muted)', '#F7DC6F', '#BB8FCE', '#85C1E9', '#82E0AA',
   '#F1948A', '#F8C471', '#AED6F1', '#A9DFBF', '#FCF3CF',
 ]
+/* eslint-enable no-restricted-syntax */
 
 export default function Settings() {
   const theme = useAppStore((s) => s.theme)
@@ -101,6 +103,7 @@ export default function Settings() {
       addCategory(newCategoryName.trim(), newCategoryColor)
       setIsAddingCategory(false)
       setNewCategoryName('')
+      success('已添加分类')
     }
   }
 
@@ -123,6 +126,7 @@ export default function Settings() {
       })
       setEditingCategoryId(null)
       setNewCategoryName('')
+      success('已更新分类')
     }
   }
 
@@ -135,23 +139,23 @@ export default function Settings() {
             <div
               className="p-6 rounded-2xl"
               style={{
-                background: '#FFFFFF',
-                border: '2px solid #D6D3CD',
-                boxShadow: '4px 4px 0px #D6D3CD',
+                background: 'var(--color-bg-surface-1)',
+                border: '2px solid var(--color-border-strong)',
+                boxShadow: '4px 4px 0px var(--color-border-strong)',
               }}
             >
               <div className="flex items-center gap-3 mb-6">
                 <div
                   className="w-12 h-12 rounded-xl flex items-center justify-center"
-                  style={{ background: '#FF8C8220' }}
+                  style={{ background: 'var(--color-coral)20' }}
                 >
-                  <Trash2 size={20} style={{ color: '#FF8C82' }} />
+                  <Trash2 size={20} style={{ color: 'var(--color-coral)' }} />
                 </div>
                 <div>
-                  <h3 className="text-base font-semibold" style={{ color: '#3A3638' }}>
+                  <h3 className="text-base font-semibold" style={{ color: 'var(--color-text-primary)' }}>
                     清除所有数据
                   </h3>
-                  <p className="text-sm" style={{ color: '#9E9899' }}>
+                  <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
                     此操作不可撤销
                   </p>
                 </div>
@@ -161,7 +165,7 @@ export default function Settings() {
                 <button
                   onClick={() => setShowClearDataConfirm(true)}
                   className="w-full flex items-center justify-center gap-2 p-4 rounded-xl font-semibold transition-all hover:opacity-90"
-                  style={{ background: '#FF8C82', color: '#FFFFFF' }}
+                  style={{ background: 'var(--color-coral)', color: 'var(--color-bg-surface-1)' }}
                 >
                   <Trash2 size={18} />
                   清除所有数据
@@ -169,9 +173,9 @@ export default function Settings() {
               ) : (
                 <div
                   className="p-4 rounded-xl"
-                  style={{ background: '#FFF5F5', border: '2px solid #FF8C82' }}
+                  style={{ background: '#FFF5F5', border: '2px solid var(--color-coral)' }}
                 >
-                  <p className="text-sm font-medium mb-4 text-center" style={{ color: '#3A3638' }}>
+                  <p className="text-sm font-medium mb-4 text-center" style={{ color: 'var(--color-text-primary)' }}>
                     确定要删除所有数据吗？此操作不可撤销
                   </p>
                   <div className="flex items-center gap-3">
@@ -186,7 +190,7 @@ export default function Settings() {
                         }
                       }}
                       className="flex-1 flex items-center justify-center gap-2 p-3 rounded-xl text-sm font-medium transition-all hover:opacity-90"
-                      style={{ background: '#FF8C82', color: '#FFFFFF' }}
+                      style={{ background: 'var(--color-coral)', color: 'var(--color-bg-surface-1)' }}
                     >
                       <Trash2 size={16} />
                       确认删除
@@ -194,7 +198,7 @@ export default function Settings() {
                     <button
                       onClick={() => setShowClearDataConfirm(false)}
                       className="flex-1 flex items-center justify-center gap-2 p-3 rounded-xl text-sm font-medium transition-all hover:opacity-80"
-                      style={{ background: '#E8E6E1', color: '#5C5658' }}
+                      style={{ background: 'var(--color-border-light)', color: 'var(--color-text-secondary)' }}
                     >
                       取消
                     </button>
@@ -211,16 +215,16 @@ export default function Settings() {
             <div
               className="p-6 rounded-2xl"
               style={{
-                background: '#FFFFFF',
-                border: '2px solid #D6D3CD',
-                boxShadow: '4px 4px 0px #D6D3CD',
+                background: 'var(--color-bg-surface-1)',
+                border: '2px solid var(--color-border-strong)',
+                boxShadow: '4px 4px 0px var(--color-border-strong)',
               }}
             >
-              <h3 className="text-base font-semibold mb-4" style={{ color: '#3A3638' }}>
+              <h3 className="text-base font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
                 Appearance
               </h3>
               <div className="mb-6">
-                <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#9E9899' }}>
+                <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--color-text-muted)' }}>
                   Theme
                 </p>
                 <div className="grid grid-cols-2 gap-3">
@@ -236,12 +240,12 @@ export default function Settings() {
                         onClick={() => setTheme(option.key as 'light' | 'dark')}
                         className="p-4 rounded-xl flex flex-col items-center gap-2 transition-all"
                         style={{
-                          background: isActive ? '#79BEEB20' : '#F5F1EA',
-                          border: isActive ? '2px solid #79BEEB' : '2px solid transparent',
+                          background: isActive ? 'var(--color-blue)20' : 'var(--color-bg-surface-3)',
+                          border: isActive ? '2px solid var(--color-blue)' : '2px solid transparent',
                         }}
                       >
-                        <Icon size={20} style={{ color: isActive ? '#79BEEB' : '#9E9899' }} />
-                        <span className="text-xs font-semibold" style={{ color: isActive ? '#79BEEB' : '#5C5658' }}>
+                        <Icon size={20} style={{ color: isActive ? 'var(--color-blue)' : 'var(--color-text-muted)' }} />
+                        <span className="text-xs font-semibold" style={{ color: isActive ? 'var(--color-blue)' : 'var(--color-text-secondary)' }}>
                           {option.label}
                         </span>
                       </button>
@@ -259,15 +263,15 @@ export default function Settings() {
             <div
               className="p-6 rounded-2xl"
               style={{
-                background: '#FFFFFF',
-                border: '2px solid #D6D3CD',
-                boxShadow: '4px 4px 0px #D6D3CD',
+                background: 'var(--color-bg-surface-1)',
+                border: '2px solid var(--color-border-strong)',
+                boxShadow: '4px 4px 0px var(--color-border-strong)',
               }}
             >
-              <h3 className="text-base font-semibold mb-4" style={{ color: '#3A3638' }}>
+              <h3 className="text-base font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
                 Daily Focus Goal
               </h3>
-              <p className="text-sm mb-6" style={{ color: '#9E9899' }}>
+              <p className="text-sm mb-6" style={{ color: 'var(--color-text-muted)' }}>
                 Set your daily target for focused work time
               </p>
               <div className="flex items-center gap-4">
@@ -279,11 +283,11 @@ export default function Settings() {
                   value={dailyGoalMinutes}
                   onChange={(e) => setDailyGoalMinutes(parseInt(e.target.value))}
                   className="flex-1 h-2 rounded-full appearance-none cursor-pointer"
-                  style={{ background: '#F5F1EA' }}
+                  style={{ background: 'var(--color-bg-surface-3)' }}
                 />
                 <div
                   className="px-4 py-2 rounded-xl text-center min-w-[100px]"
-                  style={{ background: '#A8E6CF30', border: '2px solid #A8E6CF' }}
+                  style={{ background: 'var(--color-green)30', border: '2px solid var(--color-green)' }}
                 >
                   <span className="text-lg font-bold" style={{ color: '#2D5A4A' }}>
                     {Math.floor(dailyGoalMinutes / 60)}h {dailyGoalMinutes % 60}m
@@ -300,12 +304,12 @@ export default function Settings() {
             <div
               className="p-6 rounded-2xl"
               style={{
-                background: '#FFFFFF',
-                border: '2px solid #D6D3CD',
-                boxShadow: '4px 4px 0px #D6D3CD',
+                background: 'var(--color-bg-surface-1)',
+                border: '2px solid var(--color-border-strong)',
+                boxShadow: '4px 4px 0px var(--color-border-strong)',
               }}
             >
-              <h3 className="text-base font-semibold mb-4" style={{ color: '#3A3638' }}>
+              <h3 className="text-base font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
                 Pomodoro Timer Settings
               </h3>
               <div className="space-y-4">
@@ -315,15 +319,15 @@ export default function Settings() {
                   { key: 'longBreakMinutes', label: 'Long Break', options: [10, 15, 20, 25, 30], suffix: 'min' },
                   { key: 'longBreakInterval', label: 'Long Break After', options: [2, 3, 4, 5, 6], suffix: 'sessions' },
                 ].map(({ key, label, options, suffix }) => (
-                  <div key={key} className="flex items-center justify-between py-2" style={{ borderBottom: '1px solid #E8E6E1' }}>
-                    <span className="text-sm" style={{ color: '#5C5658' }}>
+                  <div key={key} className="flex items-center justify-between py-2" style={{ borderBottom: '1px solid var(--color-border-light)' }}>
+                    <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
                       {label}
                     </span>
                     <select
                       value={(focusSettings as any)[key]}
                       onChange={(e) => updateFocusSettings({ [key]: parseInt(e.target.value) })}
                       className="px-3 py-2 rounded-xl text-sm font-semibold"
-                      style={{ background: '#F5F1EA', color: '#3A3638', border: 'none', outline: 'none' }}
+                      style={{ background: 'var(--color-bg-surface-3)', color: 'var(--color-text-primary)', border: 'none', outline: 'none' }}
                     >
                       {options.map((m) => (
                         <option key={m} value={m}>{m} {suffix}</option>
@@ -342,17 +346,17 @@ export default function Settings() {
             <div
               className="p-6 rounded-2xl"
               style={{
-                background: '#FFFFFF',
-                border: '2px solid #D6D3CD',
-                boxShadow: '4px 4px 0px #D6D3CD',
+                background: 'var(--color-bg-surface-1)',
+                border: '2px solid var(--color-border-strong)',
+                boxShadow: '4px 4px 0px var(--color-border-strong)',
               }}
             >
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h3 className="text-base font-semibold" style={{ color: '#3A3638' }}>
+                  <h3 className="text-base font-semibold" style={{ color: 'var(--color-text-primary)' }}>
                     Activity Categories
                   </h3>
-                  <p className="text-sm mt-1" style={{ color: '#9E9899' }}>
+                  <p className="text-sm mt-1" style={{ color: 'var(--color-text-muted)' }}>
                     Manage categories for organizing your activities
                   </p>
                 </div>
@@ -360,7 +364,7 @@ export default function Settings() {
                   <button
                     onClick={startAddCategory}
                     className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all hover:opacity-80"
-                    style={{ background: '#79BEEB', color: '#FFFFFF' }}
+                    style={{ background: 'var(--color-blue)', color: 'var(--color-bg-surface-1)' }}
                   >
                     <Plus size={16} />
                     Add
@@ -372,11 +376,11 @@ export default function Settings() {
               {isAddingCategory && (
                 <div
                   className="mb-4 p-4 rounded-xl"
-                  style={{ background: '#F5F1EA', border: '2px dashed #D6D3CD' }}
+                  style={{ background: 'var(--color-bg-surface-3)', border: '2px dashed var(--color-border-strong)' }}
                 >
                   <div className="space-y-4">
                     <div>
-                      <label className="text-xs font-semibold mb-2 block" style={{ color: '#9E9899' }}>
+                      <label className="text-xs font-semibold mb-2 block" style={{ color: 'var(--color-text-muted)' }}>
                         Category Name
                       </label>
                       <input
@@ -385,12 +389,12 @@ export default function Settings() {
                         onChange={(e) => setNewCategoryName(e.target.value)}
                         placeholder="Enter category name..."
                         className="w-full px-3 py-2 rounded-xl text-sm"
-                        style={{ background: '#FFFFFF', color: '#3A3638', border: '1px solid #E8E6E1', outline: 'none' }}
+                        style={{ background: 'var(--color-bg-surface-1)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-light)', outline: 'none' }}
                         autoFocus
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-semibold mb-2 block" style={{ color: '#9E9899' }}>
+                      <label className="text-xs font-semibold mb-2 block" style={{ color: 'var(--color-text-muted)' }}>
                         Color
                       </label>
                       <div className="flex flex-wrap gap-2">
@@ -401,7 +405,7 @@ export default function Settings() {
                             className="w-8 h-8 rounded-full transition-transform hover:scale-110"
                             style={{
                               background: color,
-                              border: newCategoryColor === color ? '2px solid #3A3638' : '2px solid transparent',
+                              border: newCategoryColor === color ? '2px solid var(--color-text-primary)' : '2px solid transparent',
                             }}
                           />
                         ))}
@@ -411,7 +415,7 @@ export default function Settings() {
                       <button
                         onClick={saveNewCategory}
                         className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all hover:opacity-80"
-                        style={{ background: '#A8E6CF', color: '#2D5A4A' }}
+                        style={{ background: 'var(--color-green)', color: '#2D5A4A' }}
                       >
                         <Check size={16} />
                         Save
@@ -419,7 +423,7 @@ export default function Settings() {
                       <button
                         onClick={cancelAddCategory}
                         className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all hover:opacity-80"
-                        style={{ background: '#E8E6E1', color: '#5C5658' }}
+                        style={{ background: 'var(--color-border-light)', color: 'var(--color-text-secondary)' }}
                       >
                         <X size={16} />
                         Cancel
@@ -437,11 +441,11 @@ export default function Settings() {
                       // Edit Mode
                       <div
                         className="p-4 rounded-xl"
-                        style={{ background: '#F5F1EA', border: '2px solid #79BEEB' }}
+                        style={{ background: 'var(--color-bg-surface-3)', border: '2px solid var(--color-blue)' }}
                       >
                         <div className="space-y-4">
                           <div>
-                            <label className="text-xs font-semibold mb-2 block" style={{ color: '#9E9899' }}>
+                            <label className="text-xs font-semibold mb-2 block" style={{ color: 'var(--color-text-muted)' }}>
                               Name
                             </label>
                             <input
@@ -449,12 +453,12 @@ export default function Settings() {
                               value={newCategoryName}
                               onChange={(e) => setNewCategoryName(e.target.value)}
                               className="w-full px-3 py-2 rounded-xl text-sm"
-                              style={{ background: '#FFFFFF', color: '#3A3638', border: '1px solid #E8E6E1', outline: 'none' }}
+                              style={{ background: 'var(--color-bg-surface-1)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-light)', outline: 'none' }}
                               autoFocus
                             />
                           </div>
                           <div>
-                            <label className="text-xs font-semibold mb-2 block" style={{ color: '#9E9899' }}>
+                            <label className="text-xs font-semibold mb-2 block" style={{ color: 'var(--color-text-muted)' }}>
                               Color
                             </label>
                             <div className="flex flex-wrap gap-2">
@@ -465,7 +469,7 @@ export default function Settings() {
                                   className="w-8 h-8 rounded-full transition-transform hover:scale-110"
                                   style={{
                                     background: color,
-                                    border: newCategoryColor === color ? '2px solid #3A3638' : '2px solid transparent',
+                                    border: newCategoryColor === color ? '2px solid var(--color-text-primary)' : '2px solid transparent',
                                   }}
                                 />
                               ))}
@@ -475,7 +479,7 @@ export default function Settings() {
                             <button
                               onClick={saveEditCategory}
                               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all hover:opacity-80"
-                              style={{ background: '#A8E6CF', color: '#2D5A4A' }}
+                              style={{ background: 'var(--color-green)', color: '#2D5A4A' }}
                             >
                               <Check size={16} />
                               Save
@@ -483,7 +487,7 @@ export default function Settings() {
                             <button
                               onClick={cancelEditCategory}
                               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all hover:opacity-80"
-                              style={{ background: '#E8E6E1', color: '#5C5658' }}
+                              style={{ background: 'var(--color-border-light)', color: 'var(--color-text-secondary)' }}
                             >
                               <X size={16} />
                               Cancel
@@ -495,16 +499,16 @@ export default function Settings() {
                       // Delete Confirmation
                       <div
                         className="p-4 rounded-xl"
-                        style={{ background: '#FFF5F5', border: '2px solid #FF8C82' }}
+                        style={{ background: '#FFF5F5', border: '2px solid var(--color-coral)' }}
                       >
-                        <p className="text-sm font-medium mb-3" style={{ color: '#3A3638' }}>
+                        <p className="text-sm font-medium mb-3" style={{ color: 'var(--color-text-primary)' }}>
                           Delete "{cat.name}"? Existing activities will be migrated to:
                         </p>
                         <select
                           value={migrateToId}
                           onChange={(e) => setMigrateToId(e.target.value)}
                           className="w-full px-3 py-2 rounded-xl text-sm mb-3"
-                          style={{ background: '#FFFFFF', color: '#3A3638', border: '1px solid #E8E6E1', outline: 'none' }}
+                          style={{ background: 'var(--color-bg-surface-1)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-light)', outline: 'none' }}
                         >
                           {categories
                             .filter((c) => c.id !== cat.id)
@@ -517,9 +521,10 @@ export default function Settings() {
                             onClick={() => {
                               deleteCategory(cat.id, migrateToId)
                               setDeleteConfirmId(null)
+                              success('已删除分类')
                             }}
                             className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all hover:opacity-80"
-                            style={{ background: '#FF8C82', color: '#FFFFFF' }}
+                            style={{ background: 'var(--color-coral)', color: 'var(--color-bg-surface-1)' }}
                           >
                             <Trash2 size={16} />
                             Confirm Delete
@@ -527,7 +532,7 @@ export default function Settings() {
                           <button
                             onClick={() => setDeleteConfirmId(null)}
                             className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all hover:opacity-80"
-                            style={{ background: '#E8E6E1', color: '#5C5658' }}
+                            style={{ background: 'var(--color-border-light)', color: 'var(--color-text-secondary)' }}
                           >
                             Cancel
                           </button>
@@ -537,14 +542,14 @@ export default function Settings() {
                       // Display Mode
                       <div
                         className="flex items-center justify-between p-3 rounded-xl"
-                        style={{ background: '#F5F1EA' }}
+                        style={{ background: 'var(--color-bg-surface-3)' }}
                       >
                         <div className="flex items-center gap-3">
                           <div className="w-3 h-3 rounded-full" style={{ background: cat.color }} />
-                          <span className="text-sm font-medium" style={{ color: '#3A3638' }}>
+                          <span className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
                             {cat.name}
                             {cat.isDefault && (
-                              <span className="ml-2 text-xs px-2 py-0.5 rounded-full" style={{ background: '#D4C4FB30', color: '#D4C4FB' }}>
+                              <span className="ml-2 text-xs px-2 py-0.5 rounded-full" style={{ background: 'var(--color-purple)30', color: 'var(--color-purple)' }}>
                                 Default
                               </span>
                             )}
@@ -554,7 +559,7 @@ export default function Settings() {
                           <button
                             onClick={() => toggleCategory(cat.id)}
                             className="w-10 h-5 rounded-full transition-all flex items-center px-0.5"
-                            style={{ background: cat.enabled ? '#A8E6CF' : '#E8E6E1' }}
+                            style={{ background: cat.enabled ? 'var(--color-green)' : 'var(--color-border-light)' }}
                           >
                             <div
                               className="w-4 h-4 rounded-full bg-white transition-all shadow-sm"
@@ -566,14 +571,14 @@ export default function Settings() {
                               <button
                                 onClick={() => startEditCategory(cat)}
                                 className="p-2 rounded-lg transition-all hover:opacity-70"
-                                style={{ background: '#E8E6E1', color: '#5C5658' }}
+                                style={{ background: 'var(--color-border-light)', color: 'var(--color-text-secondary)' }}
                               >
                                 <Pencil size={14} />
                               </button>
                               <button
                                 onClick={() => setDeleteConfirmId(cat.id)}
                                 className="p-2 rounded-lg transition-all hover:opacity-70"
-                                style={{ background: '#FF8C8220', color: '#FF8C82' }}
+                                style={{ background: 'var(--color-coral)20', color: 'var(--color-coral)' }}
                               >
                                 <Trash2 size={14} />
                               </button>
@@ -595,20 +600,20 @@ export default function Settings() {
             <div
               className="p-6 rounded-2xl"
               style={{
-                background: '#FFFFFF',
-                border: '2px solid #D6D3CD',
-                boxShadow: '4px 4px 0px #D6D3CD',
+                background: 'var(--color-bg-surface-1)',
+                border: '2px solid var(--color-border-strong)',
+                boxShadow: '4px 4px 0px var(--color-border-strong)',
               }}
             >
-              <h3 className="text-base font-semibold mb-4" style={{ color: '#3A3638' }}>
+              <h3 className="text-base font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
                 Activity Tracking Settings
               </h3>
               <div className="space-y-4">
-                <div className="p-4 rounded-xl mb-4" style={{ background: '#FAF7F2' }}>
-                  <p className="text-sm font-semibold mb-1" style={{ color: '#3A3638' }}>
+                <div className="p-4 rounded-xl mb-4" style={{ background: 'var(--color-bg-surface-2)' }}>
+                  <p className="text-sm font-semibold mb-1" style={{ color: 'var(--color-text-primary)' }}>
                     Auto-Accept Tag Suggestions
                   </p>
-                  <p className="text-xs mb-3" style={{ color: '#9E9899' }}>
+                  <p className="text-xs mb-3" style={{ color: 'var(--color-text-muted)' }}>
                     Automatically accept AI suggestions above this confidence level
                   </p>
                   <div className="flex items-center gap-4">
@@ -620,24 +625,24 @@ export default function Settings() {
                       value={autoAcceptThreshold}
                       onChange={(e) => setAutoAcceptThreshold(parseInt(e.target.value))}
                       className="flex-1 h-2 rounded-full appearance-none cursor-pointer"
-                      style={{ background: '#E8E6E1' }}
+                      style={{ background: 'var(--color-border-light)' }}
                     />
-                    <span className="text-sm font-bold w-12 text-right" style={{ color: '#A8E6CF' }}>
+                    <span className="text-sm font-bold w-12 text-right" style={{ color: 'var(--color-green)' }}>
                       {autoAcceptThreshold}%
                     </span>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between py-2" style={{ borderBottom: '1px solid #E8E6E1' }}>
+                <div className="flex items-center justify-between py-2" style={{ borderBottom: '1px solid var(--color-border-light)' }}>
                   <div>
-                    <p className="text-sm font-medium" style={{ color: '#3A3638' }}>Minimum Time Entry</p>
-                    <p className="text-xs" style={{ color: '#9E9899' }}>Minimum minutes required for a time entry</p>
+                    <p className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>Minimum Time Entry</p>
+                    <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Minimum minutes required for a time entry</p>
                   </div>
                   <select
                     value={minEntryMinutes}
                     onChange={(e) => setMinEntryMinutes(parseInt(e.target.value))}
                     className="px-3 py-2 rounded-xl text-sm font-semibold"
-                    style={{ background: '#F5F1EA', color: '#3A3638', border: 'none', outline: 'none' }}
+                    style={{ background: 'var(--color-bg-surface-3)', color: 'var(--color-text-primary)', border: 'none', outline: 'none' }}
                   >
                     {[1, 5, 10, 15, 30].map((m) => (
                       <option key={m} value={m}>{m} minutes</option>
@@ -656,33 +661,33 @@ export default function Settings() {
             <div
               className="p-6 rounded-2xl"
               style={{
-                background: '#FFFFFF',
-                border: '2px solid #D6D3CD',
-                boxShadow: '4px 4px 0px #D6D3CD',
+                background: 'var(--color-bg-surface-1)',
+                border: '2px solid var(--color-border-strong)',
+                boxShadow: '4px 4px 0px var(--color-border-strong)',
               }}
             >
-              <h3 className="text-base font-semibold mb-4" style={{ color: '#3A3638' }}>
+              <h3 className="text-base font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
                 Execution Guardian
               </h3>
-              <p className="text-sm mb-6" style={{ color: '#9E9899' }}>
+              <p className="text-sm mb-6" style={{ color: 'var(--color-text-muted)' }}>
                 守护你的专注体验，帮助你建立每日仪式感
               </p>
 
               <div className="space-y-4">
                 {/* Morning Ritual Toggle */}
-                <div className="flex items-center justify-between py-3" style={{ borderBottom: '1px solid #E8E6E1' }}>
+                <div className="flex items-center justify-between py-3" style={{ borderBottom: '1px solid var(--color-border-light)' }}>
                   <div>
-                    <p className="text-sm font-medium" style={{ color: '#3A3638' }}>
+                    <p className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
                       每日晨间仪式
                     </p>
-                    <p className="text-xs mt-0.5" style={{ color: '#9E9899' }}>
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
                       每天第一次打开应用时显示今日计划
                     </p>
                   </div>
                   <button
                     onClick={() => updateGuardianSettings({ morningRitualEnabled: !guardianSettings.morningRitualEnabled })}
                     className="w-12 h-7 rounded-full transition-all relative"
-                    style={{ background: guardianSettings.morningRitualEnabled ? '#A8E6CF' : '#D6D3CD' }}
+                    style={{ background: guardianSettings.morningRitualEnabled ? 'var(--color-green)' : 'var(--color-border-strong)' }}
                   >
                     <div
                       className="w-5 h-5 rounded-full bg-white shadow-md absolute top-1 transition-all"
@@ -692,19 +697,19 @@ export default function Settings() {
                 </div>
 
                 {/* Daily Review Toggle */}
-                <div className="flex items-center justify-between py-3" style={{ borderBottom: '1px solid #E8E6E1' }}>
+                <div className="flex items-center justify-between py-3" style={{ borderBottom: '1px solid var(--color-border-light)' }}>
                   <div>
-                    <p className="text-sm font-medium" style={{ color: '#3A3638' }}>
+                    <p className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
                       每日复盘
                     </p>
-                    <p className="text-xs mt-0.5" style={{ color: '#9E9899' }}>
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
                       每晚 20:00 后自动弹出当日总结
                     </p>
                   </div>
                   <button
                     onClick={() => updateGuardianSettings({ dailyReviewEnabled: !guardianSettings.dailyReviewEnabled })}
                     className="w-12 h-7 rounded-full transition-all relative"
-                    style={{ background: guardianSettings.dailyReviewEnabled ? '#A8E6CF' : '#D6D3CD' }}
+                    style={{ background: guardianSettings.dailyReviewEnabled ? 'var(--color-green)' : 'var(--color-border-strong)' }}
                   >
                     <div
                       className="w-5 h-5 rounded-full bg-white shadow-md absolute top-1 transition-all"
@@ -716,17 +721,17 @@ export default function Settings() {
                 {/* Launch Boost Toggle */}
                 <div className="flex items-center justify-between py-3">
                   <div>
-                    <p className="text-sm font-medium" style={{ color: '#3A3638' }}>
+                    <p className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
                       启动加速
                     </p>
-                    <p className="text-xs mt-0.5" style={{ color: '#9E9899' }}>
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
                       应用启动时加载 Now Engine 推荐
                     </p>
                   </div>
                   <button
                     onClick={() => updateGuardianSettings({ launchBoostEnabled: !guardianSettings.launchBoostEnabled })}
                     className="w-12 h-7 rounded-full transition-all relative"
-                    style={{ background: guardianSettings.launchBoostEnabled ? '#A8E6CF' : '#D6D3CD' }}
+                    style={{ background: guardianSettings.launchBoostEnabled ? 'var(--color-green)' : 'var(--color-border-strong)' }}
                   >
                     <div
                       className="w-5 h-5 rounded-full bg-white shadow-md absolute top-1 transition-all"
@@ -750,19 +755,19 @@ export default function Settings() {
       <div
         className="w-56 flex-shrink-0 p-4 overflow-y-auto"
         style={{
-          background: '#FFFFFF',
-          borderRight: '2px solid #D6D3CD',
+          background: 'var(--color-bg-surface-1)',
+          borderRight: '2px solid var(--color-border-strong)',
         }}
       >
         <div className="mb-6">
-          <h2 className="text-xs font-bold uppercase tracking-wider mb-4" style={{ color: '#9E9899' }}>
+          <h2 className="text-xs font-bold uppercase tracking-wider mb-4" style={{ color: 'var(--color-text-muted)' }}>
             Settings
           </h2>
         </div>
 
         {SETTING_SECTIONS.map((group, groupIndex) => (
           <div key={group.group} className={groupIndex > 0 ? 'mt-6' : ''}>
-            <p className="text-xs font-semibold uppercase tracking-wider mb-2 px-3" style={{ color: '#9E9899' }}>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-2 px-3" style={{ color: 'var(--color-text-muted)' }}>
               {group.group}
             </p>
             <div className="space-y-1">
@@ -776,7 +781,7 @@ export default function Settings() {
                     className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all"
                     style={{
                       background: isActive ? `${item.color}20` : 'transparent',
-                      color: isActive ? item.color : '#5C5658',
+                      color: isActive ? item.color : 'var(--color-text-secondary)',
                     }}
                   >
                     <Icon size={16} />
@@ -793,7 +798,7 @@ export default function Settings() {
       <div className="flex-1 overflow-y-auto p-6">
         <div className="max-w-2xl">
           <div className="mb-6">
-            <h1 className="text-xl font-bold mb-1" style={{ color: '#3A3638', fontFamily: 'Quicksand, sans-serif' }}>
+            <h1 className="text-xl font-bold mb-1" style={{ color: 'var(--color-text-primary)', fontFamily: 'Quicksand, sans-serif' }}>
               {SETTING_SECTIONS.flatMap(g => g.items).find(i => i.key === activeSection)?.label || 'Settings'}
             </h1>
           </div>

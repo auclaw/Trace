@@ -14,10 +14,10 @@ interface UnscheduledTaskListProps {
 }
 
 const PRIORITY_COLORS: Record<number, string> = {
-  1: '#9E9899',
-  2: '#79BEEB',
-  3: '#FFD3B6',
-  4: '#FF8C82',
+  1: 'var(--color-text-muted)',
+  2: 'var(--color-blue)',
+  3: 'var(--color-lemon)',
+  4: 'var(--color-coral)',
   5: '#FF5252',
 }
 
@@ -59,9 +59,9 @@ export default function UnscheduledTaskList({
     <div
       className={`rounded-2xl overflow-hidden transition-all ${className}`}
       style={{
-        background: '#FFFFFF',
-        border: '2px solid #D6D3CD',
-        boxShadow: '4px 4px 0px #D6D3CD',
+        background: 'var(--color-bg-surface-1)',
+        border: '2px solid var(--color-border-strong)',
+        boxShadow: '4px 4px 0px var(--color-border-strong)',
         opacity: isDragging ? 0.8 : 1,
       }}
     >
@@ -72,13 +72,13 @@ export default function UnscheduledTaskList({
       >
         <div className="flex items-center gap-2">
           <span className="text-base">📋</span>
-          <h3 className="font-semibold text-sm" style={{ color: '#3A3638' }}>
+          <h3 className="font-semibold text-sm" style={{ color: 'var(--color-text-primary)' }}>
             待安排任务
           </h3>
           {count > 0 && (
             <span
               className="text-xs px-2.5 py-0.5 rounded-full font-semibold"
-              style={{ background: '#79BEEB20', color: '#0284C7' }}
+              style={{ background: 'var(--color-blue)20', color: '#0284C7' }}
             >
               {count}
             </span>
@@ -87,7 +87,7 @@ export default function UnscheduledTaskList({
         <ChevronRight
           size={18}
           style={{
-            color: '#9E9899',
+            color: 'var(--color-text-muted)',
             transform: isExpanded ? 'rotate(90deg)' : 'none',
             transition: 'transform 0.2s ease',
           }}
@@ -106,16 +106,17 @@ export default function UnscheduledTaskList({
                 {unscheduledTasks.map(task => (
                   <div
                     key={task.id}
+                    data-testid="unscheduled-task"
                     draggable
                     onDragStart={(e) => handleDragStart(e, task)}
                     onDragEnd={handleDragEnd}
                     className="p-3 rounded-xl flex items-start gap-2 transition-all hover:shadow-md cursor-grab active:cursor-grabbing group"
-                    style={{ background: '#FAF8F5', border: '2px dashed #D6D3CD' }}
+                    style={{ background: '#FAF8F5', border: '2px dashed var(--color-border-strong)' }}
                     onClick={() => onTaskClick?.(task)}
                   >
                     {/* 拖拽手柄 - 垂直居中 */}
                     <div className="pt-0.5">
-                      <GripVertical size={14} style={{ color: '#D6D3CD', flexShrink: 0 }} />
+                      <GripVertical size={14} style={{ color: 'var(--color-border-strong)', flexShrink: 0 }} />
                     </div>
 
                     {/* 优先级圆点 - 垂直居中 */}
@@ -132,25 +133,25 @@ export default function UnscheduledTaskList({
 
                     {/* 内容区域 - 更大宽度 */}
                     <div className="flex-1 min-w-0 pr-1">
-                      <p className="text-sm font-medium truncate leading-tight" style={{ color: '#3A3638' }}>
+                      <p data-testid="task-title" className="text-sm font-medium truncate leading-tight" style={{ color: 'var(--color-text-primary)' }}>
                         {task.title}
                       </p>
                       <div className="flex items-center gap-2 mt-1 flex-wrap">
                         {task.dueDate && (
-                          <span className="text-xs flex items-center gap-0.5 whitespace-nowrap" style={{ color: '#9E9899' }}>
+                          <span className="text-xs flex items-center gap-0.5 whitespace-nowrap" style={{ color: 'var(--color-text-muted)' }}>
                             <Calendar size={10} />
                             {formatDateShort(task.dueDate)}
                           </span>
                         )}
                         {task.estimatedMinutes && (
-                          <span className="text-xs flex items-center gap-0.5 whitespace-nowrap" style={{ color: '#9E9899' }}>
+                          <span className="text-xs flex items-center gap-0.5 whitespace-nowrap" style={{ color: 'var(--color-text-muted)' }}>
                             <Clock size={10} />
                             {task.estimatedMinutes}m
                           </span>
                         )}
                       </div>
                       {task.firstStep && (
-                        <p className="text-xs mt-1 truncate" style={{ color: '#79BEEB' }}>
+                        <p className="text-xs mt-1 truncate" style={{ color: 'var(--color-blue)' }}>
                           ① {task.firstStep}
                         </p>
                       )}
@@ -178,7 +179,7 @@ export default function UnscheduledTaskList({
                             onEditTask(task)
                           }}
                           className="p-2 rounded-lg transition-all hover:scale-110"
-                          style={{ background: '#79BEEB20' }}
+                          style={{ background: 'var(--color-blue)20' }}
                           title="编辑任务"
                         >
                           <Pencil size={14} style={{ color: '#0284C7' }} />
@@ -205,10 +206,10 @@ export default function UnscheduledTaskList({
           ) : (
             <div className="text-center py-8" style={{ background: '#FAF8F5', borderRadius: '12px' }}>
               <p className="text-2xl mb-2">✨</p>
-              <p className="text-sm font-medium" style={{ color: '#3A3638' }}>
+              <p className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
                 所有任务都已安排
               </p>
-              <p className="text-xs mt-1" style={{ color: '#9E9899' }}>
+              <p className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>
                 去任务页面添加更多任务吧
               </p>
             </div>

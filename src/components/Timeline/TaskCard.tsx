@@ -10,19 +10,19 @@ export default function TaskCard({ task, priority = 'normal', onClick }: TaskCar
   return (
     <div
       className="p-3 rounded-xl flex items-center gap-3 transition-all hover:bg-gray-50 cursor-pointer"
-      style={{ background: '#FAF8F5', border: '1px solid #E8E6E1' }}
+      style={{ background: '#FAF8F5', border: '1px solid var(--color-border-light)' }}
       onClick={onClick}
     >
       <div
         className="w-1.5 h-1.5 rounded-full"
-        style={{ background: priority === 'high' ? '#F87171' : '#9E9899' }}
+        style={{ background: priority === 'high' ? '#F87171' : 'var(--color-text-muted)' }}
       />
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate" style={{ color: '#3A3638' }}>
+        <p className="text-sm font-medium truncate" style={{ color: 'var(--color-text-primary)' }}>
           {task.title}
         </p>
         {task.dueDate && (
-          <p className="text-xs" style={{ color: '#9E9899' }}>
+          <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
             Due {task.dueDate}
           </p>
         )}

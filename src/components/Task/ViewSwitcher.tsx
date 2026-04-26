@@ -25,18 +25,18 @@ export default function ViewSwitcher({ currentView, onViewChange }: ViewSwitcher
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2 px-3 py-2 rounded-xl transition-all"
         style={{
-          background: '#FFFFFF',
-          border: '2px solid #E8E6E1',
-          color: '#3A3638',
+          background: 'var(--color-bg-surface-1)',
+          border: '2px solid var(--color-border-light)',
+          color: 'var(--color-text-primary)',
         }}
         onBlur={() => setTimeout(() => setIsOpen(false), 150)}
       >
-        <span style={{ color: '#79BEEB' }}>{currentOption.icon}</span>
+        <span style={{ color: 'var(--color-blue)' }}>{currentOption.icon}</span>
         <span className="text-sm font-semibold">{currentOption.label}</span>
         <ChevronDown
           size={16}
           style={{
-            color: '#9E9899',
+            color: 'var(--color-text-muted)',
             transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
             transition: 'transform 0.2s',
           }}
@@ -47,9 +47,9 @@ export default function ViewSwitcher({ currentView, onViewChange }: ViewSwitcher
         <div
           className="absolute top-full left-0 mt-1 py-1 rounded-xl z-50 min-w-[140px]"
           style={{
-            background: '#FFFFFF',
-            border: '2px solid #E8E6E1',
-            boxShadow: '4px 4px 0px #D6D3CD',
+            background: 'var(--color-bg-surface-1)',
+            border: '2px solid var(--color-border-light)',
+            boxShadow: '4px 4px 0px var(--color-border-strong)',
           }}
         >
           {VIEW_OPTIONS.map((option) => (
@@ -61,8 +61,8 @@ export default function ViewSwitcher({ currentView, onViewChange }: ViewSwitcher
               }}
               className="w-full flex items-center gap-2 px-4 py-2.5 text-left transition-all"
               style={{
-                background: currentView === option.key ? '#79BEEB15' : 'transparent',
-                color: currentView === option.key ? '#79BEEB' : '#3A3638',
+                background: currentView === option.key ? 'var(--color-blue)15' : 'transparent',
+                color: currentView === option.key ? 'var(--color-blue)' : 'var(--color-text-primary)',
               }}
             >
               <span className="opacity-60">{option.icon}</span>

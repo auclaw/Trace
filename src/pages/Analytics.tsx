@@ -5,11 +5,11 @@ import EmptyState from '../components/ui/EmptyState'
 import { useToast } from '../components/ui/Toast'
 
 const CATEGORY_COLORS: Record<string, string> = {
-  work: '#79BEEB',
-  meeting: '#D4C4FB',
-  break: '#A8E6CF',
-  learning: '#FFD3B6',
-  other: '#9E9899',
+  work: 'var(--color-blue)',
+  meeting: 'var(--color-purple)',
+  break: 'var(--color-green)',
+  learning: 'var(--color-lemon)',
+  other: 'var(--color-text-muted)',
 }
 
 // Simple SVG Pie Chart component
@@ -32,7 +32,7 @@ function SimplePieChart({ data, colors }: { data: [string, number][]; colors: Re
               key={category}
               r={radius}
               fill="none"
-              stroke={colors[category] || '#9E9899'}
+              stroke={colors[category] || 'var(--color-text-muted)'}
               strokeWidth={radius * 0.8}
               strokeDasharray={`${dash} ${circumference - dash}`}
               strokeDashoffset={-offset}
@@ -62,18 +62,18 @@ function TrendBarChart({ daily }: { daily: Record<string, number> }) {
         const label = `${date.getMonth() + 1}/${date.getDate()}`
         return (
           <div key={day} className="flex-1 flex flex-col items-center gap-1">
-            <div className="text-xs font-semibold" style={{ color: '#5C5658' }}>
+            <div className="text-xs font-semibold" style={{ color: 'var(--color-text-secondary)' }}>
               {Math.floor(minutes / 60)}h
             </div>
             <div
               className="w-full rounded-t-lg transition-all duration-500"
               style={{
                 height: `${Math.max(pct, 4)}%`,
-                background: minutes > 0 ? '#79BEEB' : '#F5F1EA',
+                background: minutes > 0 ? 'var(--color-blue)' : 'var(--color-bg-surface-3)',
                 minHeight: minutes > 0 ? '4px' : '4px',
               }}
             />
-            <div className="text-[10px]" style={{ color: '#9E9899' }}>
+            <div className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>
               {label}
             </div>
           </div>
@@ -201,7 +201,7 @@ export default function Analytics() {
           <button
             onClick={exportJSON}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all hover:opacity-80"
-            style={{ background: '#FFFFFF', border: '2px solid #D6D3CD', color: '#5C5658' }}
+            style={{ background: 'var(--color-bg-surface-1)', border: '2px solid var(--color-border-strong)', color: 'var(--color-text-secondary)' }}
           >
             <Download size={14} />
             JSON
@@ -209,7 +209,7 @@ export default function Analytics() {
           <button
             onClick={exportCSV}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all hover:opacity-80"
-            style={{ background: '#FFFFFF', border: '2px solid #D6D3CD', color: '#5C5658' }}
+            style={{ background: 'var(--color-bg-surface-1)', border: '2px solid var(--color-border-strong)', color: 'var(--color-text-secondary)' }}
           >
             <Download size={14} />
             CSV
@@ -223,10 +223,10 @@ export default function Analytics() {
                 onClick={() => setPeriod(p)}
                 className="px-4 py-2 rounded-xl text-sm font-semibold capitalize transition-all"
                 style={{
-                  background: period === p ? '#79BEEB' : '#FFFFFF',
-                  color: period === p ? 'white' : '#5C5658',
-                  border: period === p ? '2px solid #5AACDF' : '2px solid #D6D3CD',
-                  boxShadow: period === p ? '3px 3px 0px rgba(121, 190, 235, 0.4)' : '3px 3px 0px #D6D3CD',
+                  background: period === p ? 'var(--color-blue)' : 'var(--color-bg-surface-1)',
+                  color: period === p ? 'white' : 'var(--color-text-secondary)',
+                  border: period === p ? '2px solid var(--color-blue-hover)' : '2px solid var(--color-border-strong)',
+                  boxShadow: period === p ? '3px 3px 0px rgba(121, 190, 235, 0.4)' : '3px 3px 0px var(--color-border-strong)',
                 }}
               >
                 {p}
@@ -241,9 +241,9 @@ export default function Analytics() {
         <div
           className="rounded-2xl overflow-hidden"
           style={{
-            background: '#FFFFFF',
-            border: '2px solid #D6D3CD',
-            boxShadow: '4px 4px 0px #D6D3CD',
+            background: 'var(--color-bg-surface-1)',
+            border: '2px solid var(--color-border-strong)',
+            boxShadow: '4px 4px 0px var(--color-border-strong)',
           }}
         >
           <EmptyState
@@ -260,8 +260,8 @@ export default function Analytics() {
         <div
           className="p-5 rounded-2xl"
           style={{
-            background: '#79BEEB',
-            border: '2px solid #5AACDF',
+            background: 'var(--color-blue)',
+            border: '2px solid var(--color-blue-hover)',
             boxShadow: '4px 4px 0px rgba(121, 190, 235, 0.4)',
           }}
         >
@@ -280,8 +280,8 @@ export default function Analytics() {
         <div
           className="p-5 rounded-2xl"
           style={{
-            background: '#A8E6CF',
-            border: '2px solid #7DD4B0',
+            background: 'var(--color-green)',
+            border: '2px solid var(--color-green-hover)',
             boxShadow: '4px 4px 0px rgba(168, 230, 207, 0.4)',
           }}
         >
@@ -300,7 +300,7 @@ export default function Analytics() {
         <div
           className="p-5 rounded-2xl"
           style={{
-            background: '#D4C4FB',
+            background: 'var(--color-purple)',
             border: '2px solid #B8A0E8',
             boxShadow: '4px 4px 0px rgba(212, 196, 251, 0.4)',
           }}
@@ -320,18 +320,18 @@ export default function Analytics() {
         <div
           className="p-5 rounded-2xl"
           style={{
-            background: '#FFFFFF',
-            border: '2px solid #D6D3CD',
-            boxShadow: '4px 4px 0px #D6D3CD',
+            background: 'var(--color-bg-surface-1)',
+            border: '2px solid var(--color-border-strong)',
+            boxShadow: '4px 4px 0px var(--color-border-strong)',
           }}
         >
           <div className="flex items-center gap-2 mb-2">
-            <PieChart size={16} color="#5C5658" />
-            <span className="text-xs font-semibold" style={{ color: '#5C5658' }}>
+            <PieChart size={16} color="var(--color-text-secondary)" />
+            <span className="text-xs font-semibold" style={{ color: 'var(--color-text-secondary)' }}>
               Categories
             </span>
           </div>
-          <div className="text-2xl font-bold" style={{ color: '#3A3638', fontFamily: 'Quicksand, sans-serif' }}>
+          <div className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)', fontFamily: 'Quicksand, sans-serif' }}>
             {Object.keys(periodStats.categories).length}
           </div>
         </div>
@@ -343,17 +343,17 @@ export default function Analytics() {
         <div
           className="p-6 rounded-2xl"
           style={{
-            background: '#FFFFFF',
-            border: '2px solid #D6D3CD',
-            boxShadow: '4px 4px 0px #D6D3CD',
+            background: 'var(--color-bg-surface-1)',
+            border: '2px solid var(--color-border-strong)',
+            boxShadow: '4px 4px 0px var(--color-border-strong)',
           }}
         >
-          <h3 className="text-base font-semibold mb-4" style={{ color: '#3A3638', fontFamily: 'Quicksand, sans-serif' }}>
+          <h3 className="text-base font-semibold mb-4" style={{ color: 'var(--color-text-primary)', fontFamily: 'Quicksand, sans-serif' }}>
             <PieChart size={16} className="inline mr-2" style={{ color: '#9876D8' }} />
             Category Distribution
           </h3>
           {sortedCategories.length === 0 ? (
-            <p className="text-sm text-center py-8" style={{ color: '#9E9899' }}>
+            <p className="text-sm text-center py-8" style={{ color: 'var(--color-text-muted)' }}>
               No data available
             </p>
           ) : (
@@ -364,9 +364,9 @@ export default function Analytics() {
                   const percentage = periodStats.totalMinutes > 0 ? Math.round((minutes / periodStats.totalMinutes) * 100) : 0
                   return (
                     <div key={category} className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full" style={{ background: CATEGORY_COLORS[category] || '#9E9899' }} />
-                      <span className="text-sm" style={{ color: '#3A3638' }}>{category}</span>
-                      <span className="text-xs ml-auto" style={{ color: '#9E9899' }}>{percentage}%</span>
+                      <div className="w-3 h-3 rounded-full" style={{ background: CATEGORY_COLORS[category] || 'var(--color-text-muted)' }} />
+                      <span className="text-sm" style={{ color: 'var(--color-text-primary)' }}>{category}</span>
+                      <span className="text-xs ml-auto" style={{ color: 'var(--color-text-muted)' }}>{percentage}%</span>
                     </div>
                   )
                 })}
@@ -379,13 +379,13 @@ export default function Analytics() {
         <div
           className="p-6 rounded-2xl"
           style={{
-            background: '#FFFFFF',
-            border: '2px solid #D6D3CD',
-            boxShadow: '4px 4px 0px #D6D3CD',
+            background: 'var(--color-bg-surface-1)',
+            border: '2px solid var(--color-border-strong)',
+            boxShadow: '4px 4px 0px var(--color-border-strong)',
           }}
         >
-          <h3 className="text-base font-semibold mb-4" style={{ color: '#3A3638', fontFamily: 'Quicksand, sans-serif' }}>
-            <BarChart3 size={16} className="inline mr-2" style={{ color: '#79BEEB' }} />
+          <h3 className="text-base font-semibold mb-4" style={{ color: 'var(--color-text-primary)', fontFamily: 'Quicksand, sans-serif' }}>
+            <BarChart3 size={16} className="inline mr-2" style={{ color: 'var(--color-blue)' }} />
             {period === 'week' ? '7-Day Trend' : '30-Day Trend'}
           </h3>
           <TrendBarChart daily={periodStats.daily} />
@@ -396,17 +396,17 @@ export default function Analytics() {
       <div
         className="p-6 rounded-2xl mb-6"
         style={{
-          background: '#FFFFFF',
-          border: '2px solid #D6D3CD',
-          boxShadow: '4px 4px 0px #D6D3CD',
+          background: 'var(--color-bg-surface-1)',
+          border: '2px solid var(--color-border-strong)',
+          boxShadow: '4px 4px 0px var(--color-border-strong)',
         }}
       >
-        <h3 className="text-base font-semibold mb-4" style={{ color: '#3A3638', fontFamily: 'Quicksand, sans-serif' }}>
+        <h3 className="text-base font-semibold mb-4" style={{ color: 'var(--color-text-primary)', fontFamily: 'Quicksand, sans-serif' }}>
           Category Breakdown
         </h3>
         <div className="space-y-3">
           {sortedCategories.length === 0 ? (
-            <p className="text-sm text-center py-4" style={{ color: '#9E9899' }}>
+            <p className="text-sm text-center py-4" style={{ color: 'var(--color-text-muted)' }}>
               No activity data for this period
             </p>
           ) : (
@@ -416,21 +416,21 @@ export default function Analytics() {
                 <div key={category} className="flex items-center gap-3">
                   <div
                     className="w-3 h-3 rounded-full flex-shrink-0"
-                    style={{ background: CATEGORY_COLORS[category] || '#9E9899' }}
+                    style={{ background: CATEGORY_COLORS[category] || 'var(--color-text-muted)' }}
                   />
-                  <span className="text-sm font-medium w-20" style={{ color: '#3A3638' }}>
+                  <span className="text-sm font-medium w-20" style={{ color: 'var(--color-text-primary)' }}>
                     {category}
                   </span>
-                  <div className="flex-1 h-3 rounded-full" style={{ background: '#F5F1EA' }}>
+                  <div className="flex-1 h-3 rounded-full" style={{ background: 'var(--color-bg-surface-3)' }}>
                     <div
                       className="h-full rounded-full transition-all duration-500"
                       style={{
                         width: `${percentage}%`,
-                        background: CATEGORY_COLORS[category] || '#9E9899',
+                        background: CATEGORY_COLORS[category] || 'var(--color-text-muted)',
                       }}
                     />
                   </div>
-                  <span className="text-xs font-semibold w-16 text-right" style={{ color: '#5C5658' }}>
+                  <span className="text-xs font-semibold w-16 text-right" style={{ color: 'var(--color-text-secondary)' }}>
                     {percentage}%
                   </span>
                 </div>
@@ -445,13 +445,13 @@ export default function Analytics() {
         className="p-6 rounded-2xl"
         style={{
           background: 'linear-gradient(135deg, rgba(212, 196, 251, 0.2) 0%, rgba(121, 190, 235, 0.2) 100%)',
-          border: '2px solid #D6D3CD',
-          boxShadow: '4px 4px 0px #D6D3CD',
+          border: '2px solid var(--color-border-strong)',
+          boxShadow: '4px 4px 0px var(--color-border-strong)',
         }}
       >
         <div className="flex items-center gap-2 mb-4">
           <Sparkles size={18} style={{ color: '#9876D8' }} />
-          <h3 className="text-base font-semibold" style={{ color: '#3A3638', fontFamily: 'Quicksand, sans-serif' }}>
+          <h3 className="text-base font-semibold" style={{ color: 'var(--color-text-primary)', fontFamily: 'Quicksand, sans-serif' }}>
             AI Insights
           </h3>
         </div>
@@ -459,25 +459,25 @@ export default function Analytics() {
           {sortedCategories.length > 0 && (
             <div
               className="p-4 rounded-xl"
-              style={{ background: '#FFFFFF', border: '1px solid #E8E6E1' }}
+              style={{ background: 'var(--color-bg-surface-1)', border: '1px solid var(--color-border-light)' }}
             >
-              <p className="text-sm font-semibold mb-1" style={{ color: '#3A3638' }}>
+              <p className="text-sm font-semibold mb-1" style={{ color: 'var(--color-text-primary)' }}>
                 🎯 Most Time Spent
               </p>
-              <p className="text-sm" style={{ color: '#5C5658' }}>
-                You spent most of your time on <span className="font-semibold" style={{ color: CATEGORY_COLORS[sortedCategories[0][0]] || '#9E9899' }}>{sortedCategories[0][0]}</span> this {period}.
+              <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                You spent most of your time on <span className="font-semibold" style={{ color: CATEGORY_COLORS[sortedCategories[0][0]] || 'var(--color-text-muted)' }}>{sortedCategories[0][0]}</span> this {period}.
               </p>
             </div>
           )}
           {periodStats.activeDays > 0 && (
             <div
               className="p-4 rounded-xl"
-              style={{ background: '#FFFFFF', border: '1px solid #E8E6E1' }}
+              style={{ background: 'var(--color-bg-surface-1)', border: '1px solid var(--color-border-light)' }}
             >
-              <p className="text-sm font-semibold mb-1" style={{ color: '#3A3638' }}>
+              <p className="text-sm font-semibold mb-1" style={{ color: 'var(--color-text-primary)' }}>
                 📈 Consistency Score
               </p>
-              <p className="text-sm" style={{ color: '#5C5658' }}>
+              <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
                 You were active for {periodStats.activeDays} out of {period === 'week' ? 7 : 30} days. Great consistency!
               </p>
             </div>
@@ -485,12 +485,12 @@ export default function Analytics() {
           {periodStats.avgDaily > 0 && (
             <div
               className="p-4 rounded-xl"
-              style={{ background: '#FFFFFF', border: '1px solid #E8E6E1' }}
+              style={{ background: 'var(--color-bg-surface-1)', border: '1px solid var(--color-border-light)' }}
             >
-              <p className="text-sm font-semibold mb-1" style={{ color: '#3A3638' }}>
+              <p className="text-sm font-semibold mb-1" style={{ color: 'var(--color-text-primary)' }}>
                 ⏱️ Daily Rhythm
               </p>
-              <p className="text-sm" style={{ color: '#5C5658' }}>
+              <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
                 Your average daily focus time is {Math.floor(periodStats.avgDaily / 60)}h {periodStats.avgDaily % 60}m.
               </p>
             </div>

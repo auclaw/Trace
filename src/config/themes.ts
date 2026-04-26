@@ -19,48 +19,48 @@ export const colorThemeConfigs: Record<ColorTheme, ColorThemeConfig> = {
   coral: {
     name: '珊瑚粉',
     nameEn: 'Coral Pink',
-    accent: '#FF8C82',
-    accentHover: '#FB5F51',
+    accent: 'var(--color-coral)',
+    accentHover: 'var(--color-coral-hover)',
     accentSoft: 'rgba(255, 140, 130, 0.12)',
     description: '温暖活泼，适合日常使用',
   },
   blue: {
     name: '马卡龙蓝',
     nameEn: 'Macaron Blue',
-    accent: '#79BEEB',
-    accentHover: '#5AACDF',
+    accent: 'var(--color-blue)',
+    accentHover: 'var(--color-blue-hover)',
     accentSoft: 'rgba(121, 190, 235, 0.12)',
     description: '清爽平静，适合长时间专注',
   },
   mint: {
     name: '马卡龙薄荷',
     nameEn: 'Macaron Mint',
-    accent: '#A8E6CF',
-    accentHover: '#7DD4B0',
+    accent: 'var(--color-green)',
+    accentHover: 'var(--color-green-hover)',
     accentSoft: 'rgba(168, 230, 207, 0.12)',
     description: '清新自然，缓解视觉疲劳',
   },
   lilac: {
     name: '马卡龙紫',
     nameEn: 'Macaron Lilac',
-    accent: '#D4C4FB',
-    accentHover: '#B8A3F5',
+    accent: 'var(--color-purple)',
+    accentHover: 'var(--color-purple-hover)',
     accentSoft: 'rgba(212, 196, 251, 0.12)',
     description: '优雅知性，适合创意工作',
   },
   lemon: {
     name: '马卡龙柠檬',
     nameEn: 'Macaron Lemon',
-    accent: '#FFD3B6',
-    accentHover: '#FFBB8E',
+    accent: 'var(--color-lemon)',
+    accentHover: 'var(--color-lemon-hover)',
     accentSoft: 'rgba(255, 211, 182, 0.12)',
     description: '温暖柔和，充满灵感',
   },
   pink: {
     name: '马卡龙粉',
     nameEn: 'Macaron Pink',
-    accent: '#FFB5D4',
-    accentHover: '#FF8FC0',
+    accent: 'var(--color-pink)',
+    accentHover: 'var(--color-pink-hover)',
     accentSoft: 'rgba(255, 181, 212, 0.12)',
     description: '温柔甜美，治愈系配色',
   },
@@ -99,24 +99,24 @@ export const backgroundSkinConfigs: Record<BackgroundSkin, BackgroundSkinConfig>
 
 // Category colors — using macaron palette
 export const CATEGORY_COLORS: Record<string, string> = {
-  '开发': '#79BEEB',    // Macaron Blue
-  '工作': '#FF8C82',    // Coral Pink
-  '学习': '#D4C4FB',    // Macaron Lilac
-  '会议': '#79BEEB',    // Macaron Blue
-  '休息': '#A8E6CF',    // Macaron Mint
-  '娱乐': '#FFD3B6',    // Macaron Lemon
-  '运动': '#FF8C82',    // Coral Pink
-  '阅读': '#A8E6CF',    // Macaron Mint
-  '其他': '#9E9899',    // Muted gray
+  '开发': 'var(--color-blue)',    // Macaron Blue
+  '工作': 'var(--color-coral)',    // Coral Pink
+  '学习': 'var(--color-purple)',    // Macaron Lilac
+  '会议': 'var(--color-blue)',    // Macaron Blue
+  '休息': 'var(--color-green)',    // Macaron Mint
+  '娱乐': 'var(--color-lemon)',    // Macaron Lemon
+  '运动': 'var(--color-coral)',    // Coral Pink
+  '阅读': 'var(--color-green)',    // Macaron Mint
+  '其他': 'var(--color-text-muted)',    // Muted gray
 }
 
 // Priority colors — warm macaron gradient from low to high
 export const PRIORITY_COLORS: Record<number, string> = {
-  1: '#9E9899',    // Muted
-  2: '#79BEEB',    // Blue
-  3: '#FFD3B6',    // Lemon
-  4: '#FF8C82',    // Coral
-  5: '#FB5F51',    // Coral hover (urgent)
+  1: 'var(--color-text-muted)',    // Muted
+  2: 'var(--color-blue)',    // Blue
+  3: 'var(--color-lemon)',    // Lemon
+  4: 'var(--color-coral)',    // Coral
+  5: 'var(--color-coral-hover)',    // Coral hover (urgent)
 }
 
 // Default feature modules (V1 — 5 tabs)

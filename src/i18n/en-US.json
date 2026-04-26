@@ -8,6 +8,8 @@
   "nav": {
     "dashboard": "Dashboard",
     "timeline": "Timeline",
+    "tasks": "Tasks",
+    "analytics": "Analytics",
     "planner": "Planner",
     "focus": "Focus",
     "habits": "Habits",

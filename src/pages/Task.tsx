@@ -31,7 +31,7 @@ export default function TaskPage() {
   const [newTaskFirstStep, setNewTaskFirstStep] = useState('')
   const [newTaskEmotion, setNewTaskEmotion] = useState<'' | 'easy' | 'neutral' | 'resist'>('')
 
-  const [filter, setFilter] = useState<TaskStatus | 'all' | 'active'>('active')
+  const [filter, setFilter] = useState<TaskStatus | 'all' | 'active'>('all')
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null)
 
@@ -352,9 +352,9 @@ export default function TaskPage() {
             onClick={() => setShowAddForm(true)}
             className="px-4 py-2.5 rounded-xl font-semibold text-sm transition-all hover:scale-[1.02]"
             style={{
-              background: '#79BEEB',
+              background: 'var(--color-blue)',
               color: 'white',
-              boxShadow: '3px 3px 0px #D6D3CD',
+              boxShadow: '3px 3px 0px var(--color-border-strong)',
             }}
           >
             <Plus size={16} className="inline mr-1" />
@@ -371,10 +371,10 @@ export default function TaskPage() {
             onClick={() => setFilter(f.key)}
             className="px-4 py-2 rounded-xl text-sm font-semibold capitalize transition-all"
             style={{
-              background: filter === f.key ? '#79BEEB' : '#FFFFFF',
-              color: filter === f.key ? 'white' : '#5C5658',
-              border: filter === f.key ? '2px solid #5AACDF' : '2px solid #D6D3CD',
-              boxShadow: filter === f.key ? '3px 3px 0px rgba(121, 190, 235, 0.4)' : '3px 3px 0px #D6D3CD',
+              background: filter === f.key ? 'var(--color-blue)' : 'var(--color-bg-surface-1)',
+              color: filter === f.key ? 'white' : 'var(--color-text-secondary)',
+              border: filter === f.key ? '2px solid var(--color-blue-hover)' : '2px solid var(--color-border-strong)',
+              boxShadow: filter === f.key ? '3px 3px 0px rgba(121, 190, 235, 0.4)' : '3px 3px 0px var(--color-border-strong)',
             }}
           >
             {f.label}
@@ -387,20 +387,20 @@ export default function TaskPage() {
         <div
           className="mb-6 p-5 rounded-xl"
           style={{
-            background: '#FFFFFF',
-            border: '2px solid #D6D3CD',
-            boxShadow: '4px 4px 0px #D6D3CD',
+            background: 'var(--color-bg-surface-1)',
+            border: '2px solid var(--color-border-strong)',
+            boxShadow: '4px 4px 0px var(--color-border-strong)',
           }}
         >
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-base font-semibold" style={{ color: '#3A3638' }}>
+            <h3 className="text-base font-semibold" style={{ color: 'var(--color-text-primary)' }}>
               新任务
             </h3>
             <button
               onClick={() => setShowAddForm(false)}
               className="p-1 rounded-lg hover:bg-gray-100"
             >
-              <X size={18} style={{ color: '#9E9899' }} />
+              <X size={18} style={{ color: 'var(--color-text-muted)' }} />
             </button>
           </div>
 
@@ -408,12 +408,12 @@ export default function TaskPage() {
             type="text"
             value={newTaskTitle}
             onChange={(e) => setNewTaskTitle(e.target.value)}
-            placeholder="需要做什么？"
+            placeholder="任务标题"
             className="w-full px-4 py-3 rounded-xl mb-4 text-sm"
             style={{
               background: '#FAF8F5',
-              border: '2px solid #E8E6E1',
-              color: '#3A3638',
+              border: '2px solid var(--color-border-light)',
+              color: 'var(--color-text-primary)',
               outline: 'none',
             }}
             onKeyDown={(e) => e.key === 'Enter' && handleAddTask()}
@@ -423,7 +423,7 @@ export default function TaskPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             {/* Priority */}
             <div>
-              <p className="text-xs font-semibold mb-2" style={{ color: '#5C5658' }}>
+              <p className="text-xs font-semibold mb-2" style={{ color: 'var(--color-text-secondary)' }}>
                 优先级
               </p>
               <div className="flex gap-2">
@@ -434,7 +434,7 @@ export default function TaskPage() {
                     className="flex-1 px-2 py-1.5 rounded-lg text-xs font-semibold transition-all"
                     style={{
                       background: newTaskPriority === p ? PRIORITY_BG_COLORS[p] : '#FAF8F5',
-                      color: newTaskPriority === p ? 'white' : '#5C5658',
+                      color: newTaskPriority === p ? 'white' : 'var(--color-text-secondary)',
                     }}
                   >
                     {PRIORITY_LABELS[p]}
@@ -445,7 +445,7 @@ export default function TaskPage() {
 
             {/* Due Date */}
             <div>
-              <p className="text-xs font-semibold mb-2" style={{ color: '#5C5658' }}>
+              <p className="text-xs font-semibold mb-2" style={{ color: 'var(--color-text-secondary)' }}>
                 截止日期（可选）
               </p>
               <input
@@ -455,8 +455,8 @@ export default function TaskPage() {
                 className="w-full px-4 py-2.5 rounded-xl text-sm"
                 style={{
                   background: '#FAF8F5',
-                  border: '2px solid #E8E6E1',
-                  color: '#3A3638',
+                  border: '2px solid var(--color-border-light)',
+                  color: 'var(--color-text-primary)',
                   outline: 'none',
                 }}
               />
@@ -465,7 +465,7 @@ export default function TaskPage() {
 
           {/* Estimated Duration */}
           <div className="mb-4">
-            <p className="text-xs font-semibold mb-2" style={{ color: '#5C5658' }}>
+            <p className="text-xs font-semibold mb-2" style={{ color: 'var(--color-text-secondary)' }}>
               预计时长
             </p>
             <div className="flex items-center gap-2 mb-2">
@@ -476,14 +476,14 @@ export default function TaskPage() {
                 className="flex-1 px-4 py-2.5 rounded-xl text-sm"
                 style={{
                   background: '#FAF8F5',
-                  border: '2px solid #E8E6E1',
-                  color: '#3A3638',
+                  border: '2px solid var(--color-border-light)',
+                  color: 'var(--color-text-primary)',
                   outline: 'none',
                 }}
                 min={5}
                 max={480}
               />
-              <span className="text-sm" style={{ color: '#5C5658' }}>分钟</span>
+              <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>分钟</span>
             </div>
             <div className="flex gap-2">
               {[25, 50, 90].map((m) => (
@@ -492,9 +492,9 @@ export default function TaskPage() {
                   onClick={() => setNewTaskEstimatedMinutes(m)}
                   className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
                   style={{
-                    background: newTaskEstimatedMinutes === m ? '#79BEEB' : '#FAF8F5',
-                    color: newTaskEstimatedMinutes === m ? 'white' : '#5C5658',
-                    border: newTaskEstimatedMinutes === m ? '2px solid #5AACDF' : '2px solid transparent',
+                    background: newTaskEstimatedMinutes === m ? 'var(--color-blue)' : '#FAF8F5',
+                    color: newTaskEstimatedMinutes === m ? 'white' : 'var(--color-text-secondary)',
+                    border: newTaskEstimatedMinutes === m ? '2px solid var(--color-blue-hover)' : '2px solid transparent',
                   }}
                 >
                   {m}m
@@ -505,19 +505,19 @@ export default function TaskPage() {
 
           {/* First Step */}
           <div className="mb-4">
-            <p className="text-xs font-semibold mb-2" style={{ color: '#5C5658' }}>
+            <p className="text-xs font-semibold mb-2" style={{ color: 'var(--color-text-secondary)' }}>
               第一步是什么？
             </p>
             <input
               type="text"
               value={newTaskFirstStep}
               onChange={(e) => setNewTaskFirstStep(e.target.value)}
-              placeholder="例如：打开项目文件夹..."
+              placeholder="例如: 撰写需求文档 (选填)"
               className="w-full px-4 py-2.5 rounded-xl text-sm"
               style={{
                 background: '#FAF8F5',
-                border: '2px solid #E8E6E1',
-                color: '#3A3638',
+                border: '2px solid var(--color-border-light)',
+                color: 'var(--color-text-primary)',
                 outline: 'none',
               }}
             />
@@ -525,7 +525,7 @@ export default function TaskPage() {
 
           {/* Emotional Tag */}
           <div className="mb-4">
-            <p className="text-xs font-semibold mb-2" style={{ color: '#5C5658' }}>
+            <p className="text-xs font-semibold mb-2" style={{ color: 'var(--color-text-secondary)' }}>
               做这件事的感觉
             </p>
             <div className="flex gap-2">
@@ -533,8 +533,8 @@ export default function TaskPage() {
                 onClick={() => setNewTaskEmotion(newTaskEmotion === 'easy' ? '' : 'easy')}
                 className="flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-all"
                 style={{
-                  background: newTaskEmotion === 'easy' ? '#A8E6CF' : '#FAF8F5',
-                  color: newTaskEmotion === 'easy' ? '#2D5A4A' : '#5C5658',
+                  background: newTaskEmotion === 'easy' ? 'var(--color-green)' : '#FAF8F5',
+                  color: newTaskEmotion === 'easy' ? '#2D5A4A' : 'var(--color-text-secondary)',
                 }}
               >
                 😊 轻松
@@ -543,8 +543,8 @@ export default function TaskPage() {
                 onClick={() => setNewTaskEmotion(newTaskEmotion === 'neutral' ? '' : 'neutral')}
                 className="flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-all"
                 style={{
-                  background: newTaskEmotion === 'neutral' ? '#FFD3B6' : '#FAF8F5',
-                  color: newTaskEmotion === 'neutral' ? '#B8860B' : '#5C5658',
+                  background: newTaskEmotion === 'neutral' ? 'var(--color-lemon)' : '#FAF8F5',
+                  color: newTaskEmotion === 'neutral' ? '#B8860B' : 'var(--color-text-secondary)',
                 }}
               >
                 😐 一般
@@ -553,8 +553,8 @@ export default function TaskPage() {
                 onClick={() => setNewTaskEmotion(newTaskEmotion === 'resist' ? '' : 'resist')}
                 className="flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-all"
                 style={{
-                  background: newTaskEmotion === 'resist' ? '#FF8C82' : '#FAF8F5',
-                  color: newTaskEmotion === 'resist' ? '#8B0000' : '#5C5658',
+                  background: newTaskEmotion === 'resist' ? 'var(--color-coral)' : '#FAF8F5',
+                  color: newTaskEmotion === 'resist' ? '#8B0000' : 'var(--color-text-secondary)',
                 }}
               >
                 😰 困难
@@ -566,7 +566,7 @@ export default function TaskPage() {
             <button
               onClick={() => setShowAddForm(false)}
               className="px-4 py-2 rounded-xl text-sm font-semibold"
-              style={{ background: '#FAF8F5', color: '#5C5658' }}
+              style={{ background: '#FAF8F5', color: 'var(--color-text-secondary)' }}
             >
               取消
             </button>
@@ -574,7 +574,7 @@ export default function TaskPage() {
               onClick={handleAddTask}
               disabled={!newTaskTitle.trim()}
               className="px-4 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ background: '#79BEEB' }}
+              style={{ background: 'var(--color-blue)' }}
             >
               添加任务
             </button>
@@ -605,9 +605,9 @@ export default function TaskPage() {
             <div
               className="rounded-2xl overflow-hidden"
               style={{
-                background: '#FFFFFF',
-                border: '2px solid #D6D3CD',
-                boxShadow: '4px 4px 0px #D6D3CD',
+                background: 'var(--color-bg-surface-1)',
+                border: '2px solid var(--color-border-strong)',
+                boxShadow: '4px 4px 0px var(--color-border-strong)',
               }}
             >
               <EmptyState
@@ -623,7 +623,7 @@ export default function TaskPage() {
                     <button
                       onClick={() => setShowAddForm(true)}
                       className="px-4 py-2 rounded-xl text-sm font-semibold"
-                      style={{ background: '#79BEEB', color: 'white' }}
+                      style={{ background: 'var(--color-blue)', color: 'white' }}
                     >
                       添加任务
                     </button>
@@ -661,9 +661,9 @@ export default function TaskPage() {
             }
             return (
               <div key={status}>
-                <h3 className="text-sm font-semibold mb-3 px-1" style={{ color: '#5C5658' }}>
+                <h3 className="text-sm font-semibold mb-3 px-1" style={{ color: 'var(--color-text-secondary)' }}>
                   {statusLabels[status]}
-                  <span className="ml-2 px-2 py-0.5 rounded-full text-xs" style={{ background: '#F5F1EA' }}>
+                  <span className="ml-2 px-2 py-0.5 rounded-full text-xs" style={{ background: 'var(--color-bg-surface-3)' }}>
                     {statusTasks.length}
                   </span>
                 </h3>
@@ -671,9 +671,9 @@ export default function TaskPage() {
                   {statusTasks.length === 0 ? (
                     <div
                       className="p-6 rounded-2xl text-center"
-                      style={{ background: '#FFFFFF', border: '2px dashed #D6D3CD' }}
+                      style={{ background: 'var(--color-bg-surface-1)', border: '2px dashed var(--color-border-strong)' }}
                     >
-                      <p className="text-xs" style={{ color: '#9E9899' }}>暂无任务</p>
+                      <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>暂无任务</p>
                     </div>
                   ) : (
                     statusTasks.map((task) => (

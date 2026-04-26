@@ -13,10 +13,13 @@ const EMOJI_OPTIONS = [
   '💧', '🎯', '🧃', '🍵', '🥗', '🛌', '🎹', '🐾',
 ]
 
+// 习惯颜色配置选项 - 用户可选择的颜色，不属于 UI 硬编码
+/* eslint-disable no-restricted-syntax */
 const COLOR_OPTIONS = [
   '#6366f1', '#3b82f6', '#10b981', '#f59e0b',
   '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4',
 ]
+/* eslint-enable no-restricted-syntax */
 
 const CATEGORY_OPTIONS: { value: HabitCategory; labelKey: string }[] = [
   { value: 'health', labelKey: 'habits.categories.health' },

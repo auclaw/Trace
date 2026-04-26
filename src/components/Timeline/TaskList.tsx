@@ -22,19 +22,19 @@ export default function TaskList({
     <div
       className="rounded-2xl p-5"
       style={{
-        background: '#FFFFFF',
-        border: '2px solid #D6D3CD',
-        boxShadow: '4px 4px 0px #D6D3CD',
+        background: 'var(--color-bg-surface-1)',
+        border: '2px solid var(--color-border-strong)',
+        boxShadow: '4px 4px 0px var(--color-border-strong)',
       }}
     >
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-bold text-sm" style={{ color: '#3A3638' }}>
+        <h3 className="font-bold text-sm" style={{ color: 'var(--color-text-primary)' }}>
           {title}
         </h3>
         {onAddNew && (
           <span
             className="text-xs font-semibold cursor-pointer transition-all hover:opacity-80"
-            style={{ color: '#79BEEB' }}
+            style={{ color: 'var(--color-blue)' }}
             onClick={onAddNew}
           >
             + ADD NEW
@@ -53,7 +53,7 @@ export default function TaskList({
           ))
         ) : (
           <div className="text-center py-6">
-            <p className="text-xs" style={{ color: '#9E9899' }}>暂无任务 🎉</p>
+            <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>暂无任务 🎉</p>
           </div>
         )}
       </div>

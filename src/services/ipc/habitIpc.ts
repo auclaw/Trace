@@ -65,7 +65,7 @@ function toBackendHabit(habit: Partial<Habit>): BackendDbHabit {
     icon: habit.icon || '✅',
     target_minutes: habit.targetMinutes || 0,
     target_count: habit.targetCount || 1,
-    color: habit.color || '#79BEEB',
+    color: habit.color || 'var(--color-blue)',
     streak: habit.streak || 0,
     category: habit.category || 'other',
     reminders: JSON.stringify(habit.reminders || []),

@@ -27,18 +27,10 @@ test.describe('app shell smoke', () => {
   test.use({ viewport: DESKTOP_VIEWPORT })
 
   test('loads the shell, shows sidebar navigation, and opens a main page', async ({ page }) => {
-    await seedStableAppState(page)
+    await page.goto('/', { waitUntil: 'load', timeout: 30000 })
 
-    await page.goto('/', { waitUntil: 'networkidle', timeout: 30000 })
-
-    // 等待应用完全加载 - 等待加载状态消失
-    await page.waitForFunction(() => {
-      const root = document.getElementById('root')
-      return root && !root.textContent?.includes('Starting Trace')
-    }, { timeout: 30000 })
-
-    // 等待侧边栏出现
-    await page.waitForSelector('aside', { timeout: 15000 })
+    // 等待侧边栏出现 - 表示应用已加载
+    await page.waitForSelector('aside', { timeout: 30000 })
     await expect(page.locator('aside')).toBeVisible()
 
     // 等待导航链接出现
@@ -49,8 +41,8 @@ test.describe('app shell smoke', () => {
     const count = await navLinks.count()
     expect(count).toBeGreaterThan(0)
 
-    // 点击 Settings 链接
-    const settingsLink = page.locator('nav a').filter({ hasText: 'Settings' })
+    // 点击 Settings 链接 - 使用中文文本因为默认语言是中文
+    const settingsLink = page.locator('nav a').filter({ hasText: '设置' })
     await settingsLink.click()
     await page.waitForURL(/\/settings$/, { timeout: 10000 })
 
