@@ -1,12 +1,12 @@
 import { useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useFocusModal } from '../App'
 import { useAppStore } from '../store/useAppStore'
 import type { AppState } from '../store/useAppStore'
 
 /**
  * Global top-right focus status indicator.
  * Shows "专注 MM:SS" when focus timer is active, "休息 MM:SS" during breaks.
- * Clicking navigates to /focus page.
+ * Clicking opens the Focus Modal.
  */
 
 const STATE_CONFIG: Record<string, { label: string; dotColor: string; pulseColor: string }> = {
@@ -37,7 +37,7 @@ export default function FocusStatusIndicator() {
   const focusState = useAppStore((s: AppState) => s.focusState)
   const focusTimeLeft = useAppStore((s: AppState) => s.focusTimeLeft)
   const focusSettings = useAppStore((s: AppState) => s.focusSettings)
-  const navigate = useNavigate()
+  const { openFocusModal } = useFocusModal()
 
   // No-op effect just to keep the component reactive to focusTimeLeft changes
   useEffect(() => {}, [focusTimeLeft])
@@ -58,7 +58,7 @@ export default function FocusStatusIndicator() {
 
   return (
     <button
-      onClick={() => navigate('/focus')}
+      onClick={() => openFocusModal()}
       className="fixed top-3 right-3 z-[60] flex items-center gap-2 px-3 py-1.5 rounded-full cursor-pointer transition-all duration-200 hover:scale-105 group"
       style={{
         background: 'var(--color-bg-surface-1)',

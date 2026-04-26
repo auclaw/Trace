@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { ChevronLeft, ChevronRight, ChevronDown, Trash2, Plus, Play, CheckCircle2, Scissors, Merge, CalendarOff, Edit } from 'lucide-react'
 import dataService from '../services/dataService'
 import type { TimeBlock, Task } from '../services/dataService'
@@ -125,20 +125,7 @@ export default function Timeline() {
   const [addingDate, setAddingDate] = useState<string>(formatDateYMD(new Date()))
 
   // 🎯 统一使用 useAppStore 作为专注状态唯一来源
-  const focusState = useAppStore((s) => s.focusState)
-  const currentFocusTaskId = useAppStore((s) => s.currentFocusTaskId)
   const startFocus = useAppStore((s) => s.startFocus)
-  const pauseFocus = useAppStore((s) => s.pauseFocus)
-  const resetFocus = useAppStore((s) => s.resetFocus)
-
-  // 计算当前是否正在专注
-  const isFocusActive = focusState === 'working'
-
-  // 获取当前专注的任务
-  const currentFocusTask = useMemo(() => {
-    if (!currentFocusTaskId) return null
-    return tasks.find(t => t.id === currentFocusTaskId) || null
-  }, [currentFocusTaskId, tasks])
 
   // 右键菜单
   const [showContextMenu, setShowContextMenu] = useState(false)

@@ -185,4 +185,77 @@ Settings 板块验证通过当且仅当：
 > 2. A/B 测试 — 可以对比开关状态对留存的影响
 > 3. 减少差评 — 讨厌弹窗的用户有关闭选项就不会打一星
 
-*最后更新: 2026-04-22*
+---
+
+## 🔄 V2 功能更新（2026-04-26 新增需求）
+
+### 🚫 Beta 版本隐藏未开发的功能
+
+根据需求："把设置里面目前还没有开发的功能暂时隐掉"
+
+**需要隐藏/移除的功能**（第一个版本不做）:
+
+| 功能模块 | 原位置 | 隐藏原因 |
+|---------|--------|---------|
+| 👤 Account | ACCOUNT & BILLING | 无云同步，暂无账户系统 |
+| 💳 Billing | ACCOUNT & BILLING | 无付费功能 |
+| 👥 Members | ACCOUNT & BILLING | 无团队功能 |
+| 🤖 AI Coach | PRODUCTIVITY | V2 后考虑，Beta 只用确定性逻辑 |
+| 📅 Calendar | INTEGRATIONS & DATA | V2 后做第三方日历集成 |
+| 💾 Data Export | INTEGRATIONS & DATA | 第一个版本暂时不支持导出功能 |
+| 🔑 API | INTEGRATIONS & DATA | 无 API 服务 |
+| ⌨️ Shortcuts | SYSTEM | OS 级快捷键高风险，V2 后考虑 |
+| 📄 About | SYSTEM | 非核心功能 |
+
+---
+
+### ✅ Beta 版本保留的设置功能
+
+| 组名 | 保留的设置项 | 状态 |
+|------|------------|------|
+| **外观 APPEARANCE** | |
+| | 🎨 Theme - 亮色/深色/跟随系统 | ✅ 保留 |
+| **目标与追踪 TRACKING** | |
+| | 🎯 Daily Goal - 每日专注分钟目标 | ✅ 保留 |
+| | ⏱️ Focus Timer - 番茄钟设置 | ✅ 保留 |
+| | 📊 Activity - 活动追踪阈值 | ✅ 保留 |
+| | 🏷️ Categories - 分类管理 | ✅ 保留 |
+| **工作休息 BREAKS** | |
+| | ☕ Breaks - 休息提醒设置 | ✅ 保留 |
+| **守护系统 GUARDIAN** | |
+| | 🛡️ Guardian - 晨间仪式/每日复盘/Launch Boost 三个开关 | ✅ 保留 |
+| **数据与系统 SYSTEM** | |
+| | 🧹 清除所有数据（带确认） | ✅ 保留（替换 Data Export） |
+
+---
+
+### 🎨 设置页面优化建议
+
+1. **简化导航分组**：从 7 组减到 3-4 组
+   - 外观
+   - 专注与目标
+   - Guardian 守护
+   - 高级（分类管理、清除数据）
+
+2. **分类管理优化**：
+   - 支持拖拽调整分类顺序
+   - 默认分类可以改颜色，不可以删除
+   - 新增分类默认启用
+
+3. **开关描述优化**：
+   - 每个 Guardian 开关下面有 1 行小字说明"开启后会在 xxx 时间显示 xxx"
+
+---
+
+## ✅ 验证标准（V2 更新）
+
+Settings 验证通过当且仅当：
+1. [x] 隐藏了所有未开发的功能（Account/Billing/Members/AI Coach/Calendar/Export/API/Shortcuts/About）
+2. [x] 保留的设置功能全部正常工作
+3. [x] 分类管理可以添加/编辑/删除/改颜色
+4. [x] Guardian 三个开关正常工作
+5. [x] 清除所有数据有确认对话框，执行后数据清空
+6. [x] `npm run build` 无编译错误
+7. [x] 页面无控制台报错
+
+*最后更新: 2026-04-26*

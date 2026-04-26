@@ -1,11 +1,10 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { BarChart3, Calendar, Sparkles, TrendingUp } from 'lucide-react'
+import { BarChart3, Calendar, ChevronRight, Sparkles, TrendingUp } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import NowEngineCard from '../components/NowEngineCard'
 import MorningRitual from '../components/MorningRitual'
 import DailyReview from '../components/DailyReview'
-import { useToast } from '../components/ui/Toast'
 
 function todayStr(): string {
   const d = new Date()
@@ -23,7 +22,7 @@ function getGreeting(): string {
 }
 
 // 鼓励语
-function getEncouragement(goalProgress: number, efficiencyScore: number): string {
+function getEncouragement(goalProgress: number): string {
   if (goalProgress >= 100) return '太棒了！今日目标已达成 🎉'
   if (goalProgress >= 70) return '做得很好！继续保持 💪'
   if (goalProgress >= 40) return '状态不错，加油前进 🚀'
@@ -33,7 +32,6 @@ function getEncouragement(goalProgress: number, efficiencyScore: number): string
 
 export default function Dashboard() {
   const navigate = useNavigate()
-  const { toast } = useToast()
 
   const activities = useAppStore((s) => s.activities)
   const loadActivities = useAppStore((s) => s.loadActivities)
@@ -52,13 +50,6 @@ export default function Dashboard() {
   const todayActivities = activities.filter((a) => a.startTime.slice(0, 10) === today)
   const todayMinutes = Math.round(todayActivities.reduce((sum, a) => sum + (a.duration || 0), 0))
   const goalProgress = dailyGoalMinutes > 0 ? Math.min(100, Math.round((todayMinutes / dailyGoalMinutes) * 100)) : 0
-
-  const efficiencyScore = useMemo(() => {
-    if (todayActivities.length === 0) return 0
-    const baseScore = Math.min(70, goalProgress * 0.7)
-    const activityBonus = Math.min(30, todayActivities.length * 3)
-    return Math.min(100, Math.round(baseScore + activityBonus))
-  }, [goalProgress, todayActivities.length])
 
   const isFocusing = focusState === 'working'
   const completedTasks = tasks.filter((t) => t.status === 'completed').length
@@ -137,7 +128,8 @@ export default function Dashboard() {
 
         {/* 📊 核心数据概览 - 简约横向卡片 */}
         <div
-          className="p-5 mb-6 rounded-2xl flex items-center justify-between gap-4 flex-wrap"
+          onClick={() => navigate('/analytics')}
+          className="p-5 mb-6 rounded-2xl flex items-center justify-between gap-4 flex-wrap cursor-pointer transition-all duration-200 hover:scale-[1.01] hover:shadow-md active:scale-[0.99]"
           style={{
             background: '#FFFFFF',
             border: '2px solid #D6D3CD',
@@ -193,16 +185,11 @@ export default function Dashboard() {
             </div>
           </div>
 
+          {/* 箭头指示可点击 */}
           <div className="w-px h-10 hidden sm:block" style={{ background: '#E8E6E1' }} />
-
-          <button
-            onClick={() => navigate('/analytics')}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98] ml-auto"
-            style={{ background: '#F5F1EA', color: '#5C5658' }}
-          >
-            <BarChart3 size={16} />
-            <span className="text-sm font-semibold">完整报告</span>
-          </button>
+          <div className="ml-auto flex items-center justify-center w-8 h-8 rounded-xl" style={{ background: '#F5F1EA' }}>
+            <ChevronRight size={18} style={{ color: '#9E9899' }} />
+          </div>
         </div>
 
         {/* 鼓励语 + 专注状态提示 */}
@@ -216,7 +203,7 @@ export default function Dashboard() {
               color: isFocusing ? '#2D5A4A' : '#5C5658',
             }}
           >
-            {isFocusing && '🔥 正在专注 · '}{getEncouragement(goalProgress, efficiencyScore)}
+            {isFocusing && '🔥 正在专注 · '}{getEncouragement(goalProgress)}
           </p>
         </div>
 

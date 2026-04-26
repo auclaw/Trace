@@ -913,6 +913,14 @@ const DataService = {
 
     save(KEYS.seeded, true);
   },
+
+  clearAllData: async (): Promise<void> => {
+    // Clear all localStorage data (web demo mode)
+    Object.values(KEYS).forEach((key) => localStorage.removeItem(key));
+
+    // Desktop mode: nothing extra needed as data lives in localStorage for now
+    // Native SQLite clearing would be implemented later if needed
+  },
 };
 
 export default DataService;

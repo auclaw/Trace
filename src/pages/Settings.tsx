@@ -1,20 +1,10 @@
 import { useState } from 'react'
 import {
-  User,
-  CreditCard,
-  Users,
   Palette,
   Target,
   Timer,
   Activity,
-  Coffee,
   Tag,
-  Calendar,
-  Zap,
-  BarChart3,
-  Download,
-  Key,
-  ChevronRight,
   Moon,
   Sun,
   Trash2,
@@ -26,50 +16,33 @@ import {
 } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 
-// Setting sections with grouped navigation
+// Setting sections with grouped navigation (Beta version - simplified)
 const SETTING_SECTIONS = [
   {
-    group: 'ACCOUNT & BILLING',
+    group: '🎨 外观',
     items: [
-      { key: 'account', label: 'Account', icon: User, color: '#79BEEB' },
-      { key: 'billing', label: 'Billing', icon: CreditCard, color: '#79BEEB' },
-      { key: 'members', label: 'Members', icon: Users, color: '#79BEEB' },
+      { key: 'theme', label: '主题', icon: Palette, color: '#A8E6CF' },
     ],
   },
   {
-    group: 'APPEARANCE',
+    group: '🎯 专注与目标',
     items: [
-      { key: 'theme', label: 'Theme', icon: Palette, color: '#A8E6CF' },
+      { key: 'dailyGoal', label: '每日目标', icon: Target, color: '#D4C4FB' },
+      { key: 'focus', label: '专注设置', icon: Timer, color: '#FFD3B6' },
+      { key: 'activity', label: '活动追踪', icon: Activity, color: '#FF8C82' },
     ],
   },
   {
-    group: 'TRACKING',
-    items: [
-      { key: 'dailyGoal', label: 'Daily Goal', icon: Target, color: '#D4C4FB' },
-      { key: 'focus', label: 'Focus Timer', icon: Timer, color: '#FFD3B6' },
-      { key: 'activity', label: 'Activity', icon: Activity, color: '#FF8C82' },
-      { key: 'categories', label: 'Categories', icon: Tag, color: '#9E9899' },
-    ],
-  },
-  {
-    group: 'PRODUCTIVITY',
-    items: [
-      { key: 'breaks', label: 'Breaks', icon: Coffee, color: '#79BEEB' },
-      { key: 'coach', label: 'AI Coach', icon: Zap, color: '#A8E6CF' },
-    ],
-  },
-  {
-    group: 'EXECUTION GUARDIAN',
+    group: '🛡️ Guardian',
     items: [
       { key: 'guardian', label: 'Guardian', icon: Shield, color: '#D4C4FB' },
     ],
   },
   {
-    group: 'INTEGRATIONS & DATA',
+    group: '⚙️ 高级',
     items: [
-      { key: 'calendar', label: 'Calendar', icon: Calendar, color: '#D4C4FB' },
-      { key: 'export', label: 'Data Export', icon: Download, color: '#FFD3B6' },
-      { key: 'api', label: 'API', icon: Key, color: '#FF8C82' },
+      { key: 'categories', label: '分类管理', icon: Tag, color: '#9E9899' },
+      { key: 'clearData', label: '清除所有数据', icon: Trash2, color: '#FF8C82' },
     ],
   },
 ]
@@ -96,7 +69,10 @@ export default function Settings() {
   const updateCategory = useAppStore((s) => s.updateCategory)
   const deleteCategory = useAppStore((s) => s.deleteCategory)
 
-  const [activeSection, setActiveSection] = useState<string>('account')
+  const [activeSection, setActiveSection] = useState<string>('theme')
+  const [showClearDataConfirm, setShowClearDataConfirm] = useState(false)
+  const clearAllData = useAppStore((s) => s.clearAllData)
+  const addToast = useAppStore((s) => s.addToast)
   const [autoAcceptThreshold, setAutoAcceptThreshold] = useState(95)
   const [minEntryMinutes, setMinEntryMinutes] = useState(15)
 
@@ -152,7 +128,7 @@ export default function Settings() {
   // Render section content based on active key
   const renderSectionContent = () => {
     switch (activeSection) {
-      case 'account':
+      case 'clearData':
         return (
           <div className="space-y-6">
             <div
@@ -163,68 +139,63 @@ export default function Settings() {
                 boxShadow: '4px 4px 0px #D6D3CD',
               }}
             >
-              <h3 className="text-base font-semibold mb-4" style={{ color: '#3A3638' }}>
-                Profile
-              </h3>
-              <div className="flex items-center gap-4 mb-4">
+              <div className="flex items-center gap-3 mb-6">
                 <div
-                  className="w-16 h-16 rounded-full flex items-center justify-center"
-                  style={{ background: '#79BEEB' }}
+                  className="w-12 h-12 rounded-xl flex items-center justify-center"
+                  style={{ background: '#FF8C8220' }}
                 >
-                  <User size={28} color="white" />
+                  <Trash2 size={20} style={{ color: '#FF8C82' }} />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold" style={{ color: '#3A3638' }}>Alex Trace</p>
-                  <p className="text-xs" style={{ color: '#9E9899' }}>Pro Account</p>
+                  <h3 className="text-base font-semibold" style={{ color: '#3A3638' }}>
+                    清除所有数据
+                  </h3>
+                  <p className="text-sm" style={{ color: '#9E9899' }}>
+                    此操作不可撤销
+                  </p>
                 </div>
               </div>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between py-2" style={{ borderBottom: '1px solid #E8E6E1' }}>
-                  <span className="text-sm" style={{ color: '#5C5658' }}>Email</span>
-                  <span className="text-sm font-medium" style={{ color: '#3A3638' }}>alex@trace.ai</span>
-                </div>
-                <div className="flex items-center justify-between py-2" style={{ borderBottom: '1px solid #E8E6E1' }}>
-                  <span className="text-sm" style={{ color: '#5C5658' }}>Member Since</span>
-                  <span className="text-sm font-medium" style={{ color: '#3A3638' }}>April 2026</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )
 
-      case 'billing':
-        return (
-          <div className="space-y-6">
-            <div
-              className="p-6 rounded-2xl"
-              style={{
-                background: '#FFFFFF',
-                border: '2px solid #D6D3CD',
-                boxShadow: '4px 4px 0px #D6D3CD',
-              }}
-            >
-              <h3 className="text-base font-semibold mb-4" style={{ color: '#3A3638' }}>
-                Subscription
-              </h3>
-              <div className="p-4 rounded-xl mb-4" style={{ background: '#D4C4FB20', border: '2px solid #D4C4FB' }}>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-semibold" style={{ color: '#4A3A6A' }}>Pro Plan</span>
-                  <span className="text-xs px-2 py-1 rounded-full" style={{ background: '#A8E6CF', color: '#2D5A4A' }}>
-                    Active
-                  </span>
+              {!showClearDataConfirm ? (
+                <button
+                  onClick={() => setShowClearDataConfirm(true)}
+                  className="w-full flex items-center justify-center gap-2 p-4 rounded-xl font-semibold transition-all hover:opacity-90"
+                  style={{ background: '#FF8C82', color: '#FFFFFF' }}
+                >
+                  <Trash2 size={18} />
+                  清除所有数据
+                </button>
+              ) : (
+                <div
+                  className="p-4 rounded-xl"
+                  style={{ background: '#FFF5F5', border: '2px solid #FF8C82' }}
+                >
+                  <p className="text-sm font-medium mb-4 text-center" style={{ color: '#3A3638' }}>
+                    确定要删除所有数据吗？此操作不可撤销
+                  </p>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={async () => {
+                        await clearAllData()
+                        setShowClearDataConfirm(false)
+                        addToast('success', '所有数据已清除')
+                      }}
+                      className="flex-1 flex items-center justify-center gap-2 p-3 rounded-xl text-sm font-medium transition-all hover:opacity-90"
+                      style={{ background: '#FF8C82', color: '#FFFFFF' }}
+                    >
+                      <Trash2 size={16} />
+                      确认删除
+                    </button>
+                    <button
+                      onClick={() => setShowClearDataConfirm(false)}
+                      className="flex-1 flex items-center justify-center gap-2 p-3 rounded-xl text-sm font-medium transition-all hover:opacity-80"
+                      style={{ background: '#E8E6E1', color: '#5C5658' }}
+                    >
+                      取消
+                    </button>
+                  </div>
                 </div>
-                <p className="text-xs" style={{ color: '#6A5A8A' }}>$12.99 / month · Renews May 1, 2026</p>
-              </div>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between py-2" style={{ borderBottom: '1px solid #E8E6E1' }}>
-                  <span className="text-sm" style={{ color: '#5C5658' }}>Next Billing</span>
-                  <span className="text-sm font-medium" style={{ color: '#3A3638' }}>May 1, 2026</span>
-                </div>
-                <div className="flex items-center justify-between py-2">
-                  <span className="text-sm" style={{ color: '#5C5658' }}>Payment Method</span>
-                  <span className="text-sm font-medium" style={{ color: '#3A3638' }}>•••• 4242</span>
-                </div>
-              </div>
+              )}
             </div>
           </div>
         )
@@ -673,73 +644,6 @@ export default function Settings() {
           </div>
         )
 
-      case 'export':
-        return (
-          <div className="space-y-6">
-            <div
-              className="p-6 rounded-2xl"
-              style={{
-                background: '#FFFFFF',
-                border: '2px solid #D6D3CD',
-                boxShadow: '4px 4px 0px #D6D3CD',
-              }}
-            >
-              <h3 className="text-base font-semibold mb-4" style={{ color: '#3A3638' }}>
-                Data Export
-              </h3>
-              <p className="text-sm mb-6" style={{ color: '#9E9899' }}>
-                Download all your activity data in various formats
-              </p>
-              <div className="space-y-3">
-                <button
-                  className="w-full flex items-center gap-3 p-4 rounded-xl transition-all hover:scale-[1.01]"
-                  style={{ background: '#79BEEB20' }}
-                >
-                  <Download size={18} style={{ color: '#79BEEB' }} />
-                  <div className="flex-1 text-left">
-                    <span className="text-sm font-semibold" style={{ color: '#3A3638' }}>
-                      Export as JSON
-                    </span>
-                    <p className="text-xs" style={{ color: '#9E9899' }}>
-                      Full structured data export
-                    </p>
-                  </div>
-                  <ChevronRight size={16} style={{ color: '#79BEEB' }} />
-                </button>
-                <button
-                  className="w-full flex items-center gap-3 p-4 rounded-xl transition-all hover:scale-[1.01]"
-                  style={{ background: '#A8E6CF20' }}
-                >
-                  <Download size={18} style={{ color: '#A8E6CF' }} />
-                  <div className="flex-1 text-left">
-                    <span className="text-sm font-semibold" style={{ color: '#3A3638' }}>
-                      Export as CSV
-                    </span>
-                    <p className="text-xs" style={{ color: '#9E9899' }}>
-                      Spreadsheet compatible format
-                    </p>
-                  </div>
-                  <ChevronRight size={16} style={{ color: '#A8E6CF' }} />
-                </button>
-                <button
-                  className="w-full flex items-center gap-3 p-4 rounded-xl transition-all hover:scale-[1.01]"
-                  style={{ background: '#FF8C8220' }}
-                >
-                  <Trash2 size={18} style={{ color: '#FF8C82' }} />
-                  <div className="flex-1 text-left">
-                    <span className="text-sm font-semibold" style={{ color: '#3A3638' }}>
-                      Clear All Data
-                    </span>
-                    <p className="text-xs" style={{ color: '#9E9899' }}>
-                      Permanently delete all your activity history
-                    </p>
-                  </div>
-                  <ChevronRight size={16} style={{ color: '#FF8C82' }} />
-                </button>
-              </div>
-            </div>
-          </div>
-        )
 
       case 'guardian':
         return (
@@ -831,26 +735,7 @@ export default function Settings() {
         )
 
       default:
-        return (
-          <div
-            className="p-12 rounded-2xl text-center"
-            style={{
-              background: '#FFFFFF',
-              border: '2px solid #D6D3CD',
-              boxShadow: '4px 4px 0px #D6D3CD',
-            }}
-          >
-            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center" style={{ background: '#F5F1EA' }}>
-              <BarChart3 size={28} style={{ color: '#9E9899' }} />
-            </div>
-            <h3 className="text-base font-semibold mb-2" style={{ color: '#3A3638' }}>
-              Coming Soon
-            </h3>
-            <p className="text-sm" style={{ color: '#9E9899' }}>
-              This feature is being developed and will be available in the next update.
-            </p>
-          </div>
-        )
+        return null
     }
   }
 

@@ -1,6 +1,6 @@
-import React, { Suspense, useEffect, useState, useRef } from 'react';
+import React, { Suspense, useEffect, useState, useRef, createContext, useContext, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAppStore } from './store/useAppStore';
 import { backgroundSkinConfigs } from './config/themes';
 import { ToastProvider } from './components/ui/Toast';
@@ -10,11 +10,30 @@ import FocusStatusIndicator from './components/FocusStatusIndicator';
 import FocusStartedModal from './components/FocusStartedModal';
 import FocusCompletedModal from './components/FocusCompletedModal';
 import DailyGoalAchievedModal from './components/DailyGoalAchievedModal';
+import { FocusModal } from './components/Focus';
+import type { FocusWindowMode } from './components/Focus';
 import { trackingService } from './services/trackingService';
 
 // Re-export types & configs so existing pages importing from '../App' still work
 export type { Theme, ColorTheme, BackgroundSkin } from './config/themes';
 export { colorThemeConfigs, backgroundSkinConfigs } from './config/themes';
+
+/* ── Global Focus Modal Context ── */
+interface FocusModalContextType {
+  openFocusModal: (mode?: FocusWindowMode) => void;
+  closeFocusModal: () => void;
+  isFocusModalOpen: boolean;
+}
+
+const FocusModalContext = createContext<FocusModalContextType>({
+  openFocusModal: () => {},
+  closeFocusModal: () => {},
+  isFocusModalOpen: false,
+});
+
+export function useFocusModal() {
+  return useContext(FocusModalContext);
+}
 
 /* ─ Lazy-loaded pages ── */
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
@@ -23,7 +42,7 @@ const Task = React.lazy(() => import('./pages/Task'));
 const Analytics = React.lazy(() => import('./pages/Analytics'));
 const Settings = React.lazy(() => import('./pages/Settings'));
 // Legacy pages - hidden from navigation but still accessible
-const FocusMode = React.lazy(() => import('./pages/FocusMode'));
+// Legacy FocusMode page - replaced by global FocusModal
 // Beta: Disabled features - will be removed in future cleanup
 // const Habits = React.lazy(() => import('./pages/Habits'));
 // const VirtualPet = React.lazy(() => import('./pages/VirtualPet'));
@@ -58,7 +77,7 @@ function FocusPopupManager() {
   const focusSettings = useAppStore((s: AppState) => s.focusSettings);
   const activities = useAppStore((s: AppState) => s.activities);
   const dailyGoalMinutes = useAppStore((s: AppState) => s.dailyGoalMinutes);
-  const navigate = useNavigate();
+  const { openFocusModal } = useFocusModal();
 
   const [showStarted, setShowStarted] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
@@ -114,7 +133,7 @@ function FocusPopupManager() {
       <FocusStartedModal
         isOpen={showStarted}
         onClose={() => setShowStarted(false)}
-        onViewSession={() => navigate('/focus')}
+        onViewSession={() => openFocusModal()}
       />
       <FocusCompletedModal
         isOpen={showCompleted}
@@ -143,6 +162,25 @@ function AppContent() {
   const backgroundSkin = useAppStore((s: AppState) => s.backgroundSkin);
   const location = useLocation();
   const { t } = useTranslation();
+
+  // 🎯 Global Focus Modal State
+  const [isFocusModalOpen, setIsFocusModalOpen] = useState(false);
+  const [focusModalMode, setFocusModalMode] = useState<FocusWindowMode>('fullscreen');
+
+  const openFocusModal = useCallback((mode: FocusWindowMode = 'fullscreen') => {
+    setFocusModalMode(mode);
+    setIsFocusModalOpen(true);
+  }, []);
+
+  const closeFocusModal = useCallback(() => {
+    setIsFocusModalOpen(false);
+  }, []);
+
+  const focusModalContextValue = {
+    openFocusModal,
+    closeFocusModal,
+    isFocusModalOpen,
+  };
 
   useEffect(() => {
     initialize();
@@ -183,7 +221,7 @@ function AppContent() {
   }
 
   return (
-    <>
+    <FocusModalContext.Provider value={focusModalContextValue}>
       <div
         className={`flex h-screen ${bgClass} transition-colors duration-300 ${
           backgroundSkin === 'glass' ? 'glass-mode' : ''
@@ -203,7 +241,7 @@ function AppContent() {
                 <Route path="/planner" element={<Navigate to="/task" replace />} />
                 <Route path="/statistics" element={<Navigate to="/analytics" replace />} />
                 {/* Beta: Disabled legacy routes - will be removed in future cleanup */}
-                <Route path="/focus" element={<FocusMode />} />
+                <Route path="/focus" element={<Navigate to="/" replace />} />
                 {/* <Route path="/habits" element={<Habits />} /> */}
                 {/* <Route path="/pet" element={<VirtualPet />} /> */}
                 {/* <Route path="/team" element={<Team />} /> */}
@@ -216,7 +254,13 @@ function AppContent() {
       {/* Beta: Pet feature disabled - <PetWidgetWrapper /> */}
       <FocusStatusIndicator />
       <FocusPopupManager />
-    </>
+      {/* 🎯 Global Focus Modal - accessible from anywhere */}
+      <FocusModal
+        isOpen={isFocusModalOpen}
+        onClose={closeFocusModal}
+        initialMode={focusModalMode}
+      />
+    </FocusModalContext.Provider>
   );
 }
 

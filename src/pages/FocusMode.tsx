@@ -541,7 +541,7 @@ export default function FocusMode() {
             {/* ── Controls ── */}
             <div className="flex items-center gap-3 mb-6">
               {!isActive && (
-                <Button size="lg" onClick={startFocus} className="!h-14 !px-10 !text-base !rounded-full focus-btn-start">
+                <Button size="lg" onClick={() => startFocus()} className="!h-14 !px-10 !text-base !rounded-full focus-btn-start">
                   {t('focus.start')}
                 </Button>
               )}

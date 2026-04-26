@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useMemo } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard,
@@ -11,7 +11,7 @@ import {
 import { useAppStore } from '../store/useAppStore'
 import type { AppState } from '../store/useAppStore'
 import { trackingService } from '../services/trackingService'
-import FocusModal from './FocusModal'
+import { useFocusModal } from '../App'
 
 interface NavItem {
   key: string
@@ -38,7 +38,7 @@ const ALL_NAV_ITEMS: NavItem[] = [
 export default function Sidebar() {
   const activeModules = useAppStore((s: AppState) => s.activeModules)
   const location = useLocation()
-  const [showFocusModal, setShowFocusModal] = useState(false)
+  const { openFocusModal } = useFocusModal()
 
   const visibleItems = useMemo(
     () => ALL_NAV_ITEMS.filter((item) => activeModules.includes(item.key)),
@@ -46,8 +46,7 @@ export default function Sidebar() {
   )
 
   return (
-    <>
-      <aside
+    <aside
         className="relative flex flex-col h-screen bg-white border-r border-[#D6D3CD]"
         style={{ width: '248px' }}
       >
@@ -112,7 +111,7 @@ export default function Sidebar() {
               : 'rgba(212, 196, 251, 0.12)',
             border: `2px solid ${trackingService.isTracking() ? '#B8A0E8' : '#D4C4FB'}`,
           }}
-          onClick={() => setShowFocusModal(true)}
+          onClick={() => openFocusModal()}
         >
           {trackingService.isTracking() ? (
             <>
@@ -161,8 +160,5 @@ export default function Sidebar() {
         </div>
       </div>
     </aside>
-
-    <FocusModal isOpen={showFocusModal} onClose={() => setShowFocusModal(false)} />
-    </>
   )
 }

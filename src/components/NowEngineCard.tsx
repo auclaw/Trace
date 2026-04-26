@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useMemo } from 'react'
 import { Sparkles, Play, RefreshCw, Clock, Plus, Zap, CalendarClock, Pause } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import type { Task } from '../services/dataService'
-import FocusModal from './FocusModal'
+import { useFocusLogic } from './Focus/useFocusLogic'
 import LaunchBoostModal from './LaunchBoostModal'
 
 const generateFirstStep = (taskName: string) => {
@@ -15,7 +15,7 @@ const generateFirstStep = (taskName: string) => {
   return steps[Math.floor(Math.random() * steps.length)]
 }
 
-const getMetaTags = (task: any) => {
+const getMetaTags = (task: Task) => {
   const tags: { icon: React.ReactNode; label: string }[] = []
 
   if (task.estimatedMinutes) {
@@ -45,29 +45,23 @@ const getMetaTags = (task: any) => {
 }
 
 export default function NowEngineCard() {
-  const getRecommendedTask = useAppStore((s) => s.getRecommendedTask)
-  const [focusModalOpen, setFocusModalOpen] = useState(false)
+  const getRecommendedTasks = useAppStore((s) => s.getRecommendedTasks)
   const [launchBoostOpen, setLaunchBoostOpen] = useState(false)
-  const [_, setRefreshKey] = useState(0)
+  const [refreshKey, setRefreshKey] = useState(0)
 
-  // 🎯 全局专注状态同步
-  const focusState = useAppStore((s) => s.focusState)
-  const currentFocusTaskId = useAppStore((s) => s.currentFocusTaskId)
-  const startFocus = useAppStore((s) => s.startFocus)
-  const pauseFocus = useAppStore((s) => s.pauseFocus)
-  const tasks = useAppStore((s) => s.tasks)
+  // 🎯 使用统一的 Focus Logic Hook
+  const { isWorking: isFocusing, currentFocusTask, startFocus, pauseFocus } = useFocusLogic()
 
-  const isFocusing = focusState === 'working'
-  const currentFocusTask = tasks.find(t => t.id === currentFocusTaskId)
-  const recommendedTask = getRecommendedTask()
-  const metaTags = recommendedTask ? getMetaTags(recommendedTask) : []
+  const recommendedTasks = useMemo(() => getRecommendedTasks(3), [getRecommendedTasks, refreshKey])
+  const recommendedTask = recommendedTasks[0] || null
 
   const handleStartFocus = (task: Task, durationMinutes: number) => {
-    // 🎯 直接启动全局专注，自动同步到所有页面
     startFocus(task.id, durationMinutes)
+    setLaunchBoostOpen(false)
   }
 
-  if (!recommendedTask) {
+  // 空状态 - 没有任务
+  if (!recommendedTask && !currentFocusTask) {
     return (
       <div
         className="p-8 transition-all duration-200 hover:translate-x-[-2px] hover:translate-y-[-2px]"
@@ -109,6 +103,9 @@ export default function NowEngineCard() {
     )
   }
 
+  const displayTask = currentFocusTask || recommendedTask
+  const metaTags = displayTask ? getMetaTags(displayTask) : []
+
   return (
     <>
       <div
@@ -143,43 +140,13 @@ export default function NowEngineCard() {
             color: '#3A3638',
           }}
         >
-          {(currentFocusTask || recommendedTask)?.title || '暂无任务'}
+          {displayTask?.title || '暂无任务'}
         </h2>
 
-        {/* Meta Tags Row */}
-        <div className="flex flex-wrap gap-4 mb-5">
-          {metaTags.map((tag, i) => (
-            <div
-              key={i}
-              className="flex items-center gap-1.5 text-xs"
-              style={{ color: '#5C5658' }}
-            >
-              {tag.icon}
-              <span>{tag.label}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* First Step Box */}
-        <div
-          className="p-4 mb-6 rounded-xl"
-          style={{
-            background: '#FAF7F2',
-            border: '1px solid #EDE8E2',
-          }}
-        >
-          <p
-            className="text-sm"
-            style={{ color: '#5C5658' }}
-          >
-            💡 {generateFirstStep(recommendedTask.title)}
-          </p>
-        </div>
-
         {/* Meta Tags - 显示当前专注任务或推荐任务 */}
-        {(currentFocusTask || recommendedTask) && (
+        {displayTask && (
           <div className="flex flex-wrap gap-4 mb-5">
-            {getMetaTags(currentFocusTask || recommendedTask).map((tag, i) => (
+            {metaTags.map((tag, i) => (
               <div
                 key={i}
                 className="flex items-center gap-1.5 text-xs"
@@ -193,7 +160,7 @@ export default function NowEngineCard() {
         )}
 
         {/* First Step Box */}
-        {(currentFocusTask || recommendedTask) && (
+        {displayTask && (
           <div
             className="p-4 mb-6 rounded-xl"
             style={{
@@ -205,7 +172,7 @@ export default function NowEngineCard() {
               className="text-sm"
               style={{ color: '#5C5658' }}
             >
-              💡 {isFocusing ? '保持专注，你做得很棒！' : generateFirstStep((currentFocusTask || recommendedTask).title)}
+              💡 {isFocusing ? '保持专注，你做得很棒！' : generateFirstStep(displayTask.title)}
             </p>
           </div>
         )}
@@ -258,7 +225,6 @@ export default function NowEngineCard() {
         </div>
       </div>
 
-      <FocusModal isOpen={focusModalOpen} onClose={() => setFocusModalOpen(false)} />
       <LaunchBoostModal
         isOpen={launchBoostOpen}
         onClose={() => setLaunchBoostOpen(false)}

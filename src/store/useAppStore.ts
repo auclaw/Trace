@@ -142,7 +142,7 @@ export interface AppState {
   focusTimeLeft: number
   focusSessions: number
   focusSettings: FocusSettings
-  startFocus: () => void
+  startFocus: (taskId?: string, durationMinutes?: number) => void
   pauseFocus: () => void
   resetFocus: () => void
   tickFocus: () => Promise<void>
@@ -216,6 +216,9 @@ export interface AppState {
   setRecommendationWeights: (weights: Partial<RecommendationWeights>) => void
   resetRecommendationWeights: () => void
   getRecommendedTasks: (count?: number) => Task[]
+
+  // Data Management
+  clearAllData: () => Promise<void>
 }
 
 // ─── Store ───
@@ -758,6 +761,28 @@ export const useAppStore = create<AppState>()((set, get) => ({
 
     const scored = getTopRecommendations(active, count, weights)
     return scored.map(s => s.task)
+  },
+
+  // ── Clear All Data ──
+  clearAllData: async () => {
+    // Clear localStorage data
+    Object.values(LS).forEach((key) => localStorage.removeItem(key))
+    localStorage.removeItem('trace-daily-goal')
+
+    // Clear IndexedDB through dataService
+    if (dataService.clearAllData) {
+      await dataService.clearAllData()
+    }
+
+    // Reset categories to default
+    set({ categories: [...DEFAULT_CATEGORIES] })
+    localStorage.setItem(LS.CATEGORIES, JSON.stringify(DEFAULT_CATEGORIES))
+
+    // Reload everything
+    get().loadActivities()
+    await get().loadTasks()
+    await get().loadHabits()
+    await get().loadPet()
   },
 
   // ── Init ──
