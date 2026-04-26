@@ -18,6 +18,11 @@ import {
   Moon,
   Sun,
   Trash2,
+  Shield,
+  Plus,
+  Pencil,
+  X,
+  Check,
 } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 
@@ -54,6 +59,12 @@ const SETTING_SECTIONS = [
     ],
   },
   {
+    group: 'EXECUTION GUARDIAN',
+    items: [
+      { key: 'guardian', label: 'Guardian', icon: Shield, color: '#D4C4FB' },
+    ],
+  },
+  {
     group: 'INTEGRATIONS & DATA',
     items: [
       { key: 'calendar', label: 'Calendar', icon: Calendar, color: '#D4C4FB' },
@@ -63,13 +74,11 @@ const SETTING_SECTIONS = [
   },
 ]
 
-// Default categories data
-const DEFAULT_CATEGORIES = [
-  { name: 'Work', color: '#79BEEB', enabled: true },
-  { name: 'Meeting', color: '#D4C4FB', enabled: true },
-  { name: 'Break', color: '#A8E6CF', enabled: true },
-  { name: 'Learning', color: '#FFD3B6', enabled: true },
-  { name: 'Other', color: '#9E9899', enabled: true },
+// Color palette for category selection
+const CATEGORY_COLORS = [
+  '#79BEEB', '#D4C4FB', '#A8E6CF', '#FFD3B6', '#FF8C82',
+  '#9E9899', '#F7DC6F', '#BB8FCE', '#85C1E9', '#82E0AA',
+  '#F1948A', '#F8C471', '#AED6F1', '#A9DFBF', '#FCF3CF',
 ]
 
 export default function Settings() {
@@ -79,16 +88,65 @@ export default function Settings() {
   const setDailyGoalMinutes = useAppStore((s) => s.setDailyGoalMinutes)
   const focusSettings = useAppStore((s) => s.focusSettings)
   const updateFocusSettings = useAppStore((s) => s.updateFocusSettings)
+  const guardianSettings = useAppStore((s) => s.guardianSettings)
+  const updateGuardianSettings = useAppStore((s) => s.updateGuardianSettings)
+  const categories = useAppStore((s) => s.categories)
+  const toggleCategory = useAppStore((s) => s.toggleCategory)
+  const addCategory = useAppStore((s) => s.addCategory)
+  const updateCategory = useAppStore((s) => s.updateCategory)
+  const deleteCategory = useAppStore((s) => s.deleteCategory)
 
   const [activeSection, setActiveSection] = useState<string>('account')
-  const [categories, setCategories] = useState(DEFAULT_CATEGORIES)
   const [autoAcceptThreshold, setAutoAcceptThreshold] = useState(95)
   const [minEntryMinutes, setMinEntryMinutes] = useState(15)
 
-  const toggleCategory = (index: number) => {
-    const newCategories = [...categories]
-    newCategories[index].enabled = !newCategories[index].enabled
-    setCategories(newCategories)
+  // Category edit states
+  const [isAddingCategory, setIsAddingCategory] = useState(false)
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null)
+  const [newCategoryName, setNewCategoryName] = useState('')
+  const [newCategoryColor, setNewCategoryColor] = useState(CATEGORY_COLORS[0])
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+  const [migrateToId, setMigrateToId] = useState('other')
+
+  const startAddCategory = () => {
+    setIsAddingCategory(true)
+    setNewCategoryName('')
+    setNewCategoryColor(CATEGORY_COLORS[0])
+  }
+
+  const cancelAddCategory = () => {
+    setIsAddingCategory(false)
+    setNewCategoryName('')
+  }
+
+  const saveNewCategory = () => {
+    if (newCategoryName.trim()) {
+      addCategory(newCategoryName.trim(), newCategoryColor)
+      setIsAddingCategory(false)
+      setNewCategoryName('')
+    }
+  }
+
+  const startEditCategory = (category: any) => {
+    setEditingCategoryId(category.id)
+    setNewCategoryName(category.name)
+    setNewCategoryColor(category.color)
+  }
+
+  const cancelEditCategory = () => {
+    setEditingCategoryId(null)
+    setNewCategoryName('')
+  }
+
+  const saveEditCategory = () => {
+    if (editingCategoryId && newCategoryName.trim()) {
+      updateCategory(editingCategoryId, {
+        name: newCategoryName.trim(),
+        color: newCategoryColor,
+      })
+      setEditingCategoryId(null)
+      setNewCategoryName('')
+    }
   }
 
   // Render section content based on active key
@@ -313,33 +371,241 @@ export default function Settings() {
                 boxShadow: '4px 4px 0px #D6D3CD',
               }}
             >
-              <h3 className="text-base font-semibold mb-4" style={{ color: '#3A3638' }}>
-                Activity Categories
-              </h3>
-              <p className="text-sm mb-4" style={{ color: '#9E9899' }}>
-                Enable or disable categories for activity tracking
-              </p>
-              <div className="space-y-3">
-                {categories.map((cat, index) => (
-                  <div
-                    key={cat.name}
-                    className="flex items-center justify-between p-3 rounded-xl"
-                    style={{ background: '#F5F1EA' }}
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-base font-semibold" style={{ color: '#3A3638' }}>
+                    Activity Categories
+                  </h3>
+                  <p className="text-sm mt-1" style={{ color: '#9E9899' }}>
+                    Manage categories for organizing your activities
+                  </p>
+                </div>
+                {!isAddingCategory && (
+                  <button
+                    onClick={startAddCategory}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all hover:opacity-80"
+                    style={{ background: '#79BEEB', color: '#FFFFFF' }}
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="w-3 h-3 rounded-full" style={{ background: cat.color }} />
-                      <span className="text-sm font-medium" style={{ color: '#3A3638' }}>{cat.name}</span>
-                    </div>
-                    <button
-                      onClick={() => toggleCategory(index)}
-                      className="w-10 h-5 rounded-full transition-all flex items-center px-0.5"
-                      style={{ background: cat.enabled ? '#A8E6CF' : '#E8E6E1' }}
-                    >
-                      <div
-                        className="w-4 h-4 rounded-full bg-white transition-all shadow-sm"
-                        style={{ transform: cat.enabled ? 'translateX(20px)' : 'translateX(0)' }}
+                    <Plus size={16} />
+                    Add
+                  </button>
+                )}
+              </div>
+
+              {/* Add Category Form */}
+              {isAddingCategory && (
+                <div
+                  className="mb-4 p-4 rounded-xl"
+                  style={{ background: '#F5F1EA', border: '2px dashed #D6D3CD' }}
+                >
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-xs font-semibold mb-2 block" style={{ color: '#9E9899' }}>
+                        Category Name
+                      </label>
+                      <input
+                        type="text"
+                        value={newCategoryName}
+                        onChange={(e) => setNewCategoryName(e.target.value)}
+                        placeholder="Enter category name..."
+                        className="w-full px-3 py-2 rounded-xl text-sm"
+                        style={{ background: '#FFFFFF', color: '#3A3638', border: '1px solid #E8E6E1', outline: 'none' }}
+                        autoFocus
                       />
-                    </button>
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold mb-2 block" style={{ color: '#9E9899' }}>
+                        Color
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {CATEGORY_COLORS.map((color) => (
+                          <button
+                            key={color}
+                            onClick={() => setNewCategoryColor(color)}
+                            className="w-8 h-8 rounded-full transition-transform hover:scale-110"
+                            style={{
+                              background: color,
+                              border: newCategoryColor === color ? '2px solid #3A3638' : '2px solid transparent',
+                            }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={saveNewCategory}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all hover:opacity-80"
+                        style={{ background: '#A8E6CF', color: '#2D5A4A' }}
+                      >
+                        <Check size={16} />
+                        Save
+                      </button>
+                      <button
+                        onClick={cancelAddCategory}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all hover:opacity-80"
+                        style={{ background: '#E8E6E1', color: '#5C5658' }}
+                      >
+                        <X size={16} />
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Category List */}
+              <div className="space-y-2">
+                {categories.map((cat) => (
+                  <div key={cat.id}>
+                    {editingCategoryId === cat.id ? (
+                      // Edit Mode
+                      <div
+                        className="p-4 rounded-xl"
+                        style={{ background: '#F5F1EA', border: '2px solid #79BEEB' }}
+                      >
+                        <div className="space-y-4">
+                          <div>
+                            <label className="text-xs font-semibold mb-2 block" style={{ color: '#9E9899' }}>
+                              Name
+                            </label>
+                            <input
+                              type="text"
+                              value={newCategoryName}
+                              onChange={(e) => setNewCategoryName(e.target.value)}
+                              className="w-full px-3 py-2 rounded-xl text-sm"
+                              style={{ background: '#FFFFFF', color: '#3A3638', border: '1px solid #E8E6E1', outline: 'none' }}
+                              autoFocus
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-semibold mb-2 block" style={{ color: '#9E9899' }}>
+                              Color
+                            </label>
+                            <div className="flex flex-wrap gap-2">
+                              {CATEGORY_COLORS.map((color) => (
+                                <button
+                                  key={color}
+                                  onClick={() => setNewCategoryColor(color)}
+                                  className="w-8 h-8 rounded-full transition-transform hover:scale-110"
+                                  style={{
+                                    background: color,
+                                    border: newCategoryColor === color ? '2px solid #3A3638' : '2px solid transparent',
+                                  }}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={saveEditCategory}
+                              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all hover:opacity-80"
+                              style={{ background: '#A8E6CF', color: '#2D5A4A' }}
+                            >
+                              <Check size={16} />
+                              Save
+                            </button>
+                            <button
+                              onClick={cancelEditCategory}
+                              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all hover:opacity-80"
+                              style={{ background: '#E8E6E1', color: '#5C5658' }}
+                            >
+                              <X size={16} />
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ) : deleteConfirmId === cat.id ? (
+                      // Delete Confirmation
+                      <div
+                        className="p-4 rounded-xl"
+                        style={{ background: '#FFF5F5', border: '2px solid #FF8C82' }}
+                      >
+                        <p className="text-sm font-medium mb-3" style={{ color: '#3A3638' }}>
+                          Delete "{cat.name}"? Existing activities will be migrated to:
+                        </p>
+                        <select
+                          value={migrateToId}
+                          onChange={(e) => setMigrateToId(e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl text-sm mb-3"
+                          style={{ background: '#FFFFFF', color: '#3A3638', border: '1px solid #E8E6E1', outline: 'none' }}
+                        >
+                          {categories
+                            .filter((c) => c.id !== cat.id)
+                            .map((c) => (
+                              <option key={c.id} value={c.id}>{c.name}</option>
+                            ))}
+                        </select>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => {
+                              deleteCategory(cat.id, migrateToId)
+                              setDeleteConfirmId(null)
+                            }}
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all hover:opacity-80"
+                            style={{ background: '#FF8C82', color: '#FFFFFF' }}
+                          >
+                            <Trash2 size={16} />
+                            Confirm Delete
+                          </button>
+                          <button
+                            onClick={() => setDeleteConfirmId(null)}
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all hover:opacity-80"
+                            style={{ background: '#E8E6E1', color: '#5C5658' }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      // Display Mode
+                      <div
+                        className="flex items-center justify-between p-3 rounded-xl"
+                        style={{ background: '#F5F1EA' }}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-3 h-3 rounded-full" style={{ background: cat.color }} />
+                          <span className="text-sm font-medium" style={{ color: '#3A3638' }}>
+                            {cat.name}
+                            {cat.isDefault && (
+                              <span className="ml-2 text-xs px-2 py-0.5 rounded-full" style={{ background: '#D4C4FB30', color: '#D4C4FB' }}>
+                                Default
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => toggleCategory(cat.id)}
+                            className="w-10 h-5 rounded-full transition-all flex items-center px-0.5"
+                            style={{ background: cat.enabled ? '#A8E6CF' : '#E8E6E1' }}
+                          >
+                            <div
+                              className="w-4 h-4 rounded-full bg-white transition-all shadow-sm"
+                              style={{ transform: cat.enabled ? 'translateX(20px)' : 'translateX(0)' }}
+                            />
+                          </button>
+                          {!cat.isDefault && (
+                            <>
+                              <button
+                                onClick={() => startEditCategory(cat)}
+                                className="p-2 rounded-lg transition-all hover:opacity-70"
+                                style={{ background: '#E8E6E1', color: '#5C5658' }}
+                              >
+                                <Pencil size={14} />
+                              </button>
+                              <button
+                                onClick={() => setDeleteConfirmId(cat.id)}
+                                className="p-2 rounded-lg transition-all hover:opacity-70"
+                                style={{ background: '#FF8C8220', color: '#FF8C82' }}
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -470,6 +736,95 @@ export default function Settings() {
                   </div>
                   <ChevronRight size={16} style={{ color: '#FF8C82' }} />
                 </button>
+              </div>
+            </div>
+          </div>
+        )
+
+      case 'guardian':
+        return (
+          <div className="space-y-6">
+            <div
+              className="p-6 rounded-2xl"
+              style={{
+                background: '#FFFFFF',
+                border: '2px solid #D6D3CD',
+                boxShadow: '4px 4px 0px #D6D3CD',
+              }}
+            >
+              <h3 className="text-base font-semibold mb-4" style={{ color: '#3A3638' }}>
+                Execution Guardian
+              </h3>
+              <p className="text-sm mb-6" style={{ color: '#9E9899' }}>
+                守护你的专注体验，帮助你建立每日仪式感
+              </p>
+
+              <div className="space-y-4">
+                {/* Morning Ritual Toggle */}
+                <div className="flex items-center justify-between py-3" style={{ borderBottom: '1px solid #E8E6E1' }}>
+                  <div>
+                    <p className="text-sm font-medium" style={{ color: '#3A3638' }}>
+                      每日晨间仪式
+                    </p>
+                    <p className="text-xs mt-0.5" style={{ color: '#9E9899' }}>
+                      每天第一次打开应用时显示今日计划
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => updateGuardianSettings({ morningRitualEnabled: !guardianSettings.morningRitualEnabled })}
+                    className="w-12 h-7 rounded-full transition-all relative"
+                    style={{ background: guardianSettings.morningRitualEnabled ? '#A8E6CF' : '#D6D3CD' }}
+                  >
+                    <div
+                      className="w-5 h-5 rounded-full bg-white shadow-md absolute top-1 transition-all"
+                      style={{ left: guardianSettings.morningRitualEnabled ? 26 : 4 }}
+                    />
+                  </button>
+                </div>
+
+                {/* Daily Review Toggle */}
+                <div className="flex items-center justify-between py-3" style={{ borderBottom: '1px solid #E8E6E1' }}>
+                  <div>
+                    <p className="text-sm font-medium" style={{ color: '#3A3638' }}>
+                      每日复盘
+                    </p>
+                    <p className="text-xs mt-0.5" style={{ color: '#9E9899' }}>
+                      每晚 20:00 后自动弹出当日总结
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => updateGuardianSettings({ dailyReviewEnabled: !guardianSettings.dailyReviewEnabled })}
+                    className="w-12 h-7 rounded-full transition-all relative"
+                    style={{ background: guardianSettings.dailyReviewEnabled ? '#A8E6CF' : '#D6D3CD' }}
+                  >
+                    <div
+                      className="w-5 h-5 rounded-full bg-white shadow-md absolute top-1 transition-all"
+                      style={{ left: guardianSettings.dailyReviewEnabled ? 26 : 4 }}
+                    />
+                  </button>
+                </div>
+
+                {/* Launch Boost Toggle */}
+                <div className="flex items-center justify-between py-3">
+                  <div>
+                    <p className="text-sm font-medium" style={{ color: '#3A3638' }}>
+                      启动加速
+                    </p>
+                    <p className="text-xs mt-0.5" style={{ color: '#9E9899' }}>
+                      应用启动时加载 Now Engine 推荐
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => updateGuardianSettings({ launchBoostEnabled: !guardianSettings.launchBoostEnabled })}
+                    className="w-12 h-7 rounded-full transition-all relative"
+                    style={{ background: guardianSettings.launchBoostEnabled ? '#A8E6CF' : '#D6D3CD' }}
+                  >
+                    <div
+                      className="w-5 h-5 rounded-full bg-white shadow-md absolute top-1 transition-all"
+                      style={{ left: guardianSettings.launchBoostEnabled ? 26 : 4 }}
+                    />
+                  </button>
+                </div>
               </div>
             </div>
           </div>

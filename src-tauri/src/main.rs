@@ -1351,6 +1351,14 @@ async fn update_task(
 
 #[tauri::command]
 async fn delete_task(id: String, db: State<'_, SqlitePool>) -> Result<(), String> {
+    // Delete associated time blocks first (cascade delete)
+    sqlx::query("DELETE FROM time_blocks WHERE task_id = ? AND user_id = 1")
+        .bind(&id)
+        .execute(&*db)
+        .await
+        .map_err(|e: Error| e.to_string())?;
+
+    // Then delete the task itself
     sqlx::query("DELETE FROM tasks WHERE id = ? AND user_id = 1")
         .bind(id)
         .execute(&*db)
@@ -1678,6 +1686,92 @@ async fn delete_time_block(id: String, db: State<'_, SqlitePool>) -> Result<(), 
         .map_err(|e: Error| e.to_string())
 }
 
+// ==================== Execution Guardian Commands ====================
+
+#[tauri::command]
+async fn get_guardian_settings(
+    db: State<'_, SqlitePool>,
+) -> Result<database::DbGuardianSettings, String> {
+    sqlx::query_as::<_, database::DbGuardianSettings>(
+        "SELECT * FROM guardian_settings WHERE user_id = 1 LIMIT 1"
+    )
+    .fetch_one(&*db)
+    .await
+    .map_err(|e: Error| e.to_string())
+}
+
+#[tauri::command]
+async fn update_guardian_settings(
+    settings: database::DbGuardianSettings,
+    db: State<'_, SqlitePool>,
+) -> Result<(), String> {
+    sqlx::query(
+        "UPDATE guardian_settings SET
+            last_morning_ritual_date = ?,
+            last_daily_review_date = ?,
+            tomorrow_top_task_id = ?,
+            daily_review_time = ?,
+            enable_morning_ritual = ?,
+            enable_daily_review = ?,
+            enable_now_engine = ?,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = 1",
+    )
+    .bind(settings.last_morning_ritual_date)
+    .bind(settings.last_daily_review_date)
+    .bind(settings.tomorrow_top_task_id)
+    .bind(settings.daily_review_time)
+    .bind(settings.enable_morning_ritual)
+    .bind(settings.enable_daily_review)
+    .bind(settings.enable_now_engine)
+    .execute(&*db)
+    .await
+    .map(|_| ())
+    .map_err(|e: Error| e.to_string())
+}
+
+#[tauri::command]
+async fn create_daily_review(
+    review: database::DbDailyReview,
+    db: State<'_, SqlitePool>,
+) -> Result<(), String> {
+    sqlx::query(
+        "INSERT INTO daily_reviews (id, user_id, date, mood, win_note, improve_note, focus_minutes, completed_tasks)
+         VALUES (?, 1, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(date) DO UPDATE SET
+             mood = excluded.mood,
+             win_note = excluded.win_note,
+             improve_note = excluded.improve_note,
+             focus_minutes = excluded.focus_minutes,
+             completed_tasks = excluded.completed_tasks",
+    )
+    .bind(review.id)
+    .bind(review.date)
+    .bind(review.mood)
+    .bind(review.win_note)
+    .bind(review.improve_note)
+    .bind(review.focus_minutes)
+    .bind(review.completed_tasks)
+    .execute(&*db)
+    .await
+    .map(|_| ())
+    .map_err(|e: Error| e.to_string())
+}
+
+#[tauri::command]
+async fn get_daily_review(
+    date: String,
+    db: State<'_, SqlitePool>,
+) -> Result<Option<database::DbDailyReview>, String> {
+    sqlx::query_as::<_, database::DbDailyReview>(
+        "SELECT * FROM daily_reviews WHERE date = ? AND user_id = 1 LIMIT 1"
+    )
+    .bind(date)
+    .fetch_optional(&*db)
+    .await
+    .map_err(|e: Error| e.to_string())
+}
+
 // 主函数
 fn main() {
     // 初始化 tokio runtime 用于异步AI调用
@@ -1967,6 +2061,11 @@ fn main() {
             create_time_block,
             update_time_block,
             delete_time_block,
+            // Execution Guardian
+            get_guardian_settings,
+            update_guardian_settings,
+            create_daily_review,
+            get_daily_review,
         ])
         .on_tray_icon_event(|_tray, _event| {
             // 默认已经处理点击弹出菜单

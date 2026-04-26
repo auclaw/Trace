@@ -1,26 +1,52 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { BarChart3, Clock, ListTodo, ChevronRight } from 'lucide-react'
+import { BarChart3, Calendar, Sparkles, TrendingUp } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import NowEngineCard from '../components/NowEngineCard'
-import ActiveTrackingCard from '../components/Dashboard/ActiveTrackingCard'
-import PlanVsActualCard from '../components/Dashboard/PlanVsActualCard'
-import DailyReviewCard from '../components/Dashboard/DailyReviewCard'
+import MorningRitual from '../components/MorningRitual'
+import DailyReview from '../components/DailyReview'
+import { useToast } from '../components/ui/Toast'
 
 function todayStr(): string {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
+// 根据时间返回不同的打招呼语
+function getGreeting(): string {
+  const hour = new Date().getHours()
+  if (hour >= 5 && hour < 12) return '早上好 ☀️'
+  if (hour >= 12 && hour < 14) return '中午好 🌤️'
+  if (hour >= 14 && hour < 18) return '下午好 🌅'
+  if (hour >= 18 && hour < 22) return '晚上好 🌙'
+  return '夜深了 ✨'
+}
+
+// 鼓励语
+function getEncouragement(goalProgress: number, efficiencyScore: number): string {
+  if (goalProgress >= 100) return '太棒了！今日目标已达成 🎉'
+  if (goalProgress >= 70) return '做得很好！继续保持 💪'
+  if (goalProgress >= 40) return '状态不错，加油前进 🚀'
+  if (goalProgress > 0) return '已开始专注，循序渐进 ⭐'
+  return '准备好开始新的一天了吗？'
+}
+
 export default function Dashboard() {
   const navigate = useNavigate()
+  const { toast } = useToast()
 
   const activities = useAppStore((s) => s.activities)
   const loadActivities = useAppStore((s) => s.loadActivities)
   const tasks = useAppStore((s) => s.tasks)
   const loadTasks = useAppStore((s) => s.loadTasks)
   const dailyGoalMinutes = useAppStore((s) => s.dailyGoalMinutes)
+  const guardianSettings = useAppStore((s) => s.guardianSettings)
+  const focusState = useAppStore((s) => s.focusState)
   const [loading, setLoading] = useState(true)
+
+  // Guardian modal states
+  const [showMorningRitual, setShowMorningRitual] = useState(false)
+  const [showDailyReview, setShowDailyReview] = useState(false)
 
   const today = todayStr()
   const todayActivities = activities.filter((a) => a.startTime.slice(0, 10) === today)
@@ -34,11 +60,46 @@ export default function Dashboard() {
     return Math.min(100, Math.round(baseScore + activityBonus))
   }, [goalProgress, todayActivities.length])
 
-  const pendingTasks = tasks.filter((t) => t.status !== 'completed').length
+  const isFocusing = focusState === 'working'
+  const completedTasks = tasks.filter((t) => t.status === 'completed').length
+  const pendingTasks = tasks.filter((t) => t.status !== 'completed' && t.status !== 'archived').length
 
   useEffect(() => {
     Promise.all([loadActivities(), loadTasks()]).finally(() => setLoading(false))
   }, [loadActivities, loadTasks])
+
+  // Auto-trigger Morning Ritual and Daily Review
+  const lastMorningRitualDate = useAppStore((s) => s.lastMorningRitualDate)
+  const lastDailyReviewDate = useAppStore((s) => s.lastDailyReviewDate)
+
+  useEffect(() => {
+    if (loading) return
+
+    const today = todayStr()
+    const currentHour = new Date().getHours()
+
+    // Check Morning Ritual: 5:00 - 18:00, and not done today
+    if (
+      guardianSettings.morningRitualEnabled &&
+      currentHour >= 5 &&
+      currentHour < 18 &&
+      lastMorningRitualDate !== today
+    ) {
+      // Delay 1 second to not overwhelm user on page load
+      const timer = setTimeout(() => setShowMorningRitual(true), 1000)
+      return () => clearTimeout(timer)
+    }
+
+    // Check Daily Review: after 20:00, and not done today
+    if (
+      guardianSettings.dailyReviewEnabled &&
+      currentHour >= 20 &&
+      lastDailyReviewDate !== today
+    ) {
+      const timer = setTimeout(() => setShowDailyReview(true), 1000)
+      return () => clearTimeout(timer)
+    }
+  }, [loading, guardianSettings, lastMorningRitualDate, lastDailyReviewDate])
 
   if (loading) {
     return (
@@ -52,229 +113,169 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen px-8 py-8" style={{ background: 'var(--color-bg-base)' }}>
-      {/* Page Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold mb-1" style={{ color: 'var(--color-text-primary)', fontFamily: 'Quicksand, sans-serif' }}>
-          Dashboard
-        </h1>
-        <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-          {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-        </p>
-      </div>
+    <>
+      {/* Guardian Modals */}
+      <MorningRitual
+        isOpen={showMorningRitual}
+        onComplete={() => setShowMorningRitual(false)}
+      />
+      <DailyReview
+        isOpen={showDailyReview}
+        onComplete={() => setShowDailyReview(false)}
+      />
 
-      {/* Stats Row - 4 Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {/* Focus Time - Blue */}
-        <div
-          className="p-6 rounded-2xl cursor-pointer transition-all duration-200 hover:-translate-y-0.5"
-          style={{
-            background: '#79BEEB',
-            border: '2px solid #5AACDF',
-            boxShadow: '4px 4px 0px rgba(121, 190, 235, 0.4)',
-          }}
-        >
-          <div className="flex items-center gap-2 mb-3">
-            <Clock size={20} style={{ color: '#2A4A5E' }} />
-            <span className="text-sm font-semibold" style={{ color: '#2A4A5E' }}>
-              Focus Time
-            </span>
-          </div>
-          <div className="text-3xl font-bold mb-2" style={{ color: '#2A4A5E', fontFamily: 'Quicksand, sans-serif' }}>
-            {Math.floor(todayMinutes / 60)}h {todayMinutes % 60}m
-          </div>
-          <div className="text-xs" style={{ color: '#3D6A7E' }}>
-            Today
-          </div>
+      <div className="min-h-screen px-8 py-8" style={{ background: 'var(--color-bg-base)' }}>
+        {/* 🎯 Page Header - 用日期 + 打招呼，去掉 Dashboard */}
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold mb-1" style={{ color: 'var(--color-text-primary)', fontFamily: 'Quicksand, sans-serif' }}>
+            {getGreeting()}
+          </h1>
+          <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+            {new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' })}
+          </p>
         </div>
 
-        {/* Goal Progress - Green */}
+        {/* 📊 核心数据概览 - 简约横向卡片 */}
         <div
-          className="p-6 rounded-2xl cursor-pointer transition-all duration-200 hover:-translate-y-0.5"
+          className="p-5 mb-6 rounded-2xl flex items-center justify-between gap-4 flex-wrap"
           style={{
-            background: '#A8E6CF',
-            border: '2px solid #7DD4B0',
-            boxShadow: '4px 4px 0px rgba(168, 230, 207, 0.4)',
+            background: '#FFFFFF',
+            border: '2px solid #D6D3CD',
+            boxShadow: '4px 4px 0px #D6D3CD',
           }}
         >
-          <div className="flex items-center gap-2 mb-3">
-            <ListTodo size={20} style={{ color: '#2D5A4A' }} />
-            <span className="text-sm font-semibold" style={{ color: '#2D5A4A' }}>
-              Daily Goal
-            </span>
-          </div>
-          <div className="text-3xl font-bold mb-2" style={{ color: '#2D5A4A', fontFamily: 'Quicksand, sans-serif' }}>
-            {goalProgress}%
-          </div>
-          <div className="w-full h-2 rounded-full" style={{ background: '#D4F5E5' }}>
+          <div className="flex items-center gap-2">
             <div
-              className="h-full rounded-full transition-all duration-500"
-              style={{ width: `${goalProgress}%`, background: '#4A8A6E' }}
-            />
+              className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{ background: isFocusing ? '#A8E6CF40' : '#79BEEB40' }}
+            >
+              <Sparkles size={18} style={{ color: isFocusing ? '#2D5A4A' : '#2A4A5E' }} />
+            </div>
+            <div>
+              <p className="text-xs" style={{ color: '#9E9899' }}>今日专注</p>
+              <p className="text-lg font-bold" style={{ color: isFocusing ? '#2D5A4A' : '#3A3638' }}>
+                {Math.floor(todayMinutes / 60)}h {todayMinutes % 60}m
+              </p>
+            </div>
           </div>
-        </div>
 
-        {/* Efficiency Score - Purple */}
-        <div
-          className="p-6 rounded-2xl cursor-pointer transition-all duration-200 hover:-translate-y-0.5"
-          style={{
-            background: '#D4C4FB',
-            border: '2px solid #B8A0E8',
-            boxShadow: '4px 4px 0px rgba(212, 196, 251, 0.4)',
-          }}
-        >
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-xl">⚡</span>
-            <span className="text-sm font-semibold" style={{ color: '#4A3A6A' }}>
-              Efficiency
-            </span>
-          </div>
-          <div className="text-3xl font-bold mb-2" style={{ color: '#4A3A6A', fontFamily: 'Quicksand, sans-serif' }}>
-            {efficiencyScore}
-          </div>
-          <div className="text-xs" style={{ color: '#6A5A8A' }}>
-            Better than {Math.min(98, Math.round((todayMinutes / 240) * 50 + (efficiencyScore / 100) * 30 + 20))}%
-          </div>
-        </div>
+          <div className="w-px h-10" style={{ background: '#E8E6E1' }} />
 
-        {/* Activities Count - Neutral */}
-        <div
-          className="p-6 rounded-2xl cursor-pointer transition-all duration-200 hover:-translate-y-0.5"
-          style={{
-            background: '#FFFFFF',
-            border: '2px solid #D6D3CD',
-            boxShadow: '4px 4px 0px #D6D3CD',
-          }}
-        >
-          <div className="flex items-center gap-2 mb-3">
-            <BarChart3 size={20} color="#5C5658" />
-            <span className="text-sm font-semibold" style={{ color: '#5C5658' }}>
-              Activities
-            </span>
+          <div className="flex items-center gap-2">
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{ background: goalProgress >= 100 ? '#A8E6CF40' : '#FFD3B640' }}
+            >
+              <TrendingUp size={18} style={{ color: goalProgress >= 100 ? '#2D5A4A' : '#B8860B' }} />
+            </div>
+            <div>
+              <p className="text-xs" style={{ color: '#9E9899' }}>目标进度</p>
+              <p className="text-lg font-bold" style={{ color: goalProgress >= 100 ? '#2D5A4A' : '#3A3638' }}>
+                {goalProgress}%
+              </p>
+            </div>
           </div>
-          <div className="text-3xl font-bold mb-2" style={{ color: '#3A3638', fontFamily: 'Quicksand, sans-serif' }}>
-            {todayActivities.length}
+
+          <div className="w-px h-10" style={{ background: '#E8E6E1' }} />
+
+          <div className="flex items-center gap-2">
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{ background: '#D4C4FB40' }}
+            >
+              <Calendar size={18} style={{ color: '#4A3A6A' }} />
+            </div>
+            <div>
+              <p className="text-xs" style={{ color: '#9E9899' }}>任务完成</p>
+              <p className="text-lg font-bold" style={{ color: '#3A3638' }}>
+                {completedTasks} / {tasks.length}
+              </p>
+            </div>
           </div>
-          <div className="text-xs" style={{ color: '#9E9899' }}>
-            Today
-          </div>
-        </div>
-      </div>
 
-      {/* NowEngine - Centerpiece */}
-      <div className="mb-6">
-        <NowEngineCard />
-      </div>
+          <div className="w-px h-10 hidden sm:block" style={{ background: '#E8E6E1' }} />
 
-      {/* Activity Tracking & Plan vs Actual Row - 2 Columns */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <ActiveTrackingCard
-          currentApp="VSCode - Dashboard.tsx"
-          duration={todayMinutes}
-          category="work"
-        />
-        <PlanVsActualCard
-          plannedMinutes={dailyGoalMinutes}
-          actualMinutes={todayMinutes}
-          goalMinutes={dailyGoalMinutes}
-        />
-      </div>
-
-      {/* Daily Review Card */}
-      <div className="mb-6">
-        <DailyReviewCard
-          totalMinutes={todayMinutes}
-          efficiencyScore={efficiencyScore}
-          completedTasks={tasks.filter((t) => t.status === 'completed').length}
-        />
-      </div>
-
-      {/* Function Cards Row - 3 Columns */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Review Activities */}
-        <div
-          className="p-6 rounded-2xl cursor-pointer transition-all duration-200 hover:translate-x-[-2px] hover:translate-y-[-2px]"
-          onClick={() => navigate('/timeline')}
-          style={{
-            background: '#FFFFFF',
-            border: '2px solid #D6D3CD',
-            boxShadow: '4px 4px 0px #D6D3CD',
-          }}
-        >
-          <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center mb-4"
-            style={{ background: 'rgba(168, 230, 207, 0.12)' }}
+          <button
+            onClick={() => navigate('/analytics')}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98] ml-auto"
+            style={{ background: '#F5F1EA', color: '#5C5658' }}
           >
-            <Clock size={18} style={{ color: '#7DD4B0' }} />
-          </div>
-          <h3 className="text-base font-semibold mb-2" style={{ color: '#3A3638', fontFamily: 'Quicksand, sans-serif' }}>
-            Review Activities
-          </h3>
-          <p className="text-sm mb-4" style={{ color: '#9E9899' }}>
-            Auto-classified by AI, click to confirm
-          </p>
-          <div className="flex items-center text-xs font-semibold" style={{ color: '#7DD4B0' }}>
-            {Math.max(0, todayActivities.length - 3) || 5} items to review
-            <ChevronRight size={14} className="ml-1" />
-          </div>
+            <BarChart3 size={16} />
+            <span className="text-sm font-semibold">完整报告</span>
+          </button>
         </div>
 
-        {/* Priority Tasks */}
-        <div
-          className="p-6 rounded-2xl cursor-pointer transition-all duration-200 hover:translate-x-[-2px] hover:translate-y-[-2px]"
-          onClick={() => navigate('/task')}
-          style={{
-            background: '#FFFFFF',
-            border: '2px solid #D6D3CD',
-            boxShadow: '4px 4px 0px #D6D3CD',
-          }}
-        >
-          <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center mb-4"
-            style={{ background: 'rgba(255, 211, 182, 0.12)' }}
+        {/* 鼓励语 + 专注状态提示 */}
+        <div className="mb-6 text-center">
+          <p
+            className="text-sm font-medium px-4 py-2 rounded-xl inline-block"
+            style={{
+              background: isFocusing
+                ? 'linear-gradient(135deg, rgba(168,230,207,0.3) 0%, rgba(121,190,235,0.2) 100%)'
+                : 'rgba(245,241,234,0.5)',
+              color: isFocusing ? '#2D5A4A' : '#5C5658',
+            }}
           >
-            <ListTodo size={18} style={{ color: '#FFBB8E' }} />
-          </div>
-          <h3 className="text-base font-semibold mb-2" style={{ color: '#3A3638', fontFamily: 'Quicksand, sans-serif' }}>
-            Priority Tasks
-          </h3>
-          <p className="text-sm mb-4" style={{ color: '#9E9899' }}>
-            Important items to complete today
+            {isFocusing && '🔥 正在专注 · '}{getEncouragement(goalProgress, efficiencyScore)}
           </p>
-          <div className="flex items-center text-xs font-semibold" style={{ color: '#FFBB8E' }}>
-            {pendingTasks} pending
-            <ChevronRight size={14} className="ml-1" />
-          </div>
         </div>
 
-        {/* Daily Report */}
-        <div
-          className="p-6 rounded-2xl cursor-pointer transition-all duration-200 hover:translate-x-[-2px] hover:translate-y-[-2px]"
-          onClick={() => navigate('/analytics')}
-          style={{
-            background: '#FFFFFF',
-            border: '2px solid #D6D3CD',
-            boxShadow: '4px 4px 0px #D6D3CD',
-          }}
-        >
-          <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center mb-4"
-            style={{ background: 'rgba(121, 190, 235, 0.12)' }}
+        {/* 🌟 NowEngine - 页面核心 */}
+        <div className="mb-6">
+          <NowEngineCard />
+        </div>
+
+        {/* 底部快捷入口 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <button
+            onClick={() => navigate('/timeline')}
+            className="p-5 rounded-2xl text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+            style={{
+              background: '#FFFFFF',
+              border: '2px solid #D6D3CD',
+              boxShadow: '4px 4px 0px #D6D3CD',
+            }}
           >
-            <BarChart3 size={18} style={{ color: '#79BEEB' }} />
-          </div>
-          <h3 className="text-base font-semibold mb-2" style={{ color: '#3A3638', fontFamily: 'Quicksand, sans-serif' }}>
-            Daily Report
-          </h3>
-          <p className="text-sm mb-4" style={{ color: '#9E9899' }}>
-            Efficiency score {efficiencyScore} · Detailed insights
-          </p>
-          <div className="flex items-center text-xs font-semibold" style={{ color: '#79BEEB' }}>
-            View full analysis
-            <ChevronRight size={14} className="ml-1" />
-          </div>
+            <div className="flex items-center gap-3">
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center"
+                style={{ background: '#79BEEB40' }}
+              >
+                <BarChart3 size={18} style={{ color: '#2A4A5E' }} />
+              </div>
+              <div>
+                <p className="font-semibold" style={{ color: '#3A3638' }}>时间线</p>
+                <p className="text-xs" style={{ color: '#9E9899' }}>查看完整活动记录</p>
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => navigate('/tasks')}
+            className="p-5 rounded-2xl text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+            style={{
+              background: '#FFFFFF',
+              border: '2px solid #D6D3CD',
+              boxShadow: '4px 4px 0px #D6D3CD',
+            }}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center"
+                style={{ background: '#D4C4FB40' }}
+              >
+                <BarChart3 size={18} style={{ color: '#4A3A6A' }} />
+              </div>
+              <div>
+                <p className="font-semibold" style={{ color: '#3A3638' }}>任务管理</p>
+                <p className="text-xs" style={{ color: '#9E9899' }}>
+                  {pendingTasks} 个待办任务
+                </p>
+              </div>
+            </div>
+          </button>
         </div>
       </div>
-    </div>
+    </>
   )
 }

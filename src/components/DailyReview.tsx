@@ -49,8 +49,7 @@ export default function DailyReview({
           style={{
             background: 'var(--color-bg-surface-1)',
             border: '2px solid var(--color-border-strong)',
-            boxShadow: '4px 4px 0px var(--color-border-strong)',
-          }}
+                      }}
         >
           <div className="flex items-center justify-center w-20 h-20 mx-auto mb-6 rounded-full"
             style={{ background: 'var(--color-accent-soft)' }}>
@@ -131,8 +130,7 @@ export default function DailyReview({
           style={{
             background: 'var(--color-bg-surface-1)',
             border: '2px solid var(--color-border-strong)',
-            boxShadow: '4px 4px 0px var(--color-border-strong)',
-          }}
+                      }}
         >
           <h2 className="text-xl font-bold mb-2 text-center" style={{ color: 'var(--color-text-primary)' }}>
             明天的首要任务

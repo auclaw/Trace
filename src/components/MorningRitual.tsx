@@ -99,11 +99,11 @@ export default function MorningRitual({
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
         <div
-          className="w-full max-w-md mx-4 p-8 rounded-2xl"
+          className="w-full max-w-md mx-4 p-8 rounded-[24px]"
           style={{
-            background: 'var(--color-bg-card)',
-            border: '1px solid var(--color-border-subtle)',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+            background: 'var(--color-bg-surface-1)',
+            border: '2px solid var(--color-border-strong)',
+            boxShadow: '4px 4px 0px var(--color-border-strong)',
           }}
         >
           <h2 className="text-xl font-bold mb-2 text-center" style={{ color: 'var(--color-text-primary)' }}>

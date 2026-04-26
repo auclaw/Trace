@@ -188,6 +188,43 @@ INSERT OR IGNORE INTO settings (id, user_id) VALUES (1, 1);
 INSERT OR IGNORE INTO pets (id, user_id) VALUES (1, 1);
 "###,
             },
+            Migration {
+                version: 3,
+                description: "Add Execution Guardian tables ",
+                kind: tauri_plugin_sql::MigrationKind::Up,
+                sql: r###"
+-- guardian_settings: Execution Guardian 配置和状态
+CREATE TABLE IF NOT EXISTS guardian_settings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER DEFAULT 1 UNIQUE,
+    last_morning_ritual_date TEXT, -- YYYY-MM-DD
+    last_daily_review_date TEXT,   -- YYYY-MM-DD
+    tomorrow_top_task_id TEXT,     -- references tasks.id
+    daily_review_time TEXT DEFAULT '20:00',
+    enable_morning_ritual INTEGER DEFAULT 1,
+    enable_daily_review INTEGER DEFAULT 1,
+    enable_now_engine INTEGER DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- daily_reviews: 每日复盘记录
+CREATE TABLE IF NOT EXISTS daily_reviews (
+    id TEXT PRIMARY KEY,
+    user_id INTEGER DEFAULT 1,
+    date TEXT NOT NULL UNIQUE, -- YYYY-MM-DD
+    mood TEXT, -- great/good/bad
+    win_note TEXT, -- 今天做得好的地方
+    improve_note TEXT, -- 明天要改进的地方
+    focus_minutes INTEGER DEFAULT 0,
+    completed_tasks INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 初始化 guardian_settings 默认记录
+INSERT OR IGNORE INTO guardian_settings (id, user_id) VALUES (1, 1);
+"###,
+            },
         ]
     }
 
@@ -292,6 +329,29 @@ pub struct DbTimeBlock {
     pub notes: Option<String>,
     pub date: String,
     pub is_completed: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct DbGuardianSettings {
+    pub id: Option<i32>,
+    pub last_morning_ritual_date: Option<String>,
+    pub last_daily_review_date: Option<String>,
+    pub tomorrow_top_task_id: Option<String>,
+    pub daily_review_time: Option<String>,
+    pub enable_morning_ritual: Option<i32>,
+    pub enable_daily_review: Option<i32>,
+    pub enable_now_engine: Option<i32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct DbDailyReview {
+    pub id: String,
+    pub date: String,
+    pub mood: Option<String>,
+    pub win_note: Option<String>,
+    pub improve_note: Option<String>,
+    pub focus_minutes: Option<i32>,
+    pub completed_tasks: Option<i32>,
 }
 
 // Helper functions

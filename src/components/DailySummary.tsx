@@ -82,7 +82,7 @@ function generateSuggestions(categories: Record<string, number>, goalPct: number
   if (meetingMin > 120) suggestions.push('尝试减少会议时间，合并短会议');
   if (restMin < 30) suggestions.push('增加适当休息，保持可持续产出');
   if (deepWork < 120) suggestions.push('安排2小时以上的深度工作时段');
-  if (goalPct < 80) suggestions.push('提前规划明天的时间块，设定优先级');
+  if (goalPct < 80) suggestions.push('提前规划明天的事件，设定优先级');
   if (suggestions.length === 0) suggestions.push('保持今天的节奏，非常棒！');
   suggestions.push('早起30分钟做最重要的任务');
   return suggestions.slice(0, 3);

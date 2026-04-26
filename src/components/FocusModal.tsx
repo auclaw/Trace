@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { X, Pause, Play, RotateCcw } from 'lucide-react'
+import { X, Pause, Play, RotateCcw, Minus } from 'lucide-react'
 
 interface FocusModalProps {
   isOpen: boolean
@@ -13,6 +13,7 @@ export default function FocusModal({ isOpen, onClose }: FocusModalProps) {
   const [isRunning, setIsRunning] = useState(false)
   const [timeLeft, setTimeLeft] = useState(25 * 60)
   const [todaySessions, setTodaySessions] = useState(3)
+  const [isMinimized, setIsMinimized] = useState(false)
 
   // 计时器逻辑
   useEffect(() => {
@@ -46,6 +47,46 @@ export default function FocusModal({ isOpen, onClose }: FocusModalProps) {
 
   if (!isOpen) return null
 
+  // Minimized mode - small floating timer
+  if (isMinimized) {
+    return (
+      <div
+        className="fixed right-6 bottom-6 z-50 cursor-pointer hover:scale-105 transition-all"
+        onClick={() => setIsMinimized(false)}
+      >
+        <div
+          className="px-5 py-4 rounded-2xl flex items-center gap-3"
+          style={{
+            background: '#FFFFFF',
+            border: '2px solid #D6D3CD',
+            boxShadow: '4px 4px 0px rgba(0,0,0,0.1)',
+          }}
+        >
+          <span className="text-2xl">🍅</span>
+          <div>
+            <div className="text-xl font-bold" style={{ color: isRunning ? '#2D5A4A' : '#2A4A5E' }}>
+              {formatTime(timeLeft)}
+            </div>
+            {isRunning && (
+              <div className="text-xs font-medium" style={{ color: '#79BEEB' }}>
+                Focusing...
+              </div>
+            )}
+          </div>
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onClose()
+            }}
+            className="ml-2 p-1 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            <X size={16} color="#9E9899" />
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <div
@@ -56,13 +97,25 @@ export default function FocusModal({ isOpen, onClose }: FocusModalProps) {
           boxShadow: '8px 8px 0px rgba(0,0,0,0.1)',
         }}
       >
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-2 rounded-xl transition-colors hover:bg-gray-100"
-        >
-          <X size={20} color="#9E9899" />
-        </button>
+        {/* Control Buttons */}
+        <div className="absolute top-4 right-4 flex gap-1">
+          {/* Minimize Button */}
+          <button
+            onClick={() => setIsMinimized(true)}
+            className="p-2 rounded-xl transition-colors hover:bg-gray-100"
+            title="最小化"
+          >
+            <Minus size={20} color="#9E9899" />
+          </button>
+          {/* Close Button */}
+          <button
+            onClick={onClose}
+            className="p-2 rounded-xl transition-colors hover:bg-gray-100"
+            title="关闭"
+          >
+            <X size={20} color="#9E9899" />
+          </button>
+        </div>
 
         {/* Title */}
         <h2 className="text-2xl font-bold text-center mb-6" style={{ color: '#3A3638' }}>

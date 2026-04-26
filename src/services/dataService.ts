@@ -31,7 +31,7 @@ export interface Subtask {
   completed: boolean;
 }
 
-export type TaskStatus = 'pending' | 'in_progress' | 'completed';
+export type TaskStatus = 'todo' | 'in_progress' | 'paused' | 'completed' | 'archived';
 export type RepeatType = 'none' | 'daily' | 'weekly' | 'monthly';
 export type EmotionalTag = 'easy' | 'neutral' | 'resist';
 
@@ -47,9 +47,16 @@ export interface Task {
   dueDate: string;
   repeatType: RepeatType;
   createdAt: string;
+  // Scheduled time on Timeline
+  scheduledStartTime?: string; // ISO string: when this task is scheduled to start
+  scheduledDate?: string; // YYYY-MM-DD: which day this task is scheduled for
   // Guardian Beta fields
   firstStep?: string;
   emotionalTag?: EmotionalTag;
+  // Description/Notes
+  description?: string;
+  // Task timer tracking
+  timeLoggedMinutes?: number; // Total time logged via time blocks
 }
 
 export type HabitCategory = 'health' | 'learning' | 'fitness' | 'mindfulness' | 'other';
@@ -73,7 +80,7 @@ export type FocusType = 'work' | 'break' | 'longBreak';
 export interface FocusSession {
   id: string;
   startTime: string;
-  endTime: string;
+  endTime: string | null;
   duration: number;
   type: FocusType;
   completed: boolean;
@@ -136,6 +143,8 @@ export interface AppSettings {
   adaptiveBreakUrgentThreshold?: number;
 }
 
+export type TimeBlockSource = 'auto' | 'manual' | 'confirmed';
+
 export interface TimeBlock {
   id: string;
   title: string;
@@ -145,6 +154,12 @@ export interface TimeBlock {
   category: ActivityCategory;
   date: string;
   completed: boolean;
+  source: TimeBlockSource;
+  description?: string;
+  status?: 'pending' | 'approved' | 'rejected';
+  categoryId?: string;
+  taskId?: string;
+  isTaskTimer?: boolean; // Flag indicating this was created from a task timer
 }
 
 export interface DailyStat {
@@ -222,7 +237,8 @@ const DataService = {
       if (date) {
         return activityIpc.getActivities(date);
       }
-      // If no date specified, return all activities - handled by localStorage fallback
+      // If no date specified, return today's activities
+      return activityIpc.getTodayActivities();
     }
     return load<Activity[]>(KEYS.activities, []);
   },
@@ -239,14 +255,13 @@ const DataService = {
   },
 
   addActivity: async (activity: Omit<Activity, 'id'>): Promise<Activity> => {
-    const newActivity = { ...activity, id: uid() } as Activity;
     if (isDesktop()) {
-      await activityIpc.addActivity(newActivity);
-    } else {
-      const existing = load<Activity[]>(KEYS.activities, []);
-      existing.push(newActivity);
-      save(KEYS.activities, existing);
+      return activityIpc.addActivity(activity);
     }
+    const newActivity = { ...activity, id: uid() } as Activity;
+    const existing = load<Activity[]>(KEYS.activities, []);
+    existing.push(newActivity);
+    save(KEYS.activities, existing);
     return newActivity;
   },
 
@@ -336,6 +351,13 @@ const DataService = {
     if (isDesktop()) {
       await taskIpc.deleteTask(id);
     } else {
+      // Delete associated time blocks first (cascade delete)
+      const allTimeBlocks = load<TimeBlock[]>(KEYS.timeBlocks, []);
+      const taskTimeBlocks = allTimeBlocks.filter(b => b.taskId === id);
+      for (const block of taskTimeBlocks) {
+        save(KEYS.timeBlocks, allTimeBlocks.filter(b => b.id !== block.id));
+      }
+      // Then delete the task itself
       const existing = load<Task[]>(KEYS.tasks, []);
       save(KEYS.tasks, existing.filter(t => t.id !== id));
     }
@@ -386,6 +408,7 @@ const DataService = {
     if (isDesktop()) {
       await habitIpc.deleteHabit(id);
     } else {
+      // Delete the habit itself
       const existing = load<Habit[]>(KEYS.habits, []);
       save(KEYS.habits, existing.filter(h => h.id !== id));
     }
@@ -672,17 +695,21 @@ const DataService = {
           ],
           dueDate: toDateStr(new Date(now.getTime() + 2 * 86400000)),
           repeatType: 'none',
+          firstStep: '打开Figma查看设计稿',
+          emotionalTag: 'neutral',
         },
         {
           title: '编写单元测试 - 数据服务',
           priority: 3,
-          status: 'pending',
+          status: 'todo',
           estimatedMinutes: 120,
           actualMinutes: 0,
           project: '前端重构',
           subtasks: [],
           dueDate: toDateStr(new Date(now.getTime() + 5 * 86400000)),
           repeatType: 'none',
+          firstStep: '创建test文件',
+          emotionalTag: 'resist',
         },
         {
           title: '每日站会',
@@ -694,6 +721,8 @@ const DataService = {
           subtasks: [],
           dueDate: toDateStr(now),
           repeatType: 'daily',
+          firstStep: '准备昨日工作总结',
+          emotionalTag: 'easy',
         },
         {
           title: '准备周五技术分享',
@@ -709,11 +738,13 @@ const DataService = {
           ],
           dueDate: toDateStr(new Date(now.getTime() + 4 * 86400000)),
           repeatType: 'none',
+          firstStep: '确定分享主题',
+          emotionalTag: 'neutral',
         },
         {
           title: '优化首页加载性能',
           priority: 5,
-          status: 'pending',
+          status: 'todo',
           estimatedMinutes: 300,
           actualMinutes: 0,
           project: '前端重构',
@@ -725,17 +756,21 @@ const DataService = {
           ],
           dueDate: toDateStr(new Date(now.getTime() + 7 * 86400000)),
           repeatType: 'none',
+          firstStep: '运行Lighthouse分析',
+          emotionalTag: 'resist',
         },
         {
           title: '阅读《设计模式》第5章',
           priority: 2,
-          status: 'pending',
+          status: 'todo',
           estimatedMinutes: 60,
           actualMinutes: 0,
           project: '个人成长',
           subtasks: [],
           dueDate: toDateStr(new Date(now.getTime() + 1 * 86400000)),
           repeatType: 'none',
+          firstStep: '翻到第5章',
+          emotionalTag: 'easy',
         },
         {
           title: '整理Jira看板',
@@ -747,6 +782,8 @@ const DataService = {
           subtasks: [],
           dueDate: toDateStr(now),
           repeatType: 'weekly',
+          firstStep: '打开Jira页面',
+          emotionalTag: 'easy',
         },
         {
           title: '修复移动端样式问题',
@@ -761,28 +798,59 @@ const DataService = {
           ],
           dueDate: toDateStr(new Date(now.getTime() + 1 * 86400000)),
           repeatType: 'none',
+          firstStep: '用Chrome开发者工具模拟手机',
+          emotionalTag: 'neutral',
         },
         {
           title: '更新项目文档',
           priority: 2,
-          status: 'pending',
+          status: 'todo',
           estimatedMinutes: 60,
           actualMinutes: 0,
           project: '前端重构',
           subtasks: [],
           dueDate: toDateStr(new Date(now.getTime() + 3 * 86400000)),
           repeatType: 'none',
+          firstStep: '找到README.md位置',
+          emotionalTag: 'easy',
         },
         {
           title: '复习英语单词',
           priority: 2,
-          status: 'pending',
+          status: 'todo',
           estimatedMinutes: 30,
           actualMinutes: 0,
           project: '个人成长',
           subtasks: [],
           dueDate: toDateStr(now),
           repeatType: 'daily',
+          firstStep: '打开背单词APP',
+          emotionalTag: 'easy',
+        },
+        {
+          title: '代码审查 - 用户模块',
+          priority: 3,
+          status: 'paused',
+          estimatedMinutes: 45,
+          actualMinutes: 15,
+          project: '团队管理',
+          subtasks: [],
+          dueDate: toDateStr(new Date(now.getTime() + 3 * 86400000)),
+          repeatType: 'none',
+          firstStep: '找到PR链接',
+          emotionalTag: 'neutral',
+        },
+        {
+          title: '数据库架构设计评审',
+          priority: 4,
+          status: 'archived',
+          estimatedMinutes: 120,
+          actualMinutes: 90,
+          project: '后端开发',
+          subtasks: [],
+          dueDate: toDateStr(new Date(now.getTime() - 5 * 86400000)),
+          repeatType: 'none',
+          emotionalTag: 'neutral',
         },
       ];
 
@@ -791,6 +859,56 @@ const DataService = {
         id: uid(),
         createdAt: new Date(new Date(now).getTime() - 14 * 86400000 + i * 86400000).toISOString(),
       }));
+    })());
+
+    // Seed time blocks with task associations for today
+    save(KEYS.timeBlocks, (() => {
+      const now = new Date();
+      const today = toDateStr(now);
+      const tasks = load<Task[]>(KEYS.tasks, []);
+      const blocks: TimeBlock[] = [];
+
+      // Add a task time block for the first 2 tasks (scheduled for today)
+      if (tasks.length >= 2) {
+        // Task 1: 10:00 - 11:30
+        blocks.push({
+          id: uid(),
+          title: tasks[0].title,
+          category: '工作',
+          startTime: `${today}T10:00:00`,
+          endTime: `${today}T11:30:00`,
+          durationMinutes: 90,
+          date: today,
+          completed: true,
+          source: 'confirmed',
+          taskId: tasks[0].id,
+          isTaskTimer: true,
+        });
+
+        // Task 2: 14:00 - 15:00
+        blocks.push({
+          id: uid(),
+          title: tasks[1].title,
+          category: '开发',
+          startTime: `${today}T14:00:00`,
+          endTime: `${today}T15:00:00`,
+          durationMinutes: 60,
+          date: today,
+          completed: false,
+          source: 'confirmed',
+          taskId: tasks[1].id,
+          isTaskTimer: true,
+        });
+
+        // Update tasks to have scheduled times
+        tasks[0].scheduledStartTime = `${today}T10:00:00`;
+        tasks[0].scheduledDate = today;
+        tasks[1].scheduledStartTime = `${today}T14:00:00`;
+        tasks[1].scheduledDate = today;
+        save(KEYS.tasks, tasks);
+      }
+
+      return blocks;
     })());
 
     save(KEYS.seeded, true);

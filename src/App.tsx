@@ -24,10 +24,10 @@ const Analytics = React.lazy(() => import('./pages/Analytics'));
 const Settings = React.lazy(() => import('./pages/Settings'));
 // Legacy pages - hidden from navigation but still accessible
 const FocusMode = React.lazy(() => import('./pages/FocusMode'));
-const Habits = React.lazy(() => import('./pages/Habits'));
-// Beta: Pet feature disabled - const VirtualPet = React.lazy(() => import('./pages/VirtualPet'));
-// Team collaboration feature flag - hidden until backend implementation is complete
-// const Team = React.lazy(() => import('./pages/Team'))
+// Beta: Disabled features - will be removed in future cleanup
+// const Habits = React.lazy(() => import('./pages/Habits'));
+// const VirtualPet = React.lazy(() => import('./pages/VirtualPet'));
+// const Team = React.lazy(() => import('./pages/Team'));
 const PrivacyPolicy = React.lazy(() => import('./pages/PrivacyPolicy'));
 
 /* ── Loading fallback ── */
@@ -149,6 +149,10 @@ function AppContent() {
   }, [initialize]);
 
   // Start AI tracking service when app initializes
+  const isDark = theme === 'dark';
+  const bgClass = backgroundSkinConfigs[backgroundSkin].getBgClass(isDark);
+
+  // Start AI tracking service when app initializes
   useEffect(() => {
     if (initialized && !isFirstLaunch) {
       trackingService.start();
@@ -157,6 +161,15 @@ function AppContent() {
       };
     }
   }, [initialized, isFirstLaunch]);
+
+  // Apply dark class to document root for CSS variables
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDark]);
 
   if (!initialized) {
     return (
@@ -168,8 +181,6 @@ function AppContent() {
       </div>
     );
   }
-
-  const bgClass = backgroundSkinConfigs[backgroundSkin].getBgClass(theme === 'dark');
 
   return (
     <>
@@ -193,9 +204,8 @@ function AppContent() {
                 <Route path="/statistics" element={<Navigate to="/analytics" replace />} />
                 {/* Beta: Disabled legacy routes - will be removed in future cleanup */}
                 <Route path="/focus" element={<FocusMode />} />
-                <Route path="/habits" element={<Habits />} />
+                {/* <Route path="/habits" element={<Habits />} /> */}
                 {/* <Route path="/pet" element={<VirtualPet />} /> */}
-                {/* Team collaboration feature flag - hidden until backend implementation is complete */}
                 {/* <Route path="/team" element={<Team />} /> */}
                 <Route path="/privacy" element={<PrivacyPolicy />} />
               </Routes>

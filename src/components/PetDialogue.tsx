@@ -132,7 +132,6 @@ export function PetDialogue({
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, autoHide, message])
 
   const handleDismiss = useCallback(() => {

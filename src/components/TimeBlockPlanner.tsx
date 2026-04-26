@@ -1,5 +1,5 @@
 // TimeBlock Planner Component
-// 时间块日程规划组件 - 可拖拽安排一天任务
+// 事件日程规划组件 - 可拖拽安排一天任务
 // 集成 AI 智能排期建议
 
 import React, { useState, useEffect, useCallback } from 'react'
@@ -78,7 +78,7 @@ const TimeBlockPlanner: React.FC<TimeBlockPlannerProps> = ({ selectedDate, theme
       setTimeblocks(blocksData)
       setTasks(tasksData.filter((t: TaskDTO) => t.status !== 'completed'))
     } catch (err) {
-      if (import.meta.env.DEV) console.error('加载时间块失败', err)
+      if (import.meta.env.DEV) console.error('加载事件失败', err)
     } finally {
       setLoading(false)
     }
@@ -159,6 +159,7 @@ const TimeBlockPlanner: React.FC<TimeBlockPlannerProps> = ({ selectedDate, theme
         await addTimeBlock({
           ...baseData,
           completed: false,
+          source: 'manual',
         })
       }
       closeModal()
@@ -170,7 +171,7 @@ const TimeBlockPlanner: React.FC<TimeBlockPlannerProps> = ({ selectedDate, theme
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('确定要删除这个时间块吗？')) return
+    if (!confirm('确定要删除这个事件吗？')) return
     try {
       await deleteTimeBlock(id)
       await loadData()
@@ -181,18 +182,13 @@ const TimeBlockPlanner: React.FC<TimeBlockPlannerProps> = ({ selectedDate, theme
   }
 
   const handleAiSuggest = async () => {
-    const pendingTasks = tasks.filter(t => t.status === 'pending')
+    const pendingTasks = tasks.filter(t => t.status === 'todo' || t.status === 'paused')
     if (pendingTasks.length === 0) {
       alert('没有待完成任务可以安排')
       return
     }
 
-    // 计算可用时间：从现在到晚上 23:00
     const now = new Date()
-    const endOfDay = new Date(selectedDate)
-    endOfDay.setHours(23, 0, 0, 0)
-    let availableHours = (endOfDay.getTime() - now.getTime()) / (1000 * 60 * 60)
-    if (availableHours < 1) availableHours = 8 // 如果已经很晚，默认按 8 小时算
 
     setSuggesting(true)
     try {
@@ -218,6 +214,7 @@ const TimeBlockPlanner: React.FC<TimeBlockPlannerProps> = ({ selectedDate, theme
           endTime: endTime.toISOString().slice(0, 19),
           durationMinutes: duration,
           completed: false,
+          source: 'manual',
         })
 
         // Add 5 minute break between tasks
@@ -225,7 +222,7 @@ const TimeBlockPlanner: React.FC<TimeBlockPlannerProps> = ({ selectedDate, theme
       }
 
       await loadData()
-      alert(`AI 已为你安排 ${pendingTasks.length} 个时间块`)
+      alert(`AI 已为你安排 ${pendingTasks.length} 个事件`)
     } catch (err) {
       if (import.meta.env.DEV) console.error('AI 建议失败', err)
       alert('AI 建议失败，请稍后重试')
@@ -266,7 +263,7 @@ const TimeBlockPlanner: React.FC<TimeBlockPlannerProps> = ({ selectedDate, theme
     <div className="rounded-xl p-6 border mt-6" style={{ ...cardStyle, ...borderStyle }}>
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold" style={titleStyle}>
-          时间块规划
+          事件规划
         </h3>
         <div className="flex gap-2">
           <button
@@ -282,7 +279,7 @@ const TimeBlockPlanner: React.FC<TimeBlockPlannerProps> = ({ selectedDate, theme
             onClick={openAddModal}
             className="px-3 py-1.5 text-sm bg-[var(--color-accent)] text-[#fffefb] rounded-lg hover:opacity-90 transition-colors"
           >
-            + 添加时间块
+            + 添加事件
           </button>
         </div>
       </div>
@@ -293,7 +290,7 @@ const TimeBlockPlanner: React.FC<TimeBlockPlannerProps> = ({ selectedDate, theme
 
       {!loading && timeblocks.length === 0 && (
         <div className="text-center py-12" style={textStyle}>
-          <p className="mb-4">这天还没有时间块安排</p>
+          <p className="mb-4">这天还没有事件安排</p>
           <p className="text-sm mb-6">
             可以手动添加，或使用 AI 根据你的待办任务智能生成日程安排
           </p>
@@ -302,7 +299,7 @@ const TimeBlockPlanner: React.FC<TimeBlockPlannerProps> = ({ selectedDate, theme
               onClick={openAddModal}
               className="px-4 py-2 bg-[var(--color-accent)] text-[#fffefb] rounded-lg hover:opacity-90 transition-colors"
             >
-              添加第一个时间块
+              添加第一个事件
             </button>
             {tasks.filter(t => t.status !== 'completed').length > 0 && (
               <button
@@ -380,7 +377,7 @@ const TimeBlockPlanner: React.FC<TimeBlockPlannerProps> = ({ selectedDate, theme
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="rounded-xl p-6 w-full max-w-md border" style={{ ...cardStyle, ...borderStyle }}>
             <h3 className="text-xl font-semibold mb-4" style={titleStyle}>
-              {editingBlock ? '编辑时间块' : '添加时间块'}
+              {editingBlock ? '编辑事件' : '添加事件'}
             </h3>
 
             <div className="space-y-4">

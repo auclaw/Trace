@@ -168,9 +168,11 @@ export default function Planner() {
 
   // --- Kanban columns ---
   const boardColumns = useMemo(() => ({
-    pending: filtered.filter((t) => t.status === 'pending'),
+    todo: filtered.filter((t) => t.status === 'todo'),
     in_progress: filtered.filter((t) => t.status === 'in_progress'),
+    paused: filtered.filter((t) => t.status === 'paused'),
     completed: filtered.filter((t) => t.status === 'completed'),
+    archived: filtered.filter((t) => t.status === 'archived'),
   }), [filtered])
 
   // --- Calendar grid ---
@@ -271,7 +273,7 @@ export default function Planner() {
       addTask({
         title: form.title.trim(),
         priority: form.priority,
-        status: 'pending' as TaskStatus,
+        status: 'todo',
         estimatedMinutes: form.estimatedMinutes,
         actualMinutes: 0,
         project: form.project.trim(),
@@ -279,15 +281,21 @@ export default function Planner() {
         dueDate: form.dueDate,
         repeatType: form.repeatType,
         createdAt: new Date().toISOString(),
+        timeLoggedMinutes: 0,
       })
     }
     setModalOpen(false)
   }, [editingId, form, addTask, updateTask])
 
   const cycleStatus = useCallback((task: Task) => {
-    const order: TaskStatus[] = ['pending', 'in_progress', 'completed']
+    const order: TaskStatus[] = ['todo', 'in_progress', 'completed']
     const idx = order.indexOf(task.status)
-    updateTask(task.id, { status: order[(idx + 1) % 3] })
+    if (idx >= 0) {
+      updateTask(task.id, { status: order[(idx + 1) % 3] })
+    } else {
+      // For paused or archived, cycle to todo
+      updateTask(task.id, { status: 'todo' })
+    }
   }, [updateTask])
 
   const handleDelete = useCallback((id: string) => {
@@ -539,10 +547,11 @@ export default function Planner() {
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {([
-              { key: 'pending' as const, labelKey: 'planner.views.pending', color: '#3b82f6' },
+              { key: 'todo' as const, labelKey: 'planner.views.pending', color: '#3b82f6' },
               { key: 'in_progress' as const, labelKey: 'planner.views.inProgress', color: '#f59e0b' },
+              { key: 'paused' as const, labelKey: 'planner.views.paused', color: '#8b5cf6' },
               { key: 'completed' as const, labelKey: 'planner.views.completed', color: '#22c55e' },
             ] as const).map(({ key, labelKey, color }) => (
               <div key={key} style={{ background: 'var(--color-bg-surface-1)', border: '1px solid var(--color-border-subtle)', borderRadius: 'var(--radius-xl)', padding: '16px', minHeight: 200 }}>
