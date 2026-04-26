@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { X, Minus, Pause, Play, RotateCcw, SkipForward, Square } from 'lucide-react'
 import { useFocusLogic } from './useFocusLogic'
 import { useAppStore } from '../../store/useAppStore'
@@ -9,6 +9,15 @@ const FOCUS_DURATION_OPTIONS = [5, 15, 25, 45, 60]
 
 // 窗口模式类型
 export type FocusWindowMode = 'fullscreen' | 'window' | 'minimized'
+
+// 拖拽状态类型
+interface DragState {
+  isDragging: boolean
+  startX: number
+  startY: number
+  initialLeft: number
+  initialTop: number
+}
 
 interface FocusModalProps {
   isOpen: boolean
@@ -26,6 +35,66 @@ export default function FocusModal({
   const [windowMode, setWindowMode] = useState<FocusWindowMode>(initialMode)
   const [selectedDuration, setSelectedDuration] = useState(25)
   const [localTaskId, setLocalTaskId] = useState<string | null>(null)
+
+  // 窗口拖拽状态
+  const [windowPosition, setWindowPosition] = useState({ left: 0, top: 0 })
+  const [dragState, setDragState] = useState<DragState>({
+    isDragging: false,
+    startX: 0,
+    startY: 0,
+    initialLeft: 0,
+    initialTop: 0,
+  })
+  const modalRef = useRef<HTMLDivElement>(null)
+
+  // 鼠标按下 - 开始拖拽
+  const handleDragStart = useCallback((e: React.MouseEvent) => {
+    if (windowMode !== 'window') return
+
+    e.preventDefault()
+    setDragState({
+      isDragging: true,
+      startX: e.clientX,
+      startY: e.clientY,
+      initialLeft: windowPosition.left,
+      initialTop: windowPosition.top,
+    })
+  }, [windowMode, windowPosition])
+
+  // 鼠标移动 - 拖拽中
+  useEffect(() => {
+    if (!dragState.isDragging) return
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const deltaX = e.clientX - dragState.startX
+      const deltaY = e.clientY - dragState.startY
+
+      setWindowPosition({
+        left: dragState.initialLeft + deltaX,
+        top: dragState.initialTop + deltaY,
+      })
+    }
+
+    const handleMouseUp = () => {
+      setDragState(prev => ({ ...prev, isDragging: false }))
+    }
+
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [dragState])
+
+  // 切换窗口模式时重置位置
+  useEffect(() => {
+    if (windowMode === 'window') {
+      // 默认放在右下角
+      setWindowPosition({ left: 0, top: 0 })
+    }
+  }, [windowMode])
 
   const addToast = useAppStore((s) => s.addToast)
 
@@ -156,9 +225,10 @@ export default function FocusModal({
   }
 
   // ──────────────────────────────────────────────────────
-  // 🖥️ 全屏模式 / 窗口模式
+  // 🖥️ 全屏模式 / 可拖拽窗口模式
   // ──────────────────────────────────────────────────────
   const isFullscreen = windowMode === 'fullscreen'
+  const isDragging = dragState.isDragging
 
   return (
     <div
@@ -167,18 +237,31 @@ export default function FocusModal({
       }`}
     >
       <div
+        ref={modalRef}
         className={`pointer-events-auto w-full max-w-md mx-4 rounded-3xl p-8 relative transition-all duration-200 ${
           !isFullscreen ? 'shadow-2xl' : ''
         }`}
         style={{
           background: '#FFFFFF',
           border: '2px solid #D6D3CD',
-          boxShadow: isFullscreen ? '8px 8px 0px rgba(0,0,0,0.1)' : '12px 12px 30px rgba(0,0,0,0.15)',
-          position: isFullscreen ? 'relative' : ('fixed' as any),
-          right: isFullscreen ? undefined : '24px',
-          bottom: isFullscreen ? undefined : '24px',
+          boxShadow: isFullscreen
+            ? '8px 8px 0px rgba(0,0,0,0.1)'
+            : isDragging
+              ? '16px 16px 40px rgba(0,0,0,0.2)'
+              : '12px 12px 30px rgba(0,0,0,0.15)',
+          position: isFullscreen ? 'relative' : 'fixed',
+          right: isFullscreen ? undefined : `${-windowPosition.left + 24}px`,
+          bottom: isFullscreen ? undefined : `${-windowPosition.top + 24}px`,
+          transform: isDragging ? 'scale(1.02)' : 'scale(1)',
+          cursor: windowMode === 'window' ? (isDragging ? 'grabbing' : 'grab') : 'default',
         }}
+        onMouseDown={handleDragStart}
       >
+        {/* ─── 顶部拖拽提示条 ─── */}
+        {windowMode === 'window' && (
+          <div className="absolute top-2 left-1/2 -translate-x-1/2 w-12 h-1 rounded-full opacity-30" style={{ background: '#D6D3CD' }} />
+        )}
+
         {/* ─── 顶部控制按钮 ─── */}
         <div className="absolute top-4 right-4 flex gap-1">
           {/* 最小化按钮 */}
